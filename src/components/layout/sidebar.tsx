@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { HouseIcon, ShieldCheckIcon, BroadcastIcon, CalendarBlankIcon, ClipboardTextIcon, WarningOctagonIcon, UsersThreeIcon, BuildingsIcon, MapPinIcon, ChatTextIcon, ArticleIcon, ChartBarIcon, UserGearIcon, GearSixIcon, ListMagnifyingGlassIcon, CaretUpIcon, CaretDownIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, DeviceMobileIcon, XIcon } from "@phosphor-icons/react";
+import { HouseIcon, ShieldCheckIcon, BroadcastIcon, EyeIcon, PaperPlaneTiltIcon, CalendarBlankIcon, ClipboardTextIcon, WarningOctagonIcon, UsersThreeIcon, BuildingsIcon, MapPinIcon, ChatTextIcon, ArticleIcon, ChartBarIcon, UserGearIcon, GearSixIcon, ListMagnifyingGlassIcon, CaretUpIcon, CaretDownIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, DeviceMobileIcon, XIcon } from "@phosphor-icons/react";
 import { BrandMark, COMPANY } from "./brand";
 import { cn } from "@/lib/cn";
 import { Count } from "@/components/ui/status";
@@ -11,7 +11,7 @@ import { Count } from "@/components/ui/status";
 type Item = { href: string; label: string; icon: React.ElementType; count?: number; urgent?: boolean };
 type Group = { label: string; icon: React.ElementType; items: Item[] };
 
-export type SidebarCounts = { attention: number; incidents: number };
+export type SidebarCounts = { attention: number; incidents: number; watched: number };
 
 export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role: string; onClose?: () => void }) {
   const path = usePathname();
@@ -22,6 +22,7 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
     { label: "Operations", icon: ShieldCheckIcon, items: [
       { href: "/dashboard", label: "Overview", icon: HouseIcon },
       { href: "/operations", label: "Active operations", icon: BroadcastIcon, count: counts.attention, urgent: counts.attention > 0 },
+      { href: "/monitoring", label: "Monitoring", icon: EyeIcon, count: counts.watched },
       { href: "/shifts", label: "Shifts", icon: CalendarBlankIcon },
       { href: "/attendance", label: "Attendance", icon: ClipboardTextIcon },
       { href: "/incidents", label: "Incidents", icon: WarningOctagonIcon, count: counts.incidents },
@@ -32,7 +33,8 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
       { href: "/locations", label: "Locations", icon: MapPinIcon },
     ] },
     { label: "Communications", icon: ChatTextIcon, items: [
-      { href: "/sms", label: "SMS logs", icon: ChatTextIcon },
+      { href: "/messages/new", label: "Compose", icon: PaperPlaneTiltIcon },
+      { href: "/sms", label: "Message logs", icon: ChatTextIcon },
       { href: "/sms/templates", label: "Templates", icon: ArticleIcon },
     ] },
   ];

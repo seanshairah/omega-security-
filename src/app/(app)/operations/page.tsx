@@ -24,6 +24,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
     attention: all.filter((s) => ["LATE", "NOT_CONFIRMED", "ASSISTANCE", "INCIDENT", "CRITICAL"].includes(s.status)),
     onduty: all.filter((s) => s.status === "ON_DUTY"),
     upcoming: all.filter((s) => s.status === "SCHEDULED" || s.status === "AWAITING_ARRIVAL"),
+    watched: all.filter((s) => s.guard.watched),
   };
   const rows = groups[f as keyof typeof groups] ?? all;
   const welfare = (s: (typeof all)[number]) => {
@@ -44,6 +45,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
         { href: "/operations?f=attention", label: "Needs attention", count: groups.attention.length, active: f === "attention", tone: "critical" },
         { href: "/operations?f=onduty", label: "On duty", count: groups.onduty.length, active: f === "onduty", tone: "ok" },
         { href: "/operations?f=upcoming", label: "Starting soon", count: groups.upcoming.length, active: f === "upcoming", tone: "neutral" },
+        ...(groups.watched.length ? [{ href: "/operations?f=watched", label: "Watched", count: groups.watched.length, active: f === "watched", tone: "warn" as const }] : []),
       ]} />
       <Card>
         <Table>
@@ -55,7 +57,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
                 <td>
                   <Link href={`/guards/${s.guardId}`} className="flex items-center gap-3">
                     <Avatar src={s.guard.photoUrl} name={`${s.guard.firstName} ${s.guard.lastName}`} size={32} />
-                    <div><div className="font-medium text-ink">{s.guard.firstName} {s.guard.lastName}</div><div className="text-[12px] text-ink-3">{s.guard.guardNo}</div></div>
+                    <div><div className="font-medium text-ink">{s.guard.firstName} {s.guard.lastName}{s.guard.watched && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-warn">watched</span>}</div><div className="text-[12px] text-ink-3">{s.guard.guardNo}</div></div>
                   </Link>
                 </td>
                 <td><div className="text-ink">{s.location.name}</div><div className="text-[12px] text-ink-3">{s.location.client.name}</div></td>

@@ -34,6 +34,9 @@ export interface SmsProvider {
   verifyWebhook(req: WebhookRequest): Promise<boolean>;
   /** Turn an inbound webhook into zero or more messages. */
   parseInbound(req: WebhookRequest): Promise<InboundMessage[]>;
+  /** Optional extra channels. Providers that lack them leave these undefined. */
+  sendWhatsApp?(to: string, body: string): Promise<SendResult>;
+  sendEmail?(to: string, subject: string, body: string): Promise<SendResult>;
   /** Delivery reports carried by the same webhook, if the gateway sends them. */
   parseDeliveryReports?(req: WebhookRequest): Promise<DeliveryReport[]>;
   /** What the gateway expects back from the webhook. */

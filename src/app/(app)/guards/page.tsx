@@ -23,6 +23,7 @@ export default async function GuardsPage({ searchParams }: { searchParams: Promi
   if (f === "active") where.active = true;
   if (f === "inactive") where.active = false;
   if (f === "leave") where.employmentStatus = { in: ["ON_LEAVE", "SUSPENDED"] };
+  if (f === "watched") where.watched = true;
   if (sp.q) where.OR = [{ firstName: { contains: sp.q, mode: "insensitive" } }, { lastName: { contains: sp.q, mode: "insensitive" } }, { phone: { contains: sp.q.replace(/\s/g, "") } }, { guardNo: { contains: sp.q, mode: "insensitive" } }, { nationalId: { contains: sp.q, mode: "insensitive" } }];
   if (sp.locationId) where.homeLocationId = sp.locationId;
   if (sp.supervisorId) where.supervisorId = sp.supervisorId;
@@ -31,7 +32,7 @@ export default async function GuardsPage({ searchParams }: { searchParams: Promi
     db.location.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.user.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.shift.findMany({ where: { status: { in: ON_SITE_STATUSES } }, select: { guardId: true, location: { select: { name: true } } } }),
-    Promise.all([db.guard.count({ where: { active: true } }), db.guard.count({ where: { employmentStatus: { in: ["ON_LEAVE", "SUSPENDED"] } } }), db.guard.count({ where: { active: false } })]),
+    Promise.all([db.guard.count({ where: { active: true } }), db.guard.count({ where: { employmentStatus: { in: ["ON_LEAVE", "SUSPENDED"] } } }), db.guard.count({ where: { active: false } }), db.guard.count({ where: { watched: true } })]),
   ]);
   const deployedMap = new Map(deployed.map((d) => [d.guardId, d.location.name]));
   const tone = { DEPLOYED: "ok", AVAILABLE: "neutral", ON_LEAVE: "warn", SUSPENDED: "critical", INACTIVE: "muted" } as const;
@@ -42,6 +43,7 @@ export default async function GuardsPage({ searchParams }: { searchParams: Promi
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Segments items={[
           { href: "/guards", label: "Active", count: counts[0], active: f === "active" },
+          { href: "/guards?f=watched", label: "Watched", count: counts[3], active: f === "watched", tone: "warn" },
           { href: "/guards?f=leave", label: "On leave / suspended", count: counts[1], active: f === "leave", tone: "warn" },
           { href: "/guards?f=inactive", label: "Inactive", count: counts[2], active: f === "inactive" },
           { href: "/guards?f=all", label: "All", active: f === "all" },
@@ -63,7 +65,7 @@ export default async function GuardsPage({ searchParams }: { searchParams: Promi
               const live = guardLiveStatus(g, deployedMap.has(g.id));
               return (
                 <tr key={g.id}>
-                  <td><Link href={`/guards/${g.id}`} className="flex items-center gap-3"><Avatar src={g.photoUrl} name={`${g.firstName} ${g.lastName}`} size={32} /><div><div className="font-medium text-ink">{g.firstName} {g.lastName}</div><div className="text-[12px] text-ink-3">{g.guardNo}</div></div></Link></td>
+                  <td><Link href={`/guards/${g.id}`} className="flex items-center gap-3"><Avatar src={g.photoUrl} name={`${g.firstName} ${g.lastName}`} size={32} /><div><div className="font-medium text-ink">{g.firstName} {g.lastName}{g.watched && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-warn">watched</span>}</div><div className="text-[12px] text-ink-3">{g.guardNo}</div></div></Link></td>
                   <td className="tnum text-ink-2">{formatPhone(g.phone)}</td>
                   <td className="tnum text-ink-2">{g.nationalId}</td>
                   <td className="text-ink-2">{g.homeLocation?.name ?? "—"}</td>

@@ -12,7 +12,7 @@ import { fmtDate, fmtTime } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 import { activeProviderName } from "@/lib/sms";
 
-export const metadata = { title: "SMS logs" };
+export const metadata = { title: "Message logs" };
 const TYPES = ["ARRIVAL", "ARRIVAL_REMINDER", "WELFARE", "INCIDENT", "ASSISTANCE", "COMPLETION", "HANDOVER", "EMERGENCY", "CLARIFICATION", "GENERAL"];
 
 export default async function SmsLogsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -22,6 +22,7 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
   const take = 50;
   const where: Prisma.SmsMessageWhereInput = {};
   if (sp.direction) where.direction = sp.direction as never;
+  if (sp.channel) where.channel = sp.channel as never;
   if (sp.type) where.type = sp.type as never;
   if (sp.status) where.status = sp.status as never;
   if (sp.guardId) where.guardId = sp.guardId;
@@ -37,12 +38,13 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div>
-      <PageHeader title="SMS logs" description={`Every message in and out, with how the system read each reply. Provider: ${activeProviderName()}.`} />
+      <PageHeader title="Message logs" description={`Every SMS, WhatsApp and email in and out, with how the system read each reply. Provider: ${activeProviderName()}.`} actions={<Link href="/messages/new" className="inline-flex h-9 items-center rounded-[8px] bg-accent px-3.5 text-sm font-medium text-white hover:bg-accent-strong">Compose</Link>} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Segments items={[{ href: keep({ direction: "", status: "" }), label: "All", count: counts[0], active: !sp.direction && !sp.status }, { href: keep({ direction: "OUTBOUND", status: "" }), label: "Sent", count: counts[1], active: sp.direction === "OUTBOUND" }, { href: keep({ direction: "INBOUND", status: "" }), label: "Received", count: counts[2], active: sp.direction === "INBOUND" }, { href: keep({ status: "FAILED", direction: "" }), label: "Failed", count: counts[3], active: sp.status === "FAILED", tone: counts[3] ? "critical" : undefined }]} />
         <form className="flex flex-wrap items-center gap-2">
           {sp.direction && <input type="hidden" name="direction" value={sp.direction} />}
           <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search text or number" className="w-52" />
+          <Select name="channel" defaultValue={sp.channel ?? ""} className="w-36"><option value="">Any channel</option><option value="SMS">SMS</option><option value="WHATSAPP">WhatsApp</option><option value="EMAIL">Email</option></Select>
           <Select name="type" defaultValue={sp.type ?? ""} className="w-44"><option value="">Any type</option>{TYPES.map((t) => <option key={t} value={t}>{t.toLowerCase().replace("_", " ")}</option>)}</Select>
           <Select name="guardId" defaultValue={sp.guardId ?? ""} className="w-44"><option value="">All guards</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}</Select>
           <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Filter</button>
@@ -50,16 +52,17 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
       </div>
       <Card>
         <Table>
-          <THead><tr><th>When</th><th></th><th>Guard</th><th>Number</th><th>Message</th><th>Type</th><th>Read as</th><th>Location</th><th>Status</th></tr></THead>
+          <THead><tr><th>When</th><th></th><th>Guard</th><th>To / from</th><th>Message</th><th>Channel</th><th>Type</th><th>Read as</th><th>Location</th><th>Status</th></tr></THead>
           <TBody>
-            {rows.length === 0 && <Empty colSpan={9} title="No messages match" />}
+            {rows.length === 0 && <Empty colSpan={10} title="No messages match" />}
             {rows.map((m) => (
               <tr key={m.id}>
                 <td className="whitespace-nowrap tnum"><div>{fmtDate(m.createdAt)}</div><div className="text-[12px] text-ink-3">{fmtTime(m.createdAt)}</div></td>
                 <td>{m.direction === "OUTBOUND" ? <ArrowUpRightIcon size={14} weight="bold" className="text-ink-3" aria-label="Sent" /> : <ArrowDownLeftIcon size={14} weight="bold" className="text-accent-strong" aria-label="Received" />}</td>
                 <td>{m.guard ? <Link href={`/guards/${m.guard.id}`} className="hover:underline">{m.guard.firstName} {m.guard.lastName}</Link> : <span className="text-ink-3">Unknown</span>}</td>
-                <td className="whitespace-nowrap tnum text-ink-2">{formatPhone(m.direction === "OUTBOUND" ? m.toNumber : m.fromNumber)}</td>
-                <td className="max-w-md"><p className={`line-clamp-2 ${m.direction === "INBOUND" ? "font-medium text-ink" : "text-ink-2"}`}>{m.body}</p>{m.error && <p className="text-[12px] text-critical">{m.error}</p>}{m.shiftId && <Link href={`/shifts/${m.shiftId}`} className="text-[12px] text-ink-3 hover:underline">shift</Link>}</td>
+                <td className="whitespace-nowrap tnum text-ink-2">{m.channel === "EMAIL" ? (m.direction === "OUTBOUND" ? m.toNumber : m.fromNumber) : formatPhone(m.direction === "OUTBOUND" ? m.toNumber : m.fromNumber)}</td>
+                <td className="max-w-md">{m.subject && <p className="text-[12px] font-medium text-ink">{m.subject}</p>}<p className={`line-clamp-2 ${m.direction === "INBOUND" ? "font-medium text-ink" : "text-ink-2"}`}>{m.body}</p>{m.error && <p className="text-[12px] text-critical">{m.error}</p>}{m.shiftId && <Link href={`/shifts/${m.shiftId}`} className="text-[12px] text-ink-3 hover:underline">shift</Link>}</td>
+                <td className="text-ink-2">{m.channel === "SMS" ? "SMS" : m.channel === "WHATSAPP" ? "WhatsApp" : "Email"}</td>
                 <td className="text-ink-2">{m.type.toLowerCase().replace("_", " ")}</td>
                 <td className="text-ink-2">{m.interpretedAs?.toLowerCase().replace("_", " ") ?? "—"}</td>
                 <td className="text-ink-2">{m.location?.name ?? "—"}</td>

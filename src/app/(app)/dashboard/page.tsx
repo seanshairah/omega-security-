@@ -100,7 +100,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </Card>
 
         <Card>
-          <CardHeader title="Send a message" description={`Signed as ${user.name}`} action={<Link href="/sms" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-strong hover:underline">SMS logs <CaretRightIcon size={12} weight="bold" /></Link>} />
+          <CardHeader title="Send a message" description={`Signed as ${user.name}`} action={<Link href="/messages/new" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-strong hover:underline">Compose · groups, WhatsApp, email <CaretRightIcon size={12} weight="bold" /></Link>} />
           <CardBody>
             <SendMessage guards={onDutyGuards.map((s) => ({ id: s.guardId, name: `${s.guard.firstName} ${s.guard.lastName}`, status: STATUS_META[s.status].label }))} />
           </CardBody>

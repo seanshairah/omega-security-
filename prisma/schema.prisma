@@ -36,6 +36,7 @@ model User {
   supervisedIncidents Incident[]   @relation("IncidentSupervisor")
   recurrences         ShiftRecurrence[]
   auditLogs           AuditLog[]
+  pushSubscriptions   PushSubscription[]
 }
 
 // ───────────────────────── Clients & locations ─────────────────────────
@@ -129,9 +130,15 @@ model Guard {
   homeLocationId        String?
   homeLocation          Location?        @relation(fields: [homeLocationId], references: [id])
   photoUrl              String?
+  email                 String?
   notes                 String?
   active                Boolean          @default(true)
   deactivatedAt         DateTime?
+  // Monitoring: admins can watch a guard closely; their events are highlighted and pushed.
+  watched               Boolean          @default(false)
+  watchedAt             DateTime?
+  watchedById           String?
+  watchNote             String?
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
@@ -145,6 +152,7 @@ model Guard {
   @@index([lastName, firstName])
   @@index([active])
   @@index([homeLocationId])
+  @@index([watched])
 }
 
 // ───────────────────────── Shifts ─────────────────────────
@@ -419,6 +427,12 @@ enum SmsType {
   GENERAL
 }
 
+enum MessageChannel {
+  SMS
+  WHATSAPP
+  EMAIL
+}
+
 enum SmsStatus {
   QUEUED
   SENT
@@ -429,6 +443,8 @@ enum SmsStatus {
 
 model SmsMessage {
   id                String       @id @default(cuid())
+  channel           MessageChannel @default(SMS)
+  subject           String?
   direction         SmsDirection
   fromNumber        String
   toNumber          String
@@ -453,6 +469,20 @@ model SmsMessage {
   @@index([shiftId])
   @@index([type])
   @@index([direction])
+  @@index([channel])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model MessageTemplate {

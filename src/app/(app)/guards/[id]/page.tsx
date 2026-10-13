@@ -15,6 +15,7 @@ import { ButtonGroup, LinkButton } from "@/components/ui/button";
 import { ConfirmButton } from "@/components/ui/confirm-button";
 import { ShiftStatusLabel } from "@/components/shift-status";
 import { setGuardActive } from "@/actions/guards";
+import { setGuardWatched } from "@/actions/messages";
 import { fmtDate, fmtTime, fmtDateTime, fmtShort } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 
@@ -43,6 +44,10 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
     <div>
       <PageHeader title={name} description={`${g.guardNo} · ${formatPhone(g.phone)}`} actions={can.manageGuards(user) && (
         <ButtonGroup>
+          <LinkButton href={`/messages/new?guardId=${g.id}`}>Message</LinkButton>
+          {g.watched
+            ? <ConfirmButton size="md" label="Stop watching" title={`Stop watching ${name}?`} body="Their events return to normal priority and they leave the Monitoring page." confirmLabel="Stop watching" action={async () => { "use server"; await setGuardWatched(g.id, false); }} />
+            : <ConfirmButton size="md" label="Watch" title={`Watch ${name} closely?`} body="They appear on the Monitoring page, every event about them is raised to at least a warning, and pushed to your devices." withNote="Why are you watching them? (shown on the Monitoring page)" confirmLabel="Start watching" action={async (note) => { "use server"; await setGuardWatched(g.id, true, note); }} />}
           <LinkButton href={`/shifts/new?guardId=${g.id}`}>Schedule shift</LinkButton>
           <LinkButton href={`/guards/${g.id}/edit`}>Edit</LinkButton>
           {g.active
@@ -134,8 +139,10 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
           <Card>
             <CardBody className="pt-5">
               <div className="flex items-center gap-3"><Avatar src={g.photoUrl} name={name} size={56} /><div><p className="font-semibold text-ink">{name}</p><Status tone={tone[live]}>{live === "DEPLOYED" && deployed ? `Deployed · ${deployed.location.name}` : GUARD_STATUS_LABEL[live]}</Status></div></div>
+              {g.watched && <div className="mt-4 rounded-[10px] border border-warn/40 bg-warn-soft px-3 py-2 text-[13px] text-[#8a5e05]"><span className="font-semibold">Being watched</span>{g.watchNote ? ` · ${g.watchNote}` : ""}. <Link href="/monitoring" className="underline">Open monitoring</Link></div>}
               <div className="mt-5 grid grid-cols-2 gap-4">
                 <Meta label="Phone"><a href={`tel:${g.phone}`} className="underline">{formatPhone(g.phone)}</a></Meta>
+                <Meta label="Email">{g.email ? <a href={`mailto:${g.email}`} className="underline">{g.email}</a> : "—"}</Meta>
                 <Meta label="National ID">{g.nationalId}</Meta>
                 <Meta label="Gender">{g.gender === "MALE" ? "Male" : g.gender === "FEMALE" ? "Female" : "Other"}</Meta>
                 <Meta label="Date of birth">{fmtDate(g.dateOfBirth)}</Meta>

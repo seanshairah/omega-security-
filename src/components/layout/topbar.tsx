@@ -10,11 +10,11 @@ import { cn } from "@/lib/cn";
 const NAMES: Record<string, string> = {
   dashboard: "Overview", operations: "Active operations", shifts: "Shifts", attendance: "Attendance", incidents: "Incidents",
   guards: "Guards", clients: "Clients", locations: "Locations", sms: "SMS logs", templates: "Templates", reports: "Reports",
-  users: "Users", settings: "Settings", audit: "Audit log", simulator: "Simulator", notifications: "Notifications", new: "New", edit: "Edit", recurring: "Recurring",
+  users: "Users", settings: "Settings", audit: "Audit log", simulator: "Simulator", notifications: "Notifications", new: "New", edit: "Edit", recurring: "Recurring", monitoring: "Monitoring", messages: "Messages",
 };
 const SECTION: Record<string, string> = {
   dashboard: "Operations", operations: "Operations", shifts: "Operations", attendance: "Operations", incidents: "Operations",
-  guards: "Workforce", clients: "Workforce", locations: "Workforce", sms: "Communications", simulator: "Communications",
+  guards: "Workforce", clients: "Workforce", locations: "Workforce", sms: "Communications", simulator: "Communications", messages: "Communications", monitoring: "Operations",
 };
 
 export function Topbar({ user, unread, systemStatus, onMenu }: { user: { name: string; avatarUrl: string | null; title: string | null }; unread: number; systemStatus: { tone: "ok" | "warn" | "critical"; label: string }; onMenu?: () => void }) {
