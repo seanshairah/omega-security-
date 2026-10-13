@@ -56,9 +56,9 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
         {view !== "recurring" && (
           <form className="flex flex-wrap items-center gap-2">
             <input type="hidden" name="view" value={view} />
-            <Select name="guardId" defaultValue={sp.guardId ?? ""} className="w-44"><option value="">All guards</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}</Select>
-            <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-52"><option value="">All locations</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
-            <Input type="date" name="date" defaultValue={sp.date ?? ""} className="w-40" />
+            <Select name="guardId" defaultValue={sp.guardId ?? ""} className="w-full sm:w-44"><option value="">All guards</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}</Select>
+            <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-full sm:w-52"><option value="">All locations</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
+            <Input type="date" name="date" defaultValue={sp.date ?? ""} className="w-full sm:w-40" />
             <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Filter</button>
           </form>
         )}

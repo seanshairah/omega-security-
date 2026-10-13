@@ -22,8 +22,8 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
     <div>
       <PageHeader title="Audit log" description="Who did what, when, and from where. System actions are attributed to the automation engine or the SMS gateway." />
       <form className="mb-4 flex flex-wrap items-center gap-2">
-        <Select name="action" defaultValue={sp.action ?? ""} className="w-56"><option value="">Any action</option>{actions.map((a) => <option key={a.action} value={a.action}>{a.action.toLowerCase().replace(/_/g, " ")}</option>)}</Select>
-        <Input name="actor" defaultValue={sp.actor ?? ""} placeholder="Actor" className="w-48" />
+        <Select name="action" defaultValue={sp.action ?? ""} className="w-full sm:w-56"><option value="">Any action</option>{actions.map((a) => <option key={a.action} value={a.action}>{a.action.toLowerCase().replace(/_/g, " ")}</option>)}</Select>
+        <Input name="actor" defaultValue={sp.actor ?? ""} placeholder="Actor" className="w-full sm:w-48" />
         <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Filter</button>
       </form>
       <Card>

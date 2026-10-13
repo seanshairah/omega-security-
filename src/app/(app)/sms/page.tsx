@@ -44,10 +44,10 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
         <Segments items={[{ href: keep({ direction: "", status: "" }), label: "All", count: counts[0], active: !sp.direction && !sp.status }, { href: keep({ direction: "OUTBOUND", status: "" }), label: "Sent", count: counts[1], active: sp.direction === "OUTBOUND" }, { href: keep({ direction: "INBOUND", status: "" }), label: "Received", count: counts[2], active: sp.direction === "INBOUND" }, { href: keep({ status: "FAILED", direction: "" }), label: "Failed", count: counts[3], active: sp.status === "FAILED", tone: counts[3] ? "critical" : undefined }]} />
         <form className="flex flex-wrap items-center gap-2">
           {sp.direction && <input type="hidden" name="direction" value={sp.direction} />}
-          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search text or number" className="w-52" />
-          <Select name="channel" defaultValue={sp.channel ?? ""} className="w-36"><option value="">Any channel</option><option value="SMS">SMS</option><option value="WHATSAPP">WhatsApp</option><option value="EMAIL">Email</option></Select>
-          <Select name="type" defaultValue={sp.type ?? ""} className="w-44"><option value="">Any type</option>{TYPES.map((t) => <option key={t} value={t}>{t.toLowerCase().replace("_", " ")}</option>)}</Select>
-          <Select name="guardId" defaultValue={sp.guardId ?? ""} className="w-44"><option value="">All guards</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}</Select>
+          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search text or number" className="w-full sm:w-52" />
+          <Select name="channel" defaultValue={sp.channel ?? ""} className="w-full sm:w-36"><option value="">Any channel</option><option value="SMS">SMS</option><option value="WHATSAPP">WhatsApp</option><option value="EMAIL">Email</option></Select>
+          <Select name="type" defaultValue={sp.type ?? ""} className="w-full sm:w-44"><option value="">Any type</option>{TYPES.map((t) => <option key={t} value={t}>{t.toLowerCase().replace("_", " ")}</option>)}</Select>
+          <Select name="guardId" defaultValue={sp.guardId ?? ""} className="w-full sm:w-44"><option value="">All guards</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}</Select>
           <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Filter</button>
         </form>
       </div>

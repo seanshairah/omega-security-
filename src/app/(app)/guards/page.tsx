@@ -51,9 +51,9 @@ export default async function GuardsPage({ searchParams }: { searchParams: Promi
         ]} />
         <form className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="f" value={f} />
-          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Name, phone, ID or guard no." className="w-56" />
-          <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-48"><option value="">Any location</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
-          <Select name="supervisorId" defaultValue={sp.supervisorId ?? ""} className="w-44"><option value="">Any supervisor</option>{supervisors.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select>
+          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Name, phone, ID or guard no." className="w-full sm:w-56" />
+          <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-full sm:w-48"><option value="">Any location</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
+          <Select name="supervisorId" defaultValue={sp.supervisorId ?? ""} className="w-full sm:w-44"><option value="">Any supervisor</option>{supervisors.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select>
           <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Search</button>
         </form>
       </div>

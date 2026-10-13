@@ -87,7 +87,7 @@ export function Compose({ guards, locations, channels, initialGuardId }: Props) 
         </CardBody>
       </Card>
 
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         <Card>
           <CardHeader title="Message" action={
             <div className="inline-flex rounded-[var(--radius-control)] border border-line bg-surface p-0.5">
