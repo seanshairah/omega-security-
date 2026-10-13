@@ -39,7 +39,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="absolute inset-0 bg-gradient-to-t from-[#101010]/85 via-[#101010]/30 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-10 text-white">
           <p className="text-[26px] font-semibold leading-tight tracking-[-0.01em]">Who is on post, where, and are they safe.</p>
-          <p className="mt-3 max-w-md text-[14px] leading-relaxed text-white/80">{COMPANY.tagline}. Every arrival, welfare check, handover and incident is confirmed by the guard's own phone and recorded here.</p>
+          <p className="mt-3 max-w-md text-[14px] leading-relaxed text-white/80">{COMPANY.tagline}. Every arrival, welfare check, handover and incident is confirmed by the guard&rsquo;s own phone and recorded here.</p>
         </div>
       </div>
     </div>
