@@ -8,6 +8,7 @@ import { hashPassword } from "@/lib/auth/password";
 import { saveSettings } from "@/lib/settings";
 import { invalidateTemplateCache, TEMPLATE_DEFS } from "@/lib/sms/templates";
 import { actor, auditAs, fail, type ActionState } from "./_helpers";
+import { resolvePhoto } from "@/lib/upload";
 
 export async function createUser(_: ActionState, fd: FormData): Promise<ActionState> {
   try {
@@ -16,7 +17,8 @@ export async function createUser(_: ActionState, fd: FormData): Promise<ActionSt
     if (!r.success) return { error: firstIssue(r.error) };
     const d = r.data;
     if (!d.password) return { error: "A password is required for a new user." };
-    const u = await db.user.create({ data: { name: d.name, email: d.email, role: d.role, title: d.title, phone: d.phone, passwordHash: await hashPassword(d.password) } });
+    const avatarUrl = (await resolvePhoto(fd, "avatarUrl")) ?? null;
+    const u = await db.user.create({ data: { name: d.name, email: d.email, role: d.role, title: d.title, phone: d.phone, avatarUrl, passwordHash: await hashPassword(d.password) } });
     await auditAs(me, "USER_CREATED", "User", u.id, { email: u.email, role: u.role });
   } catch (e) {
     return fail(e);
@@ -31,7 +33,8 @@ export async function updateUser(id: string, _: ActionState, fd: FormData): Prom
     const r = userSchema.safeParse(formToObject(fd));
     if (!r.success) return { error: firstIssue(r.error) };
     const d = r.data;
-    const u = await db.user.update({ where: { id }, data: { name: d.name, email: d.email, role: d.role, title: d.title, phone: d.phone, ...(d.password ? { passwordHash: await hashPassword(d.password) } : {}) } });
+    const avatarUrl = await resolvePhoto(fd, "avatarUrl");
+    const u = await db.user.update({ where: { id }, data: { name: d.name, email: d.email, role: d.role, title: d.title, phone: d.phone, ...(avatarUrl !== undefined ? { avatarUrl } : {}), ...(d.password ? { passwordHash: await hashPassword(d.password) } : {}) } });
     await auditAs(me, "USER_UPDATED", "User", u.id, { email: u.email, role: u.role, passwordChanged: Boolean(d.password) });
   } catch (e) {
     return fail(e);

@@ -29,10 +29,10 @@ async function main() {
 
   // ── users
   const pw = await bcrypt.hash("Sentinel123!", 10);
-  const zveshure = await db.user.create({ data: { name: "Mr T. Zveshure", email: "admin@omegasecurity.co.zw", passwordHash: pw, role: "SUPER_ADMIN", title: "Managing Director", phone: "+263772100100", avatarUrl: "/avatars/admin.jpg" } });
-  const ops = await db.user.create({ data: { name: "Rutendo Makoni", email: "ops@omegasecurity.co.zw", passwordHash: pw, role: "ADMIN", title: "Operations Manager", phone: "+263772100101", avatarUrl: "/avatars/user-1.jpg" } });
-  const supN = await db.user.create({ data: { name: "Blessing Chikwava", email: "blessing@omegasecurity.co.zw", passwordHash: pw, role: "SUPERVISOR", title: "Supervisor, Northern sites", phone: "+263772100102", avatarUrl: "/avatars/user-2.jpg" } });
-  const supS = await db.user.create({ data: { name: "Tawanda Mhlanga", email: "tawanda@omegasecurity.co.zw", passwordHash: pw, role: "SUPERVISOR", title: "Supervisor, Industrial sites", phone: "+263772100103", avatarUrl: "/avatars/user-3.jpg" } });
+  const zveshure = await db.user.create({ data: { name: "Mr T. Zveshure", email: "admin@omegasecurity.co.zw", passwordHash: pw, role: "SUPER_ADMIN", title: "Managing Director", phone: "+263772100100", avatarUrl: "/avatars/admin.svg" } });
+  const ops = await db.user.create({ data: { name: "Rutendo Makoni", email: "ops@omegasecurity.co.zw", passwordHash: pw, role: "ADMIN", title: "Operations Manager", phone: "+263772100101", avatarUrl: "/avatars/user-1.svg" } });
+  const supN = await db.user.create({ data: { name: "Blessing Chikwava", email: "blessing@omegasecurity.co.zw", passwordHash: pw, role: "SUPERVISOR", title: "Supervisor, Northern sites", phone: "+263772100102", avatarUrl: "/avatars/user-2.svg" } });
+  const supS = await db.user.create({ data: { name: "Tawanda Mhlanga", email: "tawanda@omegasecurity.co.zw", passwordHash: pw, role: "SUPERVISOR", title: "Supervisor, Industrial sites", phone: "+263772100103", avatarUrl: "/avatars/user-3.svg" } });
 
   // ── clients & locations
   const mk = async (code: string, name: string, industry: string, contactName: string, contactPhone: string, address: string) =>
@@ -84,7 +84,7 @@ async function main() {
         address: ["Mbare", "Highfield", "Chitungwiza", "Glen View", "Budiriro", "Kuwadzana", "Warren Park", "Mabvuku"][i % 8] + ", Harare",
         emergencyContactName: ["Mary", "Grace", "Tapiwa", "Joseph"][i % 4] + " " + lastName, emergencyContactPhone: `+26377299${String(1000 + i).slice(1)}`,
         employmentStatus: i === 15 ? "ON_LEAVE" : i === 16 ? "SUSPENDED" : "ACTIVE",
-        photoUrl: `/avatars/guard-${i}.jpg`,
+        photoUrl: `/avatars/guard-${i}.svg`,
         notes: i === 1 ? "Senior guard. Trained in first aid (2025)." : i === 16 ? "Suspended pending disciplinary hearing, 9 Oct 2026." : null,
       },
     });

@@ -18,7 +18,6 @@ export const guardSchema = z.object({
   dateEmployed: opt(z.string()),
   supervisorId: opt(z.string()),
   homeLocationId: opt(z.string()),
-  photoUrl: opt(z.string()),
   notes: opt(z.string()),
 });
 

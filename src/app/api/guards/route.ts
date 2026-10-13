@@ -19,10 +19,11 @@ export const GET = guarded("SUPERVISOR", async (req) => {
 });
 
 export const POST = guarded("ADMIN", async (req, _ctx, user) => {
-  const r = guardSchema.safeParse(await req.json().catch(() => ({})));
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const r = guardSchema.safeParse(body);
   if (!r.success) return error(firstIssue(r.error));
   const d = r.data;
-  const guard = await db.guard.create({ data: { ...d, dateOfBirth: d.dateOfBirth ? new Date(d.dateOfBirth) : null, dateEmployed: d.dateEmployed ? new Date(d.dateEmployed) : null, guardNo: await nextGuardNo() } });
+  const guard = await db.guard.create({ data: { ...d, photoUrl: typeof body.photoUrl === "string" ? body.photoUrl : null, dateOfBirth: d.dateOfBirth ? new Date(d.dateOfBirth) : null, dateEmployed: d.dateEmployed ? new Date(d.dateEmployed) : null, guardNo: await nextGuardNo() } });
   await audit({ userId: user.id, actor: user.name, action: "GUARD_CREATED", entity: "Guard", entityId: guard.id, details: { via: "api" } });
   return json(guard, 201);
 });
