@@ -1,0 +1,18 @@
+# Free per-minute scheduler for the automation engine when the host cannot run minute-level crons.
+# GitHub schedules can lag by several minutes; cron-job.org or Upstash QStash are more punctual.
+# Set repository secrets: APP_URL (https://your-domain) and AUTOMATION_SECRET.
+name: Automation tick
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the engine
+        run: |
+          for i in 1 2 3 4 5; do
+            curl -fsS -X POST "${{ secrets.APP_URL }}/api/automation/tick" -H "Authorization: Bearer ${{ secrets.AUTOMATION_SECRET }}" -o /dev/null || echo "tick $i failed"
+            [ $i -lt 5 ] && sleep 55
+          done
