@@ -9,6 +9,7 @@ export const guardSchema = z.object({
   lastName: z.string().trim().min(1, "Last name is required"),
   phone: phoneSchema,
   nationalId: z.string().trim().min(3, "National ID is required"),
+  email: z.string().trim().email("Enter a valid email").toLowerCase().optional().or(z.literal("")).transform((v) => (v ? v : null)),
   gender: z.enum(["MALE", "FEMALE", "OTHER"]),
   dateOfBirth: opt(z.string()),
   address: opt(z.string()),

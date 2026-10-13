@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Status } from "@/components/ui/status";
 import { ago } from "@/lib/time";
 import { cn } from "@/lib/cn";
+import { PushToggle } from "@/components/push-toggle";
 
 export const metadata = { title: "Notifications" };
 
@@ -17,7 +18,7 @@ export default async function NotificationsPage() {
   const unread = rows.filter((n) => !n.readAt).length;
   return (
     <div className="max-w-3xl">
-      <PageHeader title="Notifications" description={`${unread} unread. Email, WhatsApp and push can be added as channels later.`} actions={unread > 0 && <form action={async () => { "use server"; await markNotificationsRead("all"); }}><Button type="submit">Mark all read</Button></form>} />
+      <PageHeader title="Notifications" description={`${unread} unread. Warnings and emergencies are also pushed to devices that have enabled push.`} actions={<><PushToggle publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? process.env.VAPID_PUBLIC_KEY ?? null} compact />{unread > 0 && <form action={async () => { "use server"; await markNotificationsRead("all"); }}><Button type="submit">Mark all read</Button></form>}</>} />
       <Card>
         <ul className="divide-y divide-line">
           {rows.length === 0 && <li className="px-5 py-10 text-center text-[13px] text-ink-3">Nothing yet.</li>}

@@ -8,6 +8,8 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ActionForm } from "@/components/ui/action-form";
 import { Field, Input } from "@/components/ui/form";
 import { Status } from "@/components/ui/status";
+import { PushToggle } from "@/components/push-toggle";
+import { pushConfigured } from "@/lib/push";
 
 export const metadata = { title: "Settings" };
 const GROUPS: { key: string; title: string; description: string }[] = [
@@ -55,10 +57,21 @@ export default async function SettingsPage() {
                   </div>
                 </div>
               )}
+              {sendai.ok && (
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div><div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">WhatsApp sender</div>{sendai.identities.filter((i) => i.channel === "whatsapp").length === 0 ? <p className="mt-1 text-[13px] text-ink-2">None. Register a WhatsApp number in the Sendai dashboard to send WhatsApp from Compose.</p> : <ul className="mt-1 text-[13px]">{sendai.identities.filter((i) => i.channel === "whatsapp").map((i) => <li key={i.id}><Status tone={i.verification === "verified" ? "ok" : "warn"}>{i.address} · {i.verification}</Status></li>)}</ul>}</div>
+                  <div><div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">Email sender</div>{sendai.identities.filter((i) => i.channel === "email").length === 0 ? <p className="mt-1 text-[13px] text-ink-2">None. Register a sender email in the Sendai dashboard to send email from Compose.</p> : <ul className="mt-1 text-[13px]">{sendai.identities.filter((i) => i.channel === "email").map((i) => <li key={i.id}><Status tone={i.verification === "verified" ? "ok" : "warn"}>{i.address} · {i.verification}</Status></li>)}</ul>}</div>
+                </div>
+              )}
               <p className="mt-3 text-[12px] text-ink-3">Inbound SMS must be enabled on the Sendai account; point its callback and delivery webhook at the URL above with the signing secret in SMS_WEBHOOK_SECRET.</p>
             </div>
           )}
         </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="Push notifications" description="Warnings, emergencies and anything about a watched guard are pushed to every browser that has turned this on." action={<Status tone={pushConfigured() ? "ok" : "neutral"}>{pushConfigured() ? "Configured" : "Not configured"}</Status>} />
+        <CardBody><PushToggle publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? process.env.VAPID_PUBLIC_KEY ?? null} /><p className="mt-2 text-[12px] text-ink-3">Each person enables it on each device they use. Set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and NEXT_PUBLIC_VAPID_PUBLIC_KEY on the server to turn the feature on.</p></CardBody>
       </Card>
 
       <Card>

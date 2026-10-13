@@ -13,6 +13,14 @@ export class SimulatedProvider implements SmsProvider {
     return { ok: true, providerMessageId: `sim_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}` };
   }
 
+  async sendWhatsApp(): Promise<SendResult> {
+    return { ok: true, providerMessageId: `sim_wa_${Date.now().toString(36)}` };
+  }
+
+  async sendEmail(): Promise<SendResult> {
+    return { ok: true, providerMessageId: `sim_em_${Date.now().toString(36)}` };
+  }
+
   async verifyWebhook(req: WebhookRequest): Promise<boolean> {
     const secret = process.env.SMS_WEBHOOK_SECRET;
     if (!secret) return true;

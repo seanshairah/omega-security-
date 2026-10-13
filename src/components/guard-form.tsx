@@ -16,6 +16,7 @@ export function GuardForm({ action, guard, locations, supervisors, submitLabel }
         <Field label="Last name" required><Input name="lastName" defaultValue={g?.lastName} required /></Field>
         <Field label="Mobile number" required hint="Zimbabwean numbers can be entered as 0772 123 456."><Input name="phone" defaultValue={g?.phone} placeholder="+263 77 123 4567" required /></Field>
         <Field label="National ID / passport" required><Input name="nationalId" defaultValue={g?.nationalId} placeholder="63-123456A63" required /></Field>
+        <Field label="Email" hint="Optional. Used for email messages from the portal."><Input type="email" name="email" defaultValue={g?.email ?? ""} /></Field>
         <Field label="Gender"><Select name="gender" defaultValue={g?.gender ?? "MALE"}><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></Select></Field>
         <Field label="Date of birth"><Input type="date" name="dateOfBirth" defaultValue={g?.dateOfBirth ? dateInputValue(g.dateOfBirth) : ""} /></Field>
         <Field label="Home address" className="sm:col-span-2"><Input name="address" defaultValue={g?.address ?? ""} /></Field>

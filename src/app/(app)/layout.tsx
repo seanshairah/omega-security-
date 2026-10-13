@@ -9,11 +9,12 @@ export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
-  const [attention, incidents, unread, critical] = await Promise.all([
+  const [attention, incidents, unread, critical, watched] = await Promise.all([
     db.shift.count({ where: { status: { in: ["LATE", "NOT_CONFIRMED", "ASSISTANCE", "INCIDENT", "CRITICAL"] } } }),
     db.incident.count({ where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } } }),
     unreadCount(),
     db.shift.count({ where: { status: "CRITICAL" } }),
+    db.guard.count({ where: { watched: true } }),
   ]);
   const provider = activeProviderName();
   const systemStatus = critical > 0
@@ -23,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       : { tone: "ok" as const, label: provider === "simulated" ? "All systems operational · SMS simulated" : "All systems operational" };
 
   return (
-    <AppShell counts={{ attention, incidents }} role={user.role} user={user} unread={unread} systemStatus={systemStatus} banner={<EmergencyBanner />}>
+    <AppShell counts={{ attention, incidents, watched }} role={user.role} user={user} unread={unread} systemStatus={systemStatus} banner={<EmergencyBanner />}>
       {children}
     </AppShell>
   );

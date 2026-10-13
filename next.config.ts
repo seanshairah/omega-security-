@@ -5,7 +5,7 @@ process.env.TZ = process.env.TIMEZONE || "Africa/Harare";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  serverExternalPackages: ["@prisma/client", "@prisma/adapter-neon", "@neondatabase/serverless", "ws", "https-proxy-agent", "bcryptjs"],
+  serverExternalPackages: ["@prisma/client", "@prisma/adapter-neon", "@neondatabase/serverless", "ws", "https-proxy-agent", "bcryptjs", "web-push"],
 };
 
 export default nextConfig;
