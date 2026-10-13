@@ -32,10 +32,10 @@ export class SendaiProvider implements SmsProvider {
         body: JSON.stringify({ to: to.replace(/^\+/, ""), from: cfg.senderId, message: body }),
       });
       const text = await res.text();
-      let json: { id?: string; status?: string; error?: { type?: string; message?: string } | string; message?: string; data?: { id?: string } } = {};
+      let json: { id?: string; status?: string; error?: { type?: string; message?: string; description?: string } | string; message?: string; data?: { id?: string } } = {};
       try { json = JSON.parse(text); } catch { /* non-JSON */ }
       if (!res.ok) {
-        const err = typeof json.error === "string" ? json.error : json.error?.message ?? json.error?.type ?? json.message ?? text.slice(0, 160);
+        const err = json.message || (typeof json.error === "string" ? json.error : json.error?.description ?? json.error?.message ?? json.error?.type) || text.slice(0, 160);
         return { ok: false, error: `Sendai ${res.status}: ${err}` };
       }
       return { ok: true, providerMessageId: json.id ?? json.data?.id };
