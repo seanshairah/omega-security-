@@ -34,9 +34,13 @@ export interface SmsProvider {
   verifyWebhook(req: WebhookRequest): Promise<boolean>;
   /** Turn an inbound webhook into zero or more messages. */
   parseInbound(req: WebhookRequest): Promise<InboundMessage[]>;
+  /** Delivery reports carried by the same webhook, if the gateway sends them. */
+  parseDeliveryReports?(req: WebhookRequest): Promise<DeliveryReport[]>;
   /** What the gateway expects back from the webhook. */
   webhookResponse(): Response;
 }
+
+export type DeliveryReport = { providerMessageId: string; status: "DELIVERED" | "FAILED" | "SENT"; error?: string };
 
 export type ProviderConfig = {
   apiKey: string;

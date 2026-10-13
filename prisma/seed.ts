@@ -1,12 +1,14 @@
 /* Demo data for Omega Security. Run: npm run db:seed */
 process.env.TZ = process.env.TIMEZONE || "Africa/Harare";
-import { PrismaClient, type ShiftStatus, type AttendanceStatus, type CheckInType, type SmsType, type IncidentCategory, type Severity } from "@prisma/client";
+import { config as loadEnv } from "dotenv";
+loadEnv();
+import { type ShiftStatus, type AttendanceStatus, type CheckInType, type SmsType, type IncidentCategory, type Severity } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { addDays, addMinutes, setHours, setMinutes, startOfDay, startOfHour, subDays } from "date-fns";
 import { TEMPLATE_DEFS, renderTemplate } from "../src/lib/sms/templates";
 import { SETTING_DEFS } from "../src/lib/settings";
 
-const db = new PrismaClient();
+import { db } from "../src/lib/db";
 const now = new Date();
 const base = startOfHour(now);
 const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;

@@ -1,4 +1,3 @@
-import { createHmac } from "node:crypto";
 import type { SmsProvider, SendResult, WebhookRequest, InboundMessage } from "../provider";
 import { parseBody, providerConfig } from "../provider";
 
@@ -34,7 +33,9 @@ export class TwilioProvider implements SmsProvider {
     if (!cfg.apiSecret || !sig) return !cfg.apiSecret;
     const params = parseBody(req);
     const data = req.url + Object.keys(params).sort().map((k) => k + params[k]).join("");
-    const expected = createHmac("sha1", cfg.apiSecret).update(data).digest("base64");
+    const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(cfg.apiSecret), { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
+    const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
+    const expected = Buffer.from(mac).toString("base64");
     return expected === sig;
   }
 

@@ -54,3 +54,6 @@ export const CATEGORY_LABEL: Record<IncidentCategory, string> = {
   EMERGENCY: "Emergency",
   OTHER: "Other",
 };
+
+export const sevTone = (s: string) => (s === "CRITICAL" || s === "HIGH" ? "critical" : s === "MEDIUM" ? "warn" : "neutral") as "critical" | "warn" | "neutral";
+export const statusTone = (s: string) => (s === "OPEN" ? "critical" : s === "ACKNOWLEDGED" ? "warn" : "ok") as "critical" | "warn" | "ok";

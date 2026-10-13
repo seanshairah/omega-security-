@@ -1,4 +1,6 @@
 // Run one automation tick from the shell or cron:  npm run automation:tick
+import { config } from "dotenv";
+config();
 import { runAutomationTick } from "../src/lib/automation/engine";
 
 runAutomationTick()

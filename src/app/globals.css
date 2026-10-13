@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-ground: #f3f3f1;
+  --color-surface: #ffffff;
+  --color-surface-2: #f8f8f6;
+  --color-line: #e7e6e5;
+  --color-line-strong: #d9d8d6;
+  --color-ink: #161616;
+  --color-ink-2: #616060;
+  --color-ink-3: #8f8e8c;
+
+  --color-accent: #4f9f3a;
+  --color-accent-strong: #437f31;
+  --color-accent-soft: #eaf5e4;
+  --color-accent-bright: #6fbf4b;
+
+  --color-ok: #29a37e;
+  --color-ok-soft: #e4f4ee;
+  --color-warn: #c98a08;
+  --color-warn-soft: #fcf1d9;
+  --color-critical: #e94127;
+  --color-critical-soft: #fde7e3;
+  --color-info: #4d67d5;
+  --color-info-soft: #e8ebfa;
+
+  --radius-card: 16px;
+  --radius-control: 8px;
+  --shadow-float: 0 8px 24px -8px rgb(22 22 22 / 0.14), 0 1px 2px rgb(22 22 22 / 0.06);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  background: var(--color-ground);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+.tnum { font-variant-numeric: tabular-nums; }
+
+::selection { background: #dbeed2; }
+
+input, select, textarea { font: inherit; }
+
+@keyframes fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+.fade-in { animation: fade-in 160ms ease-out; }
+
+.scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+.scroll-thin::-webkit-scrollbar-thumb { background: #d9d8d6; border-radius: 8px; }

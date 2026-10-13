@@ -3,9 +3,11 @@ import { SimulatedProvider } from "./providers/simulated";
 import { AfricasTalkingProvider } from "./providers/africastalking";
 import { TwilioProvider } from "./providers/twilio";
 import { HttpProvider } from "./providers/http";
+import { SendaiProvider } from "./providers/sendai";
 
 const registry: Record<string, () => SmsProvider> = {
   simulated: () => new SimulatedProvider(),
+  sendai: () => new SendaiProvider(),
   africastalking: () => new AfricasTalkingProvider(),
   twilio: () => new TwilioProvider(),
   http: () => new HttpProvider(),

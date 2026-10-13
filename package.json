@@ -20,16 +20,20 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@phosphor-icons/react": "^2.1.10",
+    "@prisma/adapter-neon": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "geist": "^1.7.2",
+    "https-proxy-agent": "^9.1.0",
     "jose": "^6.2.12",
     "next": "^15.5.27",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.0.0",
+    "ws": "^8.22.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -37,8 +41,11 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.2",
+    "dotenv": "^18.0.7",
     "eslint": "^9",
     "eslint-config-next": "^15.5.27",
+    "playwright-core": "^1.64.0",
     "prisma": "^6.19.3",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
