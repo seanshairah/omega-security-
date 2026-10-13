@@ -5,7 +5,7 @@ const ctx = await browser.newContext({ viewport: { width: +w, height: +h }, devi
 const page = await ctx.newPage();
 await page.goto("http://localhost:3000/login");
 await page.fill('input[name=email]', "admin@omegasecurity.co.zw");
-await page.fill('input[name=password]', "Sentinel123!");
+await page.fill("input[name=password]", "Zvesh@2000");
 await Promise.all([page.waitForURL("**/dashboard"), page.click('button[type=submit]')]);
 await page.goto("http://localhost:3000" + path, { waitUntil: "networkidle" });
 if (openMenu) await page.click('button[aria-label="Open menu"]');
