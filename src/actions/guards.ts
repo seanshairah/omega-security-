@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { guardSchema, formToObject, firstIssue } from "@/lib/validation";
 import { nextGuardNo } from "@/lib/services/guards";
 import { actor, auditAs, fail, type ActionState } from "./_helpers";
+import { resolvePhoto } from "@/lib/upload";
 
 function parse(fd: FormData) {
   const r = guardSchema.safeParse(formToObject(fd));
@@ -19,7 +20,8 @@ export async function createGuard(_: ActionState, fd: FormData): Promise<ActionS
   try {
     const user = await actor("ADMIN");
     const data = parse(fd);
-    const guard = await db.guard.create({ data: { ...data, guardNo: await nextGuardNo() } });
+    const photoUrl = (await resolvePhoto(fd, "photoUrl")) ?? null;
+    const guard = await db.guard.create({ data: { ...data, photoUrl, guardNo: await nextGuardNo() } });
     await auditAs(user, "GUARD_CREATED", "Guard", guard.id, { name: `${guard.firstName} ${guard.lastName}`, phone: guard.phone });
     id = guard.id;
   } catch (e) {
@@ -34,7 +36,8 @@ export async function updateGuard(id: string, _: ActionState, fd: FormData): Pro
     const user = await actor("ADMIN");
     const data = parse(fd);
     const before = await db.guard.findUniqueOrThrow({ where: { id } });
-    const guard = await db.guard.update({ where: { id }, data: { ...data, active: data.employmentStatus !== "INACTIVE", deactivatedAt: data.employmentStatus === "INACTIVE" ? before.deactivatedAt ?? new Date() : null } });
+    const photoUrl = await resolvePhoto(fd, "photoUrl");
+    const guard = await db.guard.update({ where: { id }, data: { ...data, ...(photoUrl !== undefined ? { photoUrl } : {}), active: data.employmentStatus !== "INACTIVE", deactivatedAt: data.employmentStatus === "INACTIVE" ? before.deactivatedAt ?? new Date() : null } });
     const changed = Object.fromEntries(Object.entries(data).filter(([k, v]) => String((before as Record<string, unknown>)[k] ?? "") !== String(v ?? "")));
     await auditAs(user, "GUARD_UPDATED", "Guard", guard.id, changed);
   } catch (e) {

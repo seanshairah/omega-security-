@@ -2,6 +2,7 @@ import type { User } from "@prisma/client";
 import { ActionForm } from "@/components/ui/action-form";
 import { Field, Input, Select, FormSection } from "@/components/ui/form";
 import type { ActionState } from "@/actions/_helpers";
+import { PhotoField } from "@/components/photo-field";
 
 export function UserForm({ action, user, submitLabel }: { action: (s: ActionState, fd: FormData) => Promise<ActionState>; user?: User | null; submitLabel: string }) {
   return (
@@ -11,6 +12,7 @@ export function UserForm({ action, user, submitLabel }: { action: (s: ActionStat
         <Field label="Email" required><Input type="email" name="email" defaultValue={user?.email} required /></Field>
         <Field label="Job title"><Input name="title" defaultValue={user?.title ?? ""} /></Field>
         <Field label="Phone"><Input name="phone" defaultValue={user?.phone ?? ""} /></Field>
+        <PhotoField name="avatarUrl" current={user?.avatarUrl} personName={user?.name ?? "New user"} />
       </FormSection>
       <FormSection title="Access" description="Super admins manage users and settings. Admins run operations. Supervisors can view their sites and handle incidents.">
         <Field label="Role" required><Select name="role" defaultValue={user?.role ?? "ADMIN"}><option value="SUPER_ADMIN">Super admin</option><option value="ADMIN">Operations admin</option><option value="SUPERVISOR">Supervisor</option></Select></Field>

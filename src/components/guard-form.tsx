@@ -2,6 +2,7 @@ import type { Guard, Location, User } from "@prisma/client";
 import { ActionForm } from "@/components/ui/action-form";
 import { Field, Input, Select, Textarea, FormSection } from "@/components/ui/form";
 import { dateInputValue } from "@/lib/time";
+import { PhotoField } from "@/components/photo-field";
 import type { ActionState } from "@/actions/_helpers";
 
 type Props = { action: (s: ActionState, fd: FormData) => Promise<ActionState>; guard?: Guard | null; locations: Location[]; supervisors: User[]; submitLabel: string };
@@ -18,7 +19,7 @@ export function GuardForm({ action, guard, locations, supervisors, submitLabel }
         <Field label="Gender"><Select name="gender" defaultValue={g?.gender ?? "MALE"}><option value="MALE">Male</option><option value="FEMALE">Female</option><option value="OTHER">Other</option></Select></Field>
         <Field label="Date of birth"><Input type="date" name="dateOfBirth" defaultValue={g?.dateOfBirth ? dateInputValue(g.dateOfBirth) : ""} /></Field>
         <Field label="Home address" className="sm:col-span-2"><Input name="address" defaultValue={g?.address ?? ""} /></Field>
-        <Field label="Photo URL" className="sm:col-span-2" hint="Optional. A link to a passport-style photo."><Input name="photoUrl" defaultValue={g?.photoUrl ?? ""} placeholder="https://" /></Field>
+        <PhotoField name="photoUrl" current={g?.photoUrl} personName={g ? `${g.firstName} ${g.lastName}` : "New guard"} />
       </FormSection>
       <FormSection title="Emergency contact">
         <Field label="Name"><Input name="emergencyContactName" defaultValue={g?.emergencyContactName ?? ""} /></Field>
