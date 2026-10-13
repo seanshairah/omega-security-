@@ -64,7 +64,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
         </div>
         <div className="min-w-0 space-y-4">
           <Card><CardBody className="pt-5">
-            <Link href={`/guards/${i.guardId}`} className="flex items-center gap-3"><Avatar src={i.guard.photoUrl} name={i.guard.firstName} size={44} /><div><p className="font-semibold text-ink">{i.guard.firstName} {i.guard.lastName}</p><p className="text-[13px] text-ink-2">{i.guard.guardNo} · <a href={`tel:${i.guard.phone}`} className="underline">{formatPhone(i.guard.phone)}</a></p></div></Link>
+            <div className="flex items-center gap-3"><Avatar src={i.guard.photoUrl} name={i.guard.firstName} size={44} /><div><Link href={`/guards/${i.guardId}`} className="font-semibold text-ink hover:underline">{i.guard.firstName} {i.guard.lastName}</Link><p className="text-[13px] text-ink-2">{i.guard.guardNo} · <a href={`tel:${i.guard.phone}`} className="underline">{formatPhone(i.guard.phone)}</a></p></div></div>
             <div className="mt-5 grid grid-cols-2 gap-4">
               <Meta label="Location"><Link href={`/locations/${i.locationId}`} className="hover:underline">{i.location.name}</Link></Meta>
               <Meta label="Client">{i.location.client.name}</Meta>

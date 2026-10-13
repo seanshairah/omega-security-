@@ -11,6 +11,7 @@ import { Select, Input } from "@/components/ui/form";
 import { fmtDate, fmtTime } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 import { activeProviderName } from "@/lib/sms";
+import { Rows, CardRow } from "@/components/ui/rows";
 
 export const metadata = { title: "Message logs" };
 const TYPES = ["ARRIVAL", "ARRIVAL_REMINDER", "WELFARE", "INCIDENT", "ASSISTANCE", "COMPLETION", "HANDOVER", "EMERGENCY", "CLARIFICATION", "GENERAL"];
@@ -51,6 +52,18 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
         </form>
       </div>
       <Card>
+        <Rows cards={
+          rows.length === 0 ? <Empty title="No messages match" /> : rows.map((m) => (
+            <CardRow key={m.id} href={m.shiftId ? `/shifts/${m.shiftId}` : m.guard ? `/guards/${m.guard.id}` : undefined}
+              title={<span className="flex items-center gap-1.5">{m.direction === "OUTBOUND" ? <ArrowUpRightIcon size={13} weight="bold" className="text-ink-3" /> : <ArrowDownLeftIcon size={13} weight="bold" className="text-accent-strong" />}{m.guard ? `${m.guard.firstName} ${m.guard.lastName}` : "Unknown number"}</span>}
+              subtitle={`${fmtDate(m.createdAt)} ${fmtTime(m.createdAt)} · ${m.channel === "SMS" ? "SMS" : m.channel === "WHATSAPP" ? "WhatsApp" : "Email"} · ${m.type.toLowerCase().replace("_", " ")}`}
+              right={<Status tone={tone(m.status)}>{m.status.toLowerCase()}</Status>}>
+              <p className={`mt-2 text-[13px] ${m.direction === "INBOUND" ? "font-medium text-ink" : "text-ink-2"}`}>{m.subject ? <span className="block font-medium text-ink">{m.subject}</span> : null}{m.body}</p>
+              {m.error && <p className="mt-1 text-[12px] text-critical">{m.error}</p>}
+              {m.interpretedAs && <p className="mt-1 text-[12px] text-ink-3">Read as {m.interpretedAs.toLowerCase().replace("_", " ")}</p>}
+            </CardRow>
+          ))
+        } table={
         <Table>
           <THead><tr><th>When</th><th></th><th>Guard</th><th>To / from</th><th>Message</th><th>Channel</th><th>Type</th><th>Read as</th><th>Location</th><th>Status</th></tr></THead>
           <TBody>
@@ -71,6 +84,7 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
             ))}
           </TBody>
         </Table>
+        } />
         {total > take && (
           <div className="flex items-center justify-between border-t border-line px-5 py-3 text-[13px] text-ink-2">
             <span>{(page - 1) * take + 1}–{Math.min(page * take, total)} of {total}</span>
