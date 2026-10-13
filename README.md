@@ -24,7 +24,7 @@ Next.js 15 (App Router, server actions), TypeScript, Tailwind CSS 4, Prisma 6, P
 1. Import the repository in Vercel (framework: Next.js). The build runs `prisma generate && next build`.
 2. Add the environment variables listed below. Use the Neon connection string for `DATABASE_URL`.
 3. Apply the schema once from your machine: `DATABASE_URL=… npx prisma migrate deploy`, then `npm run db:seed` for demo data.
-4. Set `AUTOMATION_INPROCESS=false`. `vercel.json` schedules `/api/automation/tick` every minute; Vercel sends `CRON_SECRET` automatically. Per-minute crons need the Pro plan; on Hobby, point an external cron (cron-job.org, GitHub Actions) at `POST /api/automation/tick` with `Authorization: Bearer $AUTOMATION_SECRET` instead.
+4. Set `AUTOMATION_INPROCESS=false`. The engine must run every minute, and Vercel Hobby only allows daily crons, so `vercel.json` schedules one daily safety run (03:00 UTC) and the per-minute tick comes from an external cron: point cron-job.org, Upstash QStash or a GitHub Actions schedule at `POST https://<your-domain>/api/automation/tick` with header `Authorization: Bearer <AUTOMATION_SECRET>`, every minute. On the Pro plan you can change the schedule in `vercel.json` to `* * * * *` instead.
 5. In the Sendai dashboard, set the inbound and delivery webhooks to `https://<your-domain>/api/sms/webhook/sendai`.
 
 | Variable | Value |
