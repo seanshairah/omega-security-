@@ -11,6 +11,7 @@ import { Select, Input } from "@/components/ui/form";
 import { fmtDate, fmtTime } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 import { activeProviderName } from "@/lib/sms";
+import { Rows, CardRow } from "@/components/ui/rows";
 
 export const metadata = { title: "Message logs" };
 const TYPES = ["ARRIVAL", "ARRIVAL_REMINDER", "WELFARE", "INCIDENT", "ASSISTANCE", "COMPLETION", "HANDOVER", "EMERGENCY", "CLARIFICATION", "GENERAL"];
@@ -43,14 +44,26 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
         <Segments items={[{ href: keep({ direction: "", status: "" }), label: "All", count: counts[0], active: !sp.direction && !sp.status }, { href: keep({ direction: "OUTBOUND", status: "" }), label: "Sent", count: counts[1], active: sp.direction === "OUTBOUND" }, { href: keep({ direction: "INBOUND", status: "" }), label: "Received", count: counts[2], active: sp.direction === "INBOUND" }, { href: keep({ status: "FAILED", direction: "" }), label: "Failed", count: counts[3], active: sp.status === "FAILED", tone: counts[3] ? "critical" : undefined }]} />
         <form className="flex flex-wrap items-center gap-2">
           {sp.direction && <input type="hidden" name="direction" value={sp.direction} />}
-          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search text or number" className="w-52" />
-          <Select name="channel" defaultValue={sp.channel ?? ""} className="w-36"><option value="">Any channel</option><option value="SMS">SMS</option><option value="WHATSAPP">WhatsApp</option><option value="EMAIL">Email</option></Select>
-          <Select name="type" defaultValue={sp.type ?? ""} className="w-44"><option value="">Any type</option>{TYPES.map((t) => <option key={t} value={t}>{t.toLowerCase().replace("_", " ")}</option>)}</Select>
-          <Select name="guardId" defaultValue={sp.guardId ?? ""} className="w-44"><option value="">All guards</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}</Select>
+          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Search text or number" className="w-full sm:w-52" />
+          <Select name="channel" defaultValue={sp.channel ?? ""} className="w-full sm:w-36"><option value="">Any channel</option><option value="SMS">SMS</option><option value="WHATSAPP">WhatsApp</option><option value="EMAIL">Email</option></Select>
+          <Select name="type" defaultValue={sp.type ?? ""} className="w-full sm:w-44"><option value="">Any type</option>{TYPES.map((t) => <option key={t} value={t}>{t.toLowerCase().replace("_", " ")}</option>)}</Select>
+          <Select name="guardId" defaultValue={sp.guardId ?? ""} className="w-full sm:w-44"><option value="">All guards</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}</Select>
           <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Filter</button>
         </form>
       </div>
       <Card>
+        <Rows cards={
+          rows.length === 0 ? <Empty title="No messages match" /> : rows.map((m) => (
+            <CardRow key={m.id} href={m.shiftId ? `/shifts/${m.shiftId}` : m.guard ? `/guards/${m.guard.id}` : undefined}
+              title={<span className="flex items-center gap-1.5">{m.direction === "OUTBOUND" ? <ArrowUpRightIcon size={13} weight="bold" className="text-ink-3" /> : <ArrowDownLeftIcon size={13} weight="bold" className="text-accent-strong" />}{m.guard ? `${m.guard.firstName} ${m.guard.lastName}` : "Unknown number"}</span>}
+              subtitle={`${fmtDate(m.createdAt)} ${fmtTime(m.createdAt)} · ${m.channel === "SMS" ? "SMS" : m.channel === "WHATSAPP" ? "WhatsApp" : "Email"} · ${m.type.toLowerCase().replace("_", " ")}`}
+              right={<Status tone={tone(m.status)}>{m.status.toLowerCase()}</Status>}>
+              <p className={`mt-2 text-[13px] ${m.direction === "INBOUND" ? "font-medium text-ink" : "text-ink-2"}`}>{m.subject ? <span className="block font-medium text-ink">{m.subject}</span> : null}{m.body}</p>
+              {m.error && <p className="mt-1 text-[12px] text-critical">{m.error}</p>}
+              {m.interpretedAs && <p className="mt-1 text-[12px] text-ink-3">Read as {m.interpretedAs.toLowerCase().replace("_", " ")}</p>}
+            </CardRow>
+          ))
+        } table={
         <Table>
           <THead><tr><th>When</th><th></th><th>Guard</th><th>To / from</th><th>Message</th><th>Channel</th><th>Type</th><th>Read as</th><th>Location</th><th>Status</th></tr></THead>
           <TBody>
@@ -71,6 +84,7 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
             ))}
           </TBody>
         </Table>
+        } />
         {total > take && (
           <div className="flex items-center justify-between border-t border-line px-5 py-3 text-[13px] text-ink-2">
             <span>{(page - 1) * take + 1}–{Math.min(page * take, total)} of {total}</span>

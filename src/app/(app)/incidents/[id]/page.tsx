@@ -34,7 +34,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
         </ButtonGroup>
       )} />
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card className={i.category === "EMERGENCY" && open ? "border-critical" : ""}>
             <CardHeader title="Description" action={<span className="flex items-center gap-3"><Status tone={sevTone(i.severity)}>{i.severity.toLowerCase()}</Status><Status tone={statusTone(i.status)} pulse={i.category === "EMERGENCY" && i.status === "OPEN"}>{i.status.toLowerCase()}</Status></span>} />
             <CardBody><p className="whitespace-pre-wrap text-[14px] leading-relaxed text-ink">{i.description}</p></CardBody>
@@ -62,9 +62,9 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
             </Card>
           )}
         </div>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card><CardBody className="pt-5">
-            <Link href={`/guards/${i.guardId}`} className="flex items-center gap-3"><Avatar src={i.guard.photoUrl} name={i.guard.firstName} size={44} /><div><p className="font-semibold text-ink">{i.guard.firstName} {i.guard.lastName}</p><p className="text-[13px] text-ink-2">{i.guard.guardNo} · <a href={`tel:${i.guard.phone}`} className="underline">{formatPhone(i.guard.phone)}</a></p></div></Link>
+            <div className="flex items-center gap-3"><Avatar src={i.guard.photoUrl} name={i.guard.firstName} size={44} /><div><Link href={`/guards/${i.guardId}`} className="font-semibold text-ink hover:underline">{i.guard.firstName} {i.guard.lastName}</Link><p className="text-[13px] text-ink-2">{i.guard.guardNo} · <a href={`tel:${i.guard.phone}`} className="underline">{formatPhone(i.guard.phone)}</a></p></div></div>
             <div className="mt-5 grid grid-cols-2 gap-4">
               <Meta label="Location"><Link href={`/locations/${i.locationId}`} className="hover:underline">{i.location.name}</Link></Meta>
               <Meta label="Client">{i.location.client.name}</Meta>

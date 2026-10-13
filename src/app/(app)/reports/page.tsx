@@ -54,7 +54,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
             </TBody>
           </Table>
         </Card>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="By client" />
             <Table>

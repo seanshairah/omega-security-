@@ -61,6 +61,11 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4 scroll-thin">
+        {!collapsed && (
+          <form action="/guards" className="mb-3 lg:hidden">
+            <input name="q" placeholder="Search guards" className="h-9 w-full rounded-[var(--radius-control)] border border-line bg-surface px-3 text-sm placeholder:text-ink-3 focus:border-accent focus:outline-none" />
+          </form>
+        )}
         <Link href="/dashboard" className={cn("mb-1 flex h-9 items-center gap-2.5 rounded-[9px] px-2.5 text-[14px] font-medium", path === "/dashboard" ? "bg-surface-2 text-ink" : "text-ink-2 hover:bg-surface-2 hover:text-ink", collapsed && "justify-center px-0")} title="Home">
           <HouseIcon size={18} weight="fill" className="shrink-0" />
           {!collapsed && "Home"}

@@ -30,14 +30,14 @@ export function Simulator({ shifts }: { shifts: Shift[] }) {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[380px_1fr]">
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         <Card>
           <CardHeader title="Guard's phone" description="Pick a live shift and send what the guard would type." />
           <CardBody>
             <Select value={sel} onChange={(e) => setSel(e.target.value)}>{shifts.map((s) => <option key={s.id} value={s.id}>{s.guardName} · {s.location} · {s.start}–{s.end}</option>)}</Select>
             {shift && (
-              <div className="mt-4 rounded-[20px] border-[6px] border-[#2a2a2a] bg-[#f6f6f4] p-3">
-                <div className="mb-2 flex items-center justify-between px-1 text-[11px] text-ink-3"><span className="flex items-center gap-1"><DeviceMobileIcon size={12} weight="fill" /> {shift.phone}</span><span>{shift.status} · awaiting {shift.pending === "NONE" ? "nothing" : shift.pending.toLowerCase().replace("_", " ")}</span></div>
+              <div className="mt-4 max-w-full overflow-hidden rounded-[20px] border-[6px] border-[#2a2a2a] bg-[#f6f6f4] p-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 px-1 text-[11px] text-ink-3"><span className="flex items-center gap-1"><DeviceMobileIcon size={12} weight="fill" /> {shift.phone}</span><span className="truncate">{shift.status} · awaiting {shift.pending === "NONE" ? "nothing" : shift.pending.toLowerCase().replace("_", " ")}</span></div>
                 <div className="h-72 space-y-2 overflow-y-auto scroll-thin px-1">
                   {shift.messages.length === 0 && <p className="pt-10 text-center text-[12px] text-ink-3">No messages yet. Run the engine to send the arrival check.</p>}
                   {shift.messages.map((m) => (
@@ -54,7 +54,7 @@ export function Simulator({ shifts }: { shifts: Shift[] }) {
           </CardBody>
         </Card>
       </div>
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         <Card>
           <CardHeader title="Automation engine" description="The engine runs every minute on its own. Run it now, or pretend time has passed to reach the next step." action={
             <ButtonGroup>

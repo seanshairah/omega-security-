@@ -37,11 +37,11 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
         <Segments items={[{ href: keep({ range: "today" }), label: "Today", active: range === "today" }, { href: keep({ range: "yesterday" }), label: "Yesterday", active: range === "yesterday" }, { href: keep({ range: "week" }), label: "This week", active: range === "week" }, { href: keep({ range: "month" }), label: "This month", active: range === "month" }, { href: keep({ range: "custom" }), label: "Custom", active: range === "custom" }]} />
         <form className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="range" value={range} />
-          {range === "custom" && <><Input type="date" name="from" defaultValue={sp.from ?? dateInputValue(from)} className="w-40" /><Input type="date" name="to" defaultValue={sp.to ?? dateInputValue(now)} className="w-40" /></>}
-          <Select name="clientId" defaultValue={sp.clientId ?? ""} className="w-44"><option value="">All clients</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
-          <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-48"><option value="">All locations</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
-          <Select name="guardId" defaultValue={sp.guardId ?? ""} className="w-44"><option value="">All guards</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}</Select>
-          <Select name="status" defaultValue={sp.status ?? ""} className="w-40"><option value="">Any status</option>{Object.entries(ATTENDANCE_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</Select>
+          {range === "custom" && <><Input type="date" name="from" defaultValue={sp.from ?? dateInputValue(from)} className="w-full sm:w-40" /><Input type="date" name="to" defaultValue={sp.to ?? dateInputValue(now)} className="w-full sm:w-40" /></>}
+          <Select name="clientId" defaultValue={sp.clientId ?? ""} className="w-full sm:w-44"><option value="">All clients</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select>
+          <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-full sm:w-48"><option value="">All locations</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
+          <Select name="guardId" defaultValue={sp.guardId ?? ""} className="w-full sm:w-44"><option value="">All guards</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName}</option>)}</Select>
+          <Select name="status" defaultValue={sp.status ?? ""} className="w-full sm:w-40"><option value="">Any status</option>{Object.entries(ATTENDANCE_LABEL).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</Select>
           <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Apply</button>
         </form>
       </div>

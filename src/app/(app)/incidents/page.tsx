@@ -10,6 +10,7 @@ import { Status } from "@/components/ui/status";
 import { LinkButton } from "@/components/ui/button";
 import { Select } from "@/components/ui/form";
 import { fmtShort } from "@/lib/time";
+import { Rows, CardRow } from "@/components/ui/rows";
 
 export const metadata = { title: "Incidents" };
 
@@ -33,14 +34,21 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Pr
       <PageHeader title="Incidents" description="Everything guards reported by SMS, plus incidents logged by supervisors." actions={<LinkButton href="/incidents/new" variant="primary">Log incident</LinkButton>} />
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <Segments items={[{ href: "/incidents", label: "Open", count: counts[0], active: f === "open", tone: "critical" }, { href: "/incidents?f=resolved", label: "Resolved", active: f === "resolved", tone: "ok" }, { href: "/incidents?f=critical", label: "Critical", count: counts[1], active: f === "critical" }, { href: "/incidents?f=all", label: "All", count: counts[2], active: f === "all" }]} />
-        <form className="flex items-center gap-2">
+        <form className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="f" value={f} />
-          <Select name="category" defaultValue={sp.category ?? ""} className="w-48"><option value="">Any category</option>{Object.entries(CATEGORY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
-          <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-52"><option value="">All locations</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
+          <Select name="category" defaultValue={sp.category ?? ""} className="w-full sm:w-48"><option value="">Any category</option>{Object.entries(CATEGORY_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select>
+          <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-full sm:w-52"><option value="">All locations</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
           <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Filter</button>
         </form>
       </div>
       <Card>
+        <Rows cards={
+          rows.length === 0 ? <Empty title="No incidents" /> : rows.map((i) => (
+            <CardRow key={i.id} href={`/incidents/${i.id}`} tone={i.category === "EMERGENCY" && (i.status === "OPEN" || i.status === "ACKNOWLEDGED") ? "critical" : undefined}
+              title={`${i.incidentNo} · ${CATEGORY_LABEL[i.category]}`} subtitle={i.description} right={<Status tone={statusTone(i.status)}>{i.status.toLowerCase()}</Status>}
+              meta={[{ label: "When", value: fmtShort(i.occurredAt) }, { label: "Severity", value: <Status tone={sevTone(i.severity)}>{i.severity.toLowerCase()}</Status> }, { label: "Guard", value: `${i.guard.firstName} ${i.guard.lastName}` }, { label: "Location", value: i.location.name }]} />
+          ))
+        } table={
         <Table>
           <THead><tr><th>Incident</th><th>When</th><th>Guard</th><th>Location</th><th>Category</th><th>Severity</th><th>Supervisor</th><th>Status</th></tr></THead>
           <TBody>
@@ -59,6 +67,7 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Pr
             ))}
           </TBody>
         </Table>
+        } />
       </Card>
     </div>
   );

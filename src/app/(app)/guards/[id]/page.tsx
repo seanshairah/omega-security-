@@ -57,7 +57,7 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
       )} />
 
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardBody className="pt-5">
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-7">
@@ -135,7 +135,7 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardBody className="pt-5">
               <div className="flex items-center gap-3"><Avatar src={g.photoUrl} name={name} size={56} /><div><p className="font-semibold text-ink">{name}</p><Status tone={tone[live]}>{live === "DEPLOYED" && deployed ? `Deployed · ${deployed.location.name}` : GUARD_STATUS_LABEL[live]}</Status></div></div>

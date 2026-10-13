@@ -36,10 +36,10 @@ export default async function SettingsPage() {
       <Card>
         <CardHeader title="SMS gateway" description="Set through environment variables so secrets never live in the database." action={<Status tone={provider === "simulated" ? "neutral" : sendai?.ok && usable ? "ok" : sendai?.ok ? "warn" : "critical"}>{provider === "simulated" ? "Simulated" : sendai?.ok ? (usable ? "Connected" : "Connected · not ready to send") : "Not connected"}</Status>} />
         <CardBody>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Meta label="Provider">{provider}</Meta>
             <Meta label="Sender ID">{senderId || "—"}</Meta>
-            <Meta label="Webhook URL"><code className="text-[12px]">/api/sms/webhook/{provider}</code></Meta>
+            <Meta label="Webhook URL"><code className="break-all text-[12px]">/api/sms/webhook/{provider}</code></Meta>
             <Meta label="Supported">{PROVIDER_NAMES.join(", ")}</Meta>
           </div>
           {sendai && (

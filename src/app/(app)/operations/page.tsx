@@ -12,6 +12,8 @@ import { ShiftStatusLabel } from "@/components/shift-status";
 import { LinkButton } from "@/components/ui/button";
 import { fmtTime, ago } from "@/lib/time";
 import { cn } from "@/lib/cn";
+import { Rows, CardRow } from "@/components/ui/rows";
+import { Empty as EmptyState } from "@/components/ui/table";
 
 export const metadata = { title: "Active operations" };
 
@@ -48,6 +50,19 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
         ...(groups.watched.length ? [{ href: "/operations?f=watched", label: "Watched", count: groups.watched.length, active: f === "watched", tone: "warn" as const }] : []),
       ]} />
       <Card>
+        <Rows cards={
+          rows.length === 0 ? <EmptyState title="No shifts here" body="Shifts appear as they start." /> : rows.map((s) => (
+            <CardRow key={s.id} href={`/shifts/${s.id}`} tone={s.status === "CRITICAL" ? "critical" : undefined}
+              avatar={<Avatar src={s.guard.photoUrl} name={s.guard.firstName} size={36} />}
+              title={<>{s.guard.firstName} {s.guard.lastName}{s.guard.watched && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-warn">watched</span>}</>}
+              subtitle={`${s.location.name} · ${fmtTime(s.startAt)}–${fmtTime(s.endAt)}`}
+              right={<ShiftStatusLabel status={s.status} />}
+              meta={[
+                { label: "Arrival", value: s.attendance?.arrivalConfirmedAt ? fmtTime(s.attendance.arrivalConfirmedAt) : s.status === "SCHEDULED" ? "—" : "Not confirmed" },
+                { label: "Mid-shift", value: welfare(s) },
+              ]} />
+          ))
+        } table={
         <Table>
           <THead><tr><th>Guard</th><th>Location</th><th>Shift</th><th>Arrival</th><th>Mid-shift</th><th>Status</th><th>Last update</th><th></th></tr></THead>
           <TBody>
@@ -71,6 +86,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
             ))}
           </TBody>
         </Table>
+        } />
       </Card>
     </div>
   );

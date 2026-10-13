@@ -12,6 +12,7 @@ import { Status } from "@/components/ui/status";
 import { LinkButton } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/form";
 import { formatPhone } from "@/lib/phone";
+import { Rows, CardRow } from "@/components/ui/rows";
 
 export const metadata = { title: "Guards" };
 
@@ -50,13 +51,25 @@ export default async function GuardsPage({ searchParams }: { searchParams: Promi
         ]} />
         <form className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="f" value={f} />
-          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Name, phone, ID or guard no." className="w-56" />
-          <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-48"><option value="">Any location</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
-          <Select name="supervisorId" defaultValue={sp.supervisorId ?? ""} className="w-44"><option value="">Any supervisor</option>{supervisors.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select>
+          <Input name="q" defaultValue={sp.q ?? ""} placeholder="Name, phone, ID or guard no." className="w-full sm:w-56" />
+          <Select name="locationId" defaultValue={sp.locationId ?? ""} className="w-full sm:w-48"><option value="">Any location</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</Select>
+          <Select name="supervisorId" defaultValue={sp.supervisorId ?? ""} className="w-full sm:w-44"><option value="">Any supervisor</option>{supervisors.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select>
           <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Search</button>
         </form>
       </div>
       <Card>
+        <Rows cards={
+          guards.length === 0 ? <Empty title="No guards match" /> : guards.map((g) => {
+            const live = guardLiveStatus(g, deployedMap.has(g.id));
+            return (
+              <CardRow key={g.id} href={`/guards/${g.id}`} avatar={<Avatar src={g.photoUrl} name={g.firstName} size={36} />}
+                title={<>{g.firstName} {g.lastName}{g.watched && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-warn">watched</span>}</>}
+                subtitle={`${g.guardNo} · ${formatPhone(g.phone)}`}
+                right={<Status tone={tone[live]}>{live === "DEPLOYED" ? "Deployed" : GUARD_STATUS_LABEL[live]}</Status>}
+                meta={[{ label: "Usual location", value: g.homeLocation?.name ?? "—" }, { label: "Supervisor", value: g.supervisor?.name ?? "—" }]} />
+            );
+          })
+        } table={
         <Table>
           <THead><tr><th>Guard</th><th>Phone</th><th>National ID</th><th>Usual location</th><th>Supervisor</th><th>Employment</th><th>Current status</th></tr></THead>
           <TBody>
@@ -77,6 +90,7 @@ export default async function GuardsPage({ searchParams }: { searchParams: Promi
             })}
           </TBody>
         </Table>
+        } />
       </Card>
     </div>
   );

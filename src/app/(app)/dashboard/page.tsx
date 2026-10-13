@@ -29,7 +29,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const icon = (s: string) => s === "CRITICAL" ? SirenIcon : s === "ASSISTANCE" ? FirstAidIcon : s === "INCIDENT" ? WarningOctagonIcon : s === "NOT_CONFIRMED" ? UserMinusIcon : ClockCountdownIcon;
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard title="Guards on duty" description={`Confirmed on post right now across ${o.activeShifts} active shifts.`} value={o.onDuty} delta={last(series.onDuty)} series={series.onDuty} tone="ok" />
         <KpiCard title="Not reported" description="Shifts in the last 24 hours with no arrival confirmed after escalation." value={o.notReported} delta={last(series.notReported)} deltaGoodWhen="down" series={series.notReported} tone={o.notReported > 0 ? "critical" : "neutral"} />
