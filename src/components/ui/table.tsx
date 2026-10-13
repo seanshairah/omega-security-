@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 
 export function Table({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-x-auto scroll-thin", className)}>
+    <div className={cn("max-w-full overflow-x-auto scroll-thin", className)}>
       <table className="w-full border-collapse text-[13px]">{children}</table>
     </div>
   );

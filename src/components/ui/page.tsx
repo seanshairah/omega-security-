@@ -17,7 +17,7 @@ export function Meta({ label, children, className }: { label: string; children: 
   return (
     <div className={cn("min-w-0", className)}>
       <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">{label}</div>
-      <div className="mt-1 text-[14px] text-ink">{children}</div>
+      <div className="mt-1 break-words text-[14px] text-ink">{children}</div>
     </div>
   );
 }
@@ -26,7 +26,7 @@ export function Meta({ label, children, className }: { label: string; children: 
 export function Segments({ items, className }: { items: { href: string; label: string; count?: number; active: boolean; tone?: "ok" | "warn" | "critical" | "neutral" }[]; className?: string }) {
   const dot = { ok: "bg-ok", warn: "bg-warn", critical: "bg-critical", neutral: "border-[1.5px] border-ink-3" };
   return (
-    <div className={cn("inline-flex max-w-full items-center gap-0.5 overflow-x-auto rounded-[10px] border border-line bg-surface-2 p-0.5", className)}>
+    <div className={cn("flex max-w-full items-center gap-0.5 overflow-x-auto rounded-[10px] border border-line bg-surface-2 p-0.5 scroll-thin sm:inline-flex", className)}>
       {items.map((it) => (
         <a key={it.href} href={it.href} className={cn("inline-flex h-7 items-center gap-1.5 whitespace-nowrap rounded-[8px] px-2.5 text-[13px] font-medium transition-colors", it.active ? "bg-surface text-ink shadow-[0_1px_2px_rgb(22_22_22/0.08)] border border-line" : "text-ink-2 hover:text-ink")}>
           {it.tone && <span className={cn("h-1.5 w-1.5 rounded-full", dot[it.tone])} />}

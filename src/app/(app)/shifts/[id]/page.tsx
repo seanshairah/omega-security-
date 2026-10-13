@@ -48,7 +48,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
       } />
 
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="Timeline" description="Every automated check, reply and decision on this shift, in order." action={<ShiftStatusLabel status={s.status} />} />
             <CardBody><Timeline events={s.checkIns} showDates={s.durationMinutes > 12 * 60} /></CardBody>
@@ -60,7 +60,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
             <div className="border-t border-line px-5 py-4">
               <form action={async (fd) => { "use server"; const n = String(fd.get("note") ?? "").trim(); if (n) await addShiftNote(s.id, n); }} className="flex gap-2">
                 <input name="note" placeholder="Add a note to the timeline" className="h-9 flex-1 rounded-[8px] border border-line px-3 text-sm placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
-                <button className="h-9 rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Add note</button>
+                <button className="h-9 whitespace-nowrap rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Add note</button>
               </form>
             </div>
           </Card>
@@ -98,7 +98,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardBody className="pt-5">
               <Link href={`/guards/${s.guardId}`} className="flex items-center gap-3">

@@ -10,6 +10,7 @@ import { Status } from "@/components/ui/status";
 import { LinkButton } from "@/components/ui/button";
 import { Select } from "@/components/ui/form";
 import { fmtShort } from "@/lib/time";
+import { Rows, CardRow } from "@/components/ui/rows";
 
 export const metadata = { title: "Incidents" };
 
@@ -41,6 +42,13 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Pr
         </form>
       </div>
       <Card>
+        <Rows cards={
+          rows.length === 0 ? <Empty title="No incidents" /> : rows.map((i) => (
+            <CardRow key={i.id} href={`/incidents/${i.id}`} tone={i.category === "EMERGENCY" && (i.status === "OPEN" || i.status === "ACKNOWLEDGED") ? "critical" : undefined}
+              title={`${i.incidentNo} · ${CATEGORY_LABEL[i.category]}`} subtitle={i.description} right={<Status tone={statusTone(i.status)}>{i.status.toLowerCase()}</Status>}
+              meta={[{ label: "When", value: fmtShort(i.occurredAt) }, { label: "Severity", value: <Status tone={sevTone(i.severity)}>{i.severity.toLowerCase()}</Status> }, { label: "Guard", value: `${i.guard.firstName} ${i.guard.lastName}` }, { label: "Location", value: i.location.name }]} />
+          ))
+        } table={
         <Table>
           <THead><tr><th>Incident</th><th>When</th><th>Guard</th><th>Location</th><th>Category</th><th>Severity</th><th>Supervisor</th><th>Status</th></tr></THead>
           <TBody>
@@ -59,6 +67,7 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Pr
             ))}
           </TBody>
         </Table>
+        } />
       </Card>
     </div>
   );

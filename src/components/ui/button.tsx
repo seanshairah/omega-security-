@@ -30,7 +30,7 @@ export function LinkButton({ variant = "secondary", size = "md", className, ...p
 /** Several related actions in a row become one group. */
 export function ButtonGroup({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("inline-flex rounded-[var(--radius-control)] border border-line bg-surface [&>*]:rounded-none [&>*]:border-0 [&>*:not(:last-child)]:border-r [&>*:not(:last-child)]:border-line [&>*:first-child]:rounded-l-[7px] [&>*:last-child]:rounded-r-[7px]", className)}>
+    <div className={cn("flex flex-wrap gap-2 sm:inline-flex sm:gap-0 sm:rounded-[var(--radius-control)] sm:border sm:border-line sm:bg-surface sm:[&>*]:rounded-none sm:[&>*]:border-0 sm:[&>*:not(:last-child)]:border-r sm:[&>*:not(:last-child)]:border-line sm:[&>*:first-child]:rounded-l-[7px] sm:[&>*:last-child]:rounded-r-[7px]", className)}>
       {children}
     </div>
   );

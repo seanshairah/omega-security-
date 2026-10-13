@@ -20,7 +20,7 @@ export default async function TemplatesPage() {
     <div className="max-w-4xl">
       <PageHeader title="Message templates" description="What guards receive at each step. Variables in double braces are filled in from the shift." />
       <div className="mb-4 rounded-[12px] border border-line bg-surface px-4 py-3 text-[13px] text-ink-2">Variables: {["guard_name", "location", "start_time", "end_time", "supervisor_name", "date", "company", "other_guard"].map((v) => <code key={v} className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[12px] text-ink">{`{{${v}}}`}</code>)}</div>
-      <div className="space-y-4">
+      <div className="min-w-0 space-y-4">
         {TEMPLATE_DEFS.map((t) => {
           const body = map.get(t.key)?.body ?? t.body;
           const changed = body !== t.body;

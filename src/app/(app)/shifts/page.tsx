@@ -14,6 +14,7 @@ import { Status } from "@/components/ui/status";
 import { fmtTime, fmtDate, fmtDuration } from "@/lib/time";
 import { setRecurrenceActive } from "@/actions/shifts";
 import { ConfirmButton } from "@/components/ui/confirm-button";
+import { Rows, CardRow } from "@/components/ui/rows";
 
 export const metadata = { title: "Shifts" };
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -88,6 +89,12 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
         </Card>
       ) : (
         <Card>
+          <Rows cards={
+            shifts.length === 0 ? <Empty title="No shifts match" /> : shifts.map((s) => (
+              <CardRow key={s.id} href={`/shifts/${s.id}`} title={`${s.guard.firstName} ${s.guard.lastName}`} subtitle={`${s.location.name}`} right={<ShiftStatusLabel status={s.status} />}
+                meta={[{ label: "Date", value: fmtDate(s.startAt) }, { label: "Hours", value: `${fmtTime(s.startAt)}–${fmtTime(s.endAt)} · ${fmtDuration(s.durationMinutes)}` }, { label: "Arrival", value: s.attendance?.arrivalConfirmedAt ? fmtTime(s.attendance.arrivalConfirmedAt) : "—" }, { label: "Supervisor", value: s.supervisor?.name ?? "—" }]} />
+            ))
+          } table={
           <Table>
             <THead><tr><th>Date</th><th>Guard</th><th>Location</th><th>Hours</th><th>Duration</th><th>Supervisor</th><th>Arrival</th><th>Status</th></tr></THead>
             <TBody>
@@ -106,6 +113,7 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
               ))}
             </TBody>
           </Table>
+          } />
         </Card>
       )}
     </div>

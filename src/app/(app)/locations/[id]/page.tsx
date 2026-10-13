@@ -41,7 +41,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
         </ButtonGroup>
       )} />
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader title="On post now" description={`${onPost.length} of ${l.requiredGuards} required`} action={<Status tone={onPost.length >= l.requiredGuards ? "ok" : onPost.length ? "warn" : "critical"}>{onPost.length >= l.requiredGuards ? "Fully covered" : onPost.length ? "Under-covered" : "No cover"}</Status>} />
             <CardBody className="pt-3">
@@ -79,7 +79,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
             </Table>
           </Card>
         </div>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card><CardBody className="pt-5">
             <div className="grid grid-cols-2 gap-4">
               <Meta label="Site code">{l.code}</Meta><Meta label="Type">{l.siteType ?? "—"}</Meta>

@@ -1,7 +1,7 @@
 import { cn } from "@/lib/cn";
 
 export function Card({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <section className={cn("rounded-[var(--radius-card)] border border-line bg-surface", className)}>{children}</section>;
+  return <section className={cn("min-w-0 max-w-full rounded-[var(--radius-card)] border border-line bg-surface", className)}>{children}</section>;
 }
 
 export function CardHeader({ title, description, action, className }: { title: React.ReactNode; description?: React.ReactNode; action?: React.ReactNode; className?: string }) {
