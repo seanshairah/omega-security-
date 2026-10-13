@@ -7,13 +7,22 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 /**
- * Neon (serverless Postgres) is reached over HTTPS/WebSocket on port 443 via @prisma/adapter-neon,
- * which also works behind an HTTPS proxy. Any other Postgres uses Prisma's native engine on 5432.
+ * By default Prisma's native engine connects over TCP (port 5432), which is what Vercel and any
+ * normal host should use. Set DATABASE_OVER_HTTP=true (or run behind an HTTPS proxy that blocks
+ * 5432) to reach Neon through @prisma/adapter-neon over HTTPS/WebSocket on port 443 instead.
  */
+export function usesNeonHttp(): boolean {
+  const url = process.env.DATABASE_URL ?? "";
+  if (!/neon\.tech/.test(url)) return false;
+  if (process.env.DATABASE_OVER_HTTP === "true") return true;
+  if (process.env.DATABASE_OVER_HTTP === "false") return false;
+  return Boolean(process.env.HTTPS_PROXY || process.env.https_proxy);
+}
+
 function createClient(): PrismaClient {
   const url = process.env.DATABASE_URL ?? "";
   const log: ("warn" | "error")[] = ["warn", "error"];
-  if (!/neon\.tech/.test(url)) return new PrismaClient({ log });
+  if (!usesNeonHttp()) return new PrismaClient({ log });
 
   const proxy = process.env.HTTPS_PROXY || process.env.https_proxy;
   if (proxy) {
