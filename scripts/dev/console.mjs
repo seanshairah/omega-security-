@@ -5,7 +5,7 @@ page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") 
 page.on("pageerror", (e) => console.log("PAGEERROR", e.message.slice(0, 400)));
 await page.goto("http://localhost:3000/login");
 await page.fill('input[name=email]', "admin@omegasecurity.co.zw");
-await page.fill('input[name=password]', "Sentinel123!");
+await page.fill("input[name=password]", "Zvesh@2000");
 await Promise.all([page.waitForURL("**/dashboard"), page.click('button[type=submit]')]);
 await page.waitForTimeout(4000);
 console.log("svg paths in chart:", await page.locator(".recharts-line").count());
