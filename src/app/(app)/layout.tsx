@@ -1,0 +1,30 @@
+import { requireUser } from "@/lib/auth/rbac";
+import { db } from "@/lib/db";
+import { unreadCount } from "@/lib/notifications";
+import { AppShell } from "@/components/layout/app-shell";
+import { EmergencyBanner } from "@/components/layout/emergency-banner";
+import { activeProviderName } from "@/lib/sms";
+
+export const dynamic = "force-dynamic";
+
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const user = await requireUser();
+  const [attention, incidents, unread, critical] = await Promise.all([
+    db.shift.count({ where: { status: { in: ["LATE", "NOT_CONFIRMED", "ASSISTANCE", "INCIDENT", "CRITICAL"] } } }),
+    db.incident.count({ where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } } }),
+    unreadCount(),
+    db.shift.count({ where: { status: "CRITICAL" } }),
+  ]);
+  const provider = activeProviderName();
+  const systemStatus = critical > 0
+    ? { tone: "critical" as const, label: `${critical} emergency${critical > 1 ? " alerts" : " alert"}` }
+    : attention > 0
+      ? { tone: "warn" as const, label: `${attention} need${attention === 1 ? "s" : ""} attention` }
+      : { tone: "ok" as const, label: provider === "simulated" ? "All systems operational · SMS simulated" : "All systems operational" };
+
+  return (
+    <AppShell counts={{ attention, incidents }} role={user.role} user={user} unread={unread} systemStatus={systemStatus} banner={<EmergencyBanner />}>
+      {children}
+    </AppShell>
+  );
+}

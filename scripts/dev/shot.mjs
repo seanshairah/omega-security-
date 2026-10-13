@@ -1,0 +1,14 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs";
+const [,, path, out, w = "1440", h = "960"] = process.argv;
+const exe = fs.existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : fs.readdirSync("/opt/pw-browsers").filter(d=>d.startsWith("chromium")).map(d=>`/opt/pw-browsers/${d}/chrome-linux/chrome`).find(p=>fs.existsSync(p));
+const browser = await chromium.launch({ executablePath: exe, args: ["--no-sandbox"] });
+const ctx = await browser.newContext({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1 });
+const page = await ctx.newPage();
+await page.goto("http://localhost:3000/login");
+await page.fill('input[name=email]', "admin@omegasecurity.co.zw");
+await page.fill('input[name=password]', "Sentinel123!");
+await Promise.all([page.waitForURL("**/dashboard"), page.click('button[type=submit]')]);
+await page.goto("http://localhost:3000" + path, { waitUntil: "networkidle" });
+await page.screenshot({ path: out, fullPage: true });
+await browser.close();

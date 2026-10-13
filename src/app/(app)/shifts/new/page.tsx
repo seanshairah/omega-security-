@@ -1,0 +1,43 @@
+import { requireUser } from "@/lib/auth/rbac";
+import { db } from "@/lib/db";
+import { createShift } from "@/actions/shifts";
+import { PageHeader } from "@/components/ui/page";
+import { Card, CardBody } from "@/components/ui/card";
+import { ActionForm } from "@/components/ui/action-form";
+import { Field, Input, Select, Textarea, FormSection } from "@/components/ui/form";
+import { ShiftTimePicker } from "@/components/shift-time-picker";
+import { dateInputValue } from "@/lib/time";
+
+export const metadata = { title: "New shift" };
+
+export default async function NewShiftPage({ searchParams }: { searchParams: Promise<{ guardId?: string; locationId?: string; date?: string }> }) {
+  await requireUser("ADMIN");
+  const sp = await searchParams;
+  const [guards, locations, supervisors] = await Promise.all([
+    db.guard.findMany({ where: { active: true, employmentStatus: "ACTIVE" }, orderBy: { lastName: "asc" } }),
+    db.location.findMany({ where: { active: true }, include: { client: true }, orderBy: { name: "asc" } }),
+    db.user.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+  ]);
+  return (
+    <div className="max-w-4xl">
+      <PageHeader title="New shift" description="Assign a guard to a site for one shift. Overnight shifts end the next day automatically." />
+      <Card><CardBody>
+        <ActionForm action={createShift} submitLabel="Create shift">
+          <FormSection title="Who and where" description="The guard receives all automated checks on their registered phone.">
+            <Field label="Guard" required><Select name="guardId" defaultValue={sp.guardId ?? ""} required><option value="" disabled>Select a guard</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName} · {g.guardNo}</option>)}</Select></Field>
+            <Field label="Location" required><Select name="locationId" defaultValue={sp.locationId ?? ""} required><option value="" disabled>Select a site</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name} · {l.client.name}</option>)}</Select></Field>
+            <Field label="Supervisor" hint="Defaults to the site's supervisor."><Select name="supervisorId" defaultValue=""><option value="">Site supervisor</option>{supervisors.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></Field>
+          </FormSection>
+          <FormSection title="When" description="Pick a preset or set custom times. The duration and welfare-check midpoint are calculated.">
+            <Field label="Date" required><Input type="date" name="date" defaultValue={sp.date ?? dateInputValue(new Date())} required /></Field>
+            <div className="sm:col-span-2"><ShiftTimePicker /></div>
+          </FormSection>
+          <FormSection title="Instructions" description="Shown on the shift record. Site instructions are included automatically.">
+            <Field label="Shift instructions" className="sm:col-span-2"><Textarea name="instructions" placeholder="Anything specific to this shift" /></Field>
+            <Field label="Internal notes" className="sm:col-span-2"><Textarea name="notes" className="min-h-16" placeholder="Not shown to the guard" /></Field>
+          </FormSection>
+        </ActionForm>
+      </CardBody></Card>
+    </div>
+  );
+}

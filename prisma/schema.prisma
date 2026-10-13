@@ -1,0 +1,521 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Users & access ─────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  SUPERVISOR
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(ADMIN)
+  phone        String?
+  title        String?
+  avatarUrl    String?
+  active       Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  supervisedGuards    Guard[]      @relation("GuardSupervisor")
+  supervisedLocations Location[]   @relation("LocationSupervisor")
+  supervisedShifts    Shift[]      @relation("ShiftSupervisor")
+  supervisedIncidents Incident[]   @relation("IncidentSupervisor")
+  recurrences         ShiftRecurrence[]
+  auditLogs           AuditLog[]
+}
+
+// ───────────────────────── Clients & locations ─────────────────────────
+
+model Client {
+  id           String     @id @default(cuid())
+  code         String     @unique
+  name         String
+  industry     String?
+  contactName  String?
+  contactPhone String?
+  contactEmail String?
+  address      String?
+  notes        String?
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  locations    Location[]
+}
+
+enum ShiftPattern {
+  DAY_8
+  NIGHT_8
+  DAY_12
+  NIGHT_12
+  CUSTOM
+}
+
+model Location {
+  id                  String       @id @default(cuid())
+  code                String       @unique
+  name                String
+  clientId            String
+  client              Client       @relation(fields: [clientId], references: [id])
+  siteType            String?
+  address             String
+  contactName         String?
+  contactPhone        String?
+  requiredGuards      Int          @default(1)
+  shiftPattern        ShiftPattern @default(NIGHT_12)
+  supervisorId        String?
+  supervisor          User?        @relation("LocationSupervisor", fields: [supervisorId], references: [id])
+  specialInstructions String?
+  latitude            Float?
+  longitude           Float?
+  active              Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  guards      Guard[]
+  shifts      Shift[]
+  incidents   Incident[]
+  recurrences ShiftRecurrence[]
+  smsMessages SmsMessage[]
+
+  @@index([clientId])
+  @@index([active])
+}
+
+// ───────────────────────── Guards ─────────────────────────
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  SUSPENDED
+  INACTIVE
+}
+
+model Guard {
+  id                    String           @id @default(cuid())
+  guardNo               String           @unique
+  firstName             String
+  lastName              String
+  phone                 String           @unique
+  nationalId            String           @unique
+  gender                Gender           @default(MALE)
+  dateOfBirth           DateTime?
+  address               String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  employmentStatus      EmploymentStatus @default(ACTIVE)
+  dateEmployed          DateTime?
+  supervisorId          String?
+  supervisor            User?            @relation("GuardSupervisor", fields: [supervisorId], references: [id])
+  homeLocationId        String?
+  homeLocation          Location?        @relation(fields: [homeLocationId], references: [id])
+  photoUrl              String?
+  notes                 String?
+  active                Boolean          @default(true)
+  deactivatedAt         DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  shifts      Shift[]
+  checkIns    ShiftCheckIn[]
+  incidents   Incident[]
+  smsMessages SmsMessage[]
+  recurrences ShiftRecurrence[]
+  notifications Notification[]
+
+  @@index([lastName, firstName])
+  @@index([active])
+  @@index([homeLocationId])
+}
+
+// ───────────────────────── Shifts ─────────────────────────
+
+enum ShiftStatus {
+  SCHEDULED
+  AWAITING_ARRIVAL
+  ON_DUTY
+  LATE
+  NOT_CONFIRMED
+  ASSISTANCE
+  INCIDENT
+  CRITICAL
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+enum PendingPrompt {
+  NONE
+  ARRIVAL
+  WELFARE
+  INCIDENT_DESCRIPTION
+  COMPLETION
+}
+
+model ShiftRecurrence {
+  id           String    @id @default(cuid())
+  guardId      String
+  guard        Guard     @relation(fields: [guardId], references: [id])
+  locationId   String
+  location     Location  @relation(fields: [locationId], references: [id])
+  supervisorId String?
+  supervisor   User?     @relation(fields: [supervisorId], references: [id])
+  daysOfWeek   Int[]     // 0 = Sunday … 6 = Saturday
+  startTime    String    // "18:00"
+  endTime      String    // "06:00"
+  startsOn     DateTime
+  endsOn       DateTime?
+  instructions String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  shifts       Shift[]
+
+  @@index([active])
+}
+
+model Shift {
+  id              String        @id @default(cuid())
+  guardId         String
+  guard           Guard         @relation(fields: [guardId], references: [id])
+  locationId      String
+  location        Location      @relation(fields: [locationId], references: [id])
+  supervisorId    String?
+  supervisor      User?         @relation("ShiftSupervisor", fields: [supervisorId], references: [id])
+  recurrenceId    String?
+  recurrence      ShiftRecurrence? @relation(fields: [recurrenceId], references: [id])
+  startAt         DateTime
+  endAt           DateTime
+  durationMinutes Int
+  instructions    String?
+  notes           String?
+  status          ShiftStatus   @default(SCHEDULED)
+  pendingPrompt   PendingPrompt @default(NONE)
+
+  // automation markers — each is set once, making the engine idempotent
+  arrivalSmsSentAt        DateTime?
+  arrivalReminderSentAt   DateTime?
+  arrivalEscalatedAt      DateTime?
+  welfareSmsSentAt        DateTime?
+  welfareMissedAt         DateTime?
+  handoverSmsSentAt       DateTime?
+  completionSmsSentAt     DateTime?
+  completionTimedOutAt    DateTime?
+  emergencyAt             DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendance    Attendance?
+  checkIns      ShiftCheckIn[]
+  welfareChecks WelfareCheck[]
+  incidents     Incident[]
+  smsMessages   SmsMessage[]
+  notifications Notification[]
+
+  @@index([startAt])
+  @@index([endAt])
+  @@index([status])
+  @@index([guardId, startAt])
+  @@index([locationId, startAt])
+}
+
+enum AttendanceStatus {
+  PENDING
+  PRESENT
+  LATE
+  NOT_REPORTED
+  COMPLETED
+  LEFT_EARLY
+  STILL_ON_DUTY
+  INCIDENT
+}
+
+model Attendance {
+  id                    String           @id @default(cuid())
+  shiftId               String           @unique
+  shift                 Shift            @relation(fields: [shiftId], references: [id])
+  status                AttendanceStatus @default(PENDING)
+  arrivalConfirmedAt    DateTime?
+  lateMinutes           Int              @default(0)
+  completionConfirmedAt DateTime?
+  missedChecks          Int              @default(0)
+  updatedAt             DateTime         @updatedAt
+
+  @@index([status])
+}
+
+enum CheckInType {
+  SHIFT_STARTED
+  ARRIVAL_SMS_SENT
+  ARRIVAL_REMINDER_SENT
+  ARRIVAL_CONFIRMED
+  ARRIVAL_DENIED
+  ARRIVAL_ESCALATED
+  WELFARE_SMS_SENT
+  WELFARE_OK
+  WELFARE_ASSISTANCE
+  WELFARE_INCIDENT
+  WELFARE_MISSED
+  INCIDENT_REPORTED
+  EMERGENCY
+  HANDOVER_NOTICE
+  COMPLETION_SMS_SENT
+  COMPLETION_CONFIRMED
+  COMPLETION_DENIED
+  COMPLETION_TIMEOUT
+  SHIFT_COMPLETED
+  SHIFT_MISSED
+  SHIFT_CANCELLED
+  ADMIN_NOTE
+  UNRECOGNISED_REPLY
+}
+
+enum CheckInSource {
+  SMS
+  SYSTEM
+  ADMIN
+  APP
+}
+
+model ShiftCheckIn {
+  id           String        @id @default(cuid())
+  shiftId      String
+  shift        Shift         @relation(fields: [shiftId], references: [id])
+  guardId      String
+  guard        Guard         @relation(fields: [guardId], references: [id])
+  type         CheckInType
+  note         String?
+  at           DateTime      @default(now())
+  source       CheckInSource @default(SYSTEM)
+  latitude     Float?
+  longitude    Float?
+  smsMessageId String?
+  smsMessage   SmsMessage?   @relation(fields: [smsMessageId], references: [id])
+
+  @@index([shiftId, at])
+  @@index([guardId, at])
+}
+
+enum WelfareResponse {
+  PENDING
+  WELL
+  ASSISTANCE
+  INCIDENT
+  NO_RESPONSE
+}
+
+model WelfareCheck {
+  id          String          @id @default(cuid())
+  shiftId     String
+  shift       Shift           @relation(fields: [shiftId], references: [id])
+  sentAt      DateTime        @default(now())
+  respondedAt DateTime?
+  response    WelfareResponse @default(PENDING)
+
+  @@index([shiftId])
+}
+
+// ───────────────────────── Incidents ─────────────────────────
+
+enum IncidentCategory {
+  THEFT
+  UNAUTHORIZED_ACCESS
+  MEDICAL_EMERGENCY
+  FIRE
+  VIOLENCE
+  EQUIPMENT_PROBLEM
+  SUSPICIOUS_ACTIVITY
+  ASSISTANCE_REQUEST
+  EMERGENCY
+  OTHER
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  CLOSED
+}
+
+enum IncidentSource {
+  SMS
+  ADMIN
+  EMERGENCY
+}
+
+model Incident {
+  id              String           @id @default(cuid())
+  incidentNo      String           @unique
+  guardId         String
+  guard           Guard            @relation(fields: [guardId], references: [id])
+  locationId      String
+  location        Location         @relation(fields: [locationId], references: [id])
+  shiftId         String?
+  shift           Shift?           @relation(fields: [shiftId], references: [id])
+  occurredAt      DateTime         @default(now())
+  category        IncidentCategory @default(OTHER)
+  severity        Severity         @default(MEDIUM)
+  status          IncidentStatus   @default(OPEN)
+  description     String
+  source          IncidentSource   @default(ADMIN)
+  supervisorId    String?
+  supervisor      User?            @relation("IncidentSupervisor", fields: [supervisorId], references: [id])
+  acknowledgedAt  DateTime?
+  resolutionNotes String?
+  resolvedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  notifications   Notification[]
+
+  @@index([status])
+  @@index([occurredAt])
+  @@index([guardId])
+  @@index([locationId])
+}
+
+// ───────────────────────── SMS ─────────────────────────
+
+enum SmsDirection {
+  OUTBOUND
+  INBOUND
+}
+
+enum SmsType {
+  ARRIVAL
+  ARRIVAL_REMINDER
+  WELFARE
+  INCIDENT
+  ASSISTANCE
+  COMPLETION
+  HANDOVER
+  EMERGENCY
+  CLARIFICATION
+  GENERAL
+}
+
+enum SmsStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  RECEIVED
+}
+
+model SmsMessage {
+  id                String       @id @default(cuid())
+  direction         SmsDirection
+  fromNumber        String
+  toNumber          String
+  body              String
+  type              SmsType      @default(GENERAL)
+  status            SmsStatus    @default(QUEUED)
+  provider          String
+  providerMessageId String?
+  error             String?
+  interpretedAs     String?
+  guardId           String?
+  guard             Guard?       @relation(fields: [guardId], references: [id])
+  shiftId           String?
+  shift             Shift?       @relation(fields: [shiftId], references: [id])
+  locationId        String?
+  location          Location?    @relation(fields: [locationId], references: [id])
+  createdAt         DateTime     @default(now())
+  checkIns          ShiftCheckIn[]
+
+  @@index([createdAt])
+  @@index([guardId, createdAt])
+  @@index([shiftId])
+  @@index([type])
+  @@index([direction])
+}
+
+model MessageTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String?
+  body        String
+  variables   String[]
+  active      Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+// ───────────────────────── Settings, notifications, audit ─────────────────────────
+
+model Setting {
+  key         String   @id
+  value       String
+  label       String
+  description String?
+  group       String   @default("automation")
+  updatedAt   DateTime @updatedAt
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+model Notification {
+  id         String               @id @default(cuid())
+  type       String
+  severity   NotificationSeverity @default(INFO)
+  title      String
+  body       String
+  guardId    String?
+  guard      Guard?               @relation(fields: [guardId], references: [id])
+  shiftId    String?
+  shift      Shift?               @relation(fields: [shiftId], references: [id])
+  incidentId String?
+  incident   Incident?            @relation(fields: [incidentId], references: [id])
+  readAt     DateTime?
+  createdAt  DateTime             @default(now())
+
+  @@index([readAt])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  actor     String   // display name or "system"
+  action    String   // e.g. GUARD_CREATED
+  entity    String?
+  entityId  String?
+  details   Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([action])
+  @@index([entity, entityId])
+}
