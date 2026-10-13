@@ -1,4 +1,4 @@
-# Sentinel
+# Omega Security operations portal
 
 Guard workforce and shift management for Omega Security. Admins run operations from a web portal; guards interact only by two-way SMS, so no smartphone or app is required.
 
@@ -19,6 +19,28 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 
 Next.js 15 (App Router, server actions), TypeScript, Tailwind CSS 4, Prisma 6, PostgreSQL 16 (Neon or self-hosted), Phosphor icons, Recharts.
 
+## Deploy on Vercel
+
+1. Import the repository in Vercel (framework: Next.js). The build runs `prisma generate && next build`.
+2. Add the environment variables listed below. Use the Neon connection string for `DATABASE_URL`.
+3. Apply the schema once from your machine: `DATABASE_URL=… npx prisma migrate deploy`, then `npm run db:seed` for demo data.
+4. Set `AUTOMATION_INPROCESS=false`. `vercel.json` schedules `/api/automation/tick` every minute; Vercel sends `CRON_SECRET` automatically. Per-minute crons need the Pro plan; on Hobby, point an external cron (cron-job.org, GitHub Actions) at `POST /api/automation/tick` with `Authorization: Bearer $AUTOMATION_SECRET` instead.
+5. In the Sendai dashboard, set the inbound and delivery webhooks to `https://<your-domain>/api/sms/webhook/sendai`.
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | Neon connection string (pooled, `sslmode=require`) |
+| `AUTH_SECRET` | long random string, 32+ characters |
+| `SMS_PROVIDER` | `sendai` (or `simulated` for a demo) |
+| `SMS_API_KEY` | Sendai API key `sk_…` |
+| `SMS_SENDER_ID` | approved Sendai sender identity, e.g. `OMEGASEC` |
+| `SMS_WEBHOOK_SECRET` | Sendai webhook signing secret `whsec_…` |
+| `SMS_API_SECRET` | empty for Sendai |
+| `AUTOMATION_INPROCESS` | `false` |
+| `AUTOMATION_SECRET` | long random string for external cron calls |
+| `CRON_SECRET` | long random string; Vercel Cron sends it as a bearer token |
+| `TIMEZONE` | `Africa/Harare` |
+
 ## Run it
 
 ```bash
@@ -29,7 +51,7 @@ npm run db:seed                 # demo data: 16 guards, 5 clients, 8 sites, a we
 npm run dev                     # http://localhost:3000
 ```
 
-Sign in as `admin@omegasecurity.co.zw` / `Sentinel123!` (Mr Zveshure, super admin). Also seeded: `ops@` (operations admin), `blessing@` and `tawanda@` (supervisors), same password.
+Sign in as `admin@omegasecurity.co.zw` / `Omega Security portal123!` (Mr Zveshure, super admin). Also seeded: `ops@` (operations admin), `blessing@` and `tawanda@` (supervisors), same password.
 
 ## SMS gateway
 

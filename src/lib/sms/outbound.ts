@@ -37,7 +37,7 @@ export async function sendSms(opts: SendOptions) {
   const settings = await getSettings();
   const sig = settings["general.smsSignature"]?.trim();
   const body = sig && !opts.body.includes(sig) ? `${opts.body} ${sig}` : opts.body;
-  const from = process.env.SMS_SENDER_ID ?? "SENTINEL";
+  const from = process.env.SMS_SENDER_ID ?? "OMEGASEC";
 
   const msg = await db.smsMessage.create({
     data: {

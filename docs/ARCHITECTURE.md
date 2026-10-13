@@ -1,6 +1,6 @@
-# Sentinel — system design
+# Omega Security operations portal — system design
 
-Sentinel is the guard workforce and shift management system for Omega Security.
+The portal is the guard workforce and shift management system for Omega Security.
 Admins run operations from a web portal. Guards interact only by two-way SMS.
 
 This document is the design that the code implements. It covers:
@@ -284,7 +284,7 @@ Each step writes a ShiftCheckIn/timeline event and an SmsMessage. Each step is g
 
 ## 7. Dashboard structure
 
-Layout follows the Sentinel reference: white sidebar on a warm grey ground, a white breadcrumb bar with a live status pill, search, refresh, notifications and the admin's avatar.
+Layout follows the dashboard reference: white sidebar on a warm grey ground, a white breadcrumb bar with a live status pill, search, refresh, notifications and the admin's avatar.
 
 ```
 ┌ Sidebar ─────────┐ ┌ Top bar: Operations › Overview · ● All systems operational · search · ⟳ · 🔔 · avatar ┐

@@ -21,7 +21,7 @@ function Sparkline({ data, tone }: { data: number[]; tone: "ok" | "critical" | "
 export function KpiCard({ title, description, value, delta, deltaLabel, deltaGoodWhen = "up", series, tone }: { title: string; description: string; value: number | string; delta?: number; deltaLabel?: string; deltaGoodWhen?: "up" | "down"; series: number[]; tone: "ok" | "critical" | "neutral" }) {
   const good = delta === undefined ? null : delta === 0 ? null : (delta > 0) === (deltaGoodWhen === "up");
   return (
-    <section className="rounded-[var(--radius-card)] border border-line bg-surface p-5">
+    <section className="rounded-[var(--radius-card)] border border-line bg-surface p-4 sm:p-5">
       <h3 className="text-[16px] font-semibold text-ink">{title}</h3>
       <p className="mt-1 min-h-[36px] text-[12.5px] leading-snug text-ink-2">{description}</p>
       <div className="mt-3 flex items-end justify-between gap-3">

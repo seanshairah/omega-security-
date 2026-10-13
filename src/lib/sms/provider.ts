@@ -54,7 +54,7 @@ export function providerConfig(): ProviderConfig {
   return {
     apiKey: process.env.SMS_API_KEY ?? "",
     apiSecret: process.env.SMS_API_SECRET ?? "",
-    senderId: process.env.SMS_SENDER_ID ?? "SENTINEL",
+    senderId: process.env.SMS_SENDER_ID ?? "OMEGASEC",
     webhookSecret: process.env.SMS_WEBHOOK_SECRET ?? "",
     httpSendUrl: process.env.SMS_HTTP_SEND_URL ?? "",
   };

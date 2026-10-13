@@ -4,7 +4,7 @@ import { cache } from "react";
 import type { Role } from "@prisma/client";
 import { db } from "@/lib/db";
 
-const COOKIE = "sentinel_session";
+const COOKIE = "omega_session";
 const secret = () => new TextEncoder().encode(process.env.AUTH_SECRET || "dev-secret-change-me-dev-secret-change-me");
 
 export type SessionUser = {

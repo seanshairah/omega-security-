@@ -1,8 +1,7 @@
 import { requireUser } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { unreadCount } from "@/lib/notifications";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Topbar } from "@/components/layout/topbar";
+import { AppShell } from "@/components/layout/app-shell";
 import { EmergencyBanner } from "@/components/layout/emergency-banner";
 import { activeProviderName } from "@/lib/sms";
 
@@ -24,13 +23,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       : { tone: "ok" as const, label: provider === "simulated" ? "All systems operational · SMS simulated" : "All systems operational" };
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar counts={{ attention, incidents }} role={user.role} />
-      <div className="min-w-0 flex-1 px-4 py-4 md:px-5">
-        <Topbar user={user} unread={unread} systemStatus={systemStatus} />
-        <EmergencyBanner />
-        <main className="fade-in">{children}</main>
-      </div>
-    </div>
+    <AppShell counts={{ attention, incidents }} role={user.role} user={user} unread={unread} systemStatus={systemStatus} banner={<EmergencyBanner />}>
+      {children}
+    </AppShell>
   );
 }

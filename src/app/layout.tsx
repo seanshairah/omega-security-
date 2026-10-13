@@ -4,8 +4,8 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Sentinel", template: "%s · Sentinel" },
-  description: "Guard workforce and shift management for Omega Security",
+  title: { default: "Omega Security", template: "%s · Omega Security" },
+  description: "Omega Security operations portal: guards, sites, shifts, attendance and incidents, run over two-way SMS.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

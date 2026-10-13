@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { HouseIcon, ShieldCheckIcon, BroadcastIcon, CalendarBlankIcon, ClipboardTextIcon, WarningOctagonIcon, UsersThreeIcon, BuildingsIcon, MapPinIcon, ChatTextIcon, ArticleIcon, ChartBarIcon, UserGearIcon, GearSixIcon, ListMagnifyingGlassIcon, CaretUpIcon, CaretDownIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, DeviceMobileIcon, ShieldIcon } from "@phosphor-icons/react";
+import { HouseIcon, ShieldCheckIcon, BroadcastIcon, CalendarBlankIcon, ClipboardTextIcon, WarningOctagonIcon, UsersThreeIcon, BuildingsIcon, MapPinIcon, ChatTextIcon, ArticleIcon, ChartBarIcon, UserGearIcon, GearSixIcon, ListMagnifyingGlassIcon, CaretUpIcon, CaretDownIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, DeviceMobileIcon, XIcon } from "@phosphor-icons/react";
+import { BrandMark, COMPANY } from "./brand";
 import { cn } from "@/lib/cn";
 import { Count } from "@/components/ui/status";
 
@@ -12,7 +13,7 @@ type Group = { label: string; icon: React.ElementType; items: Item[] };
 
 export type SidebarCounts = { attention: number; incidents: number };
 
-export function Sidebar({ counts, role }: { counts: SidebarCounts; role: string }) {
+export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role: string; onClose?: () => void }) {
   const path = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({ Operations: true, Workforce: true, Communications: true });
@@ -43,14 +44,17 @@ export function Sidebar({ counts, role }: { counts: SidebarCounts; role: string 
   const isActive = (href: string) => (href === "/sms" ? path === "/sms" : path === href || path.startsWith(href + "/"));
 
   return (
-    <aside className={cn("sticky top-0 flex h-screen shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200", collapsed ? "w-[68px]" : "w-[248px]")}>
+    <aside className={cn("sticky top-0 flex h-screen shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200", collapsed ? "w-[68px]" : "w-[264px] lg:w-[248px]")}>
       <div className={cn("flex h-16 items-center border-b border-line", collapsed ? "justify-center px-0" : "justify-between px-5")}>
-        <Link href="/dashboard" className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-[9px] bg-accent text-white"><ShieldIcon weight="fill" size={18} /></span>
-          {!collapsed && <span className="text-[17px] font-semibold tracking-[-0.01em] text-ink">Sentinel</span>}
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
+          <BrandMark size={32} />
+          {!collapsed && <span className="min-w-0"><span className="block truncate text-[15px] font-semibold leading-tight tracking-[-0.01em] text-ink">{COMPANY.name}</span><span className="block text-[11px] leading-tight text-ink-3">{COMPANY.portal}</span></span>}
         </Link>
         {!collapsed && (
-          <button onClick={() => setCollapsed(true)} className="rounded-md p-1 text-ink-3 hover:bg-surface-2 hover:text-ink" aria-label="Collapse sidebar"><CaretDoubleLeftIcon size={16} weight="fill" /></button>
+          <>
+            <button onClick={() => setCollapsed(true)} className="hidden rounded-md p-1 text-ink-3 hover:bg-surface-2 hover:text-ink lg:block" aria-label="Collapse sidebar"><CaretDoubleLeftIcon size={16} weight="fill" /></button>
+            <button onClick={onClose} className="rounded-md p-1 text-ink-3 hover:bg-surface-2 hover:text-ink lg:hidden" aria-label="Close menu"><XIcon size={18} weight="bold" /></button>
+          </>
         )}
       </div>
 

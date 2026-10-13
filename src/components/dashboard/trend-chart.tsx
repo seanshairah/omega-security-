@@ -26,8 +26,8 @@ function Tip({ active, payload, label }: { active?: boolean; payload?: { dataKey
 
 export function TrendChart({ data }: { data: TrendPoint[] }) {
   return (
-    <div className="h-[260px] w-full">
-      <ResponsiveContainer width="100%" height="100%">
+    <div className="h-[260px] w-full min-w-0">
+      <ResponsiveContainer width="100%" height="100%" initialDimension={{ width: 600, height: 260 }}>
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
           <CartesianGrid vertical={false} stroke="#e7e6e5" strokeDasharray="3 4" />
           <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: "#8f8e8c" }} interval="preserveStartEnd" />
