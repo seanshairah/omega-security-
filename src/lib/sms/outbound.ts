@@ -27,6 +27,7 @@ export type SendOptions = {
   guardId?: string | null;
   shiftId?: string | null;
   locationId?: string | null;
+  clientId?: string | null;
   actor?: string;
   userId?: string | null;
 };
@@ -51,6 +52,7 @@ export async function sendSms(opts: SendOptions) {
       guardId: opts.guardId ?? null,
       shiftId: opts.shiftId ?? null,
       locationId: opts.locationId ?? null,
+      clientId: opts.clientId ?? null,
     },
   });
 

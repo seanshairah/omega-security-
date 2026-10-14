@@ -14,6 +14,7 @@ import { audit } from "@/lib/audit";
 import { notify } from "@/lib/notifications";
 import { getSettingNumber, getSettings } from "@/lib/settings";
 import { getTemplateBody, renderTemplate } from "./templates";
+import { sendClientUpdate } from "./client-updates";
 import { sendSms, sendTemplated } from "./outbound";
 import { findLiveShiftForGuard, recordEvent, shiftInclude, type ShiftWithRelations } from "@/lib/services/shifts";
 import { createIncident } from "@/lib/services/incidents";
@@ -190,7 +191,8 @@ async function applyInterpretation(shift: ShiftWithRelations, interpreted: Inter
         await db.shift.update({ where: { id: shift.id }, data: { pendingPrompt: "NONE", status: nextStatus } });
         await recordEvent(shift.id, shift.guardId, "WELFARE_OK", { ...sms, note: "Guard replied: shift going well." });
         await sendTemplated(await reload(shift.id), "WELFARE_OK", "WELFARE");
-        return { action: "Welfare check: shift going well", replySent: true };
+        const cu = await sendClientUpdate(shift, "WELFARE_OK", now);
+        return { action: `Welfare check: shift going well${cu.sent ? "; client updated" : ""}`, replySent: true };
       }
       // Nothing pending; a courtesy "ok". Log it, no state change.
       await recordEvent(shift.id, shift.guardId, "ADMIN_NOTE", { ...sms, note: `Guard message: "${rawBody.trim()}"` });
@@ -207,7 +209,8 @@ async function applyInterpretation(shift: ShiftWithRelations, interpreted: Inter
         await recordEvent(shift.id, shift.guardId, "ARRIVAL_CONFIRMED", { ...sms, note: isLate ? `Guard confirmed arrival, ${lateMinutes} min late.` : "Guard confirmed arrival." });
         if (isLate) await notify({ type: "GUARD_LATE", severity: "WARNING", title: `${guardName} arrived late at ${shift.location.name}`, body: `Confirmed at ${fmtTime(now)}, ${lateMinutes} min after the ${fmtTime(shift.startAt)} start.`, guardId: shift.guardId, shiftId: shift.id });
         await sendTemplated(await reload(shift.id), "ARRIVAL_CONFIRMED", "ARRIVAL");
-        return { action: isLate ? `Arrival confirmed, ${lateMinutes} min late` : "Arrival confirmed, on time", replySent: true };
+        const cu = await sendClientUpdate(shift, "ARRIVAL", now);
+        return { action: `${isLate ? `Arrival confirmed, ${lateMinutes} min late` : "Arrival confirmed, on time"}${cu.sent ? "; client updated" : ""}`, replySent: true };
       }
       if (shift.pendingPrompt === "COMPLETION") {
         await db.attendance.update({ where: { shiftId: shift.id }, data: { status: "COMPLETED", completionConfirmedAt: now } });
@@ -216,7 +219,8 @@ async function applyInterpretation(shift: ShiftWithRelations, interpreted: Inter
         await recordEvent(shift.id, shift.guardId, "SHIFT_COMPLETED", { at: now, note: "Shift completed." });
         await notify({ type: "SHIFT_COMPLETED", severity: "INFO", title: `${guardName} completed the shift at ${shift.location.name}`, body: `Confirmed at ${fmtTime(now)}.`, guardId: shift.guardId, shiftId: shift.id });
         await sendTemplated(await reload(shift.id), "COMPLETION_CONFIRMED", "COMPLETION");
-        return { action: "Shift completed and confirmed", replySent: true };
+        const cu = await sendClientUpdate(shift, "SHIFT_ENDED", now);
+        return { action: `Shift completed and confirmed${cu.sent ? "; client updated" : ""}`, replySent: true };
       }
       await recordEvent(shift.id, shift.guardId, "ADMIN_NOTE", { ...sms, note: `Guard message: "${rawBody.trim()}"` });
       return { action: "Nothing pending; message logged", replySent: false };

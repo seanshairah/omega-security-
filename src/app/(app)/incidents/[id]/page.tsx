@@ -12,7 +12,11 @@ import { ConfirmButton } from "@/components/ui/confirm-button";
 import { ActionForm } from "@/components/ui/action-form";
 import { Field, Textarea } from "@/components/ui/form";
 import { Timeline } from "@/components/timeline";
-import { acknowledgeIncident, resolveIncident, closeIncident } from "@/actions/incidents";
+import { acknowledgeIncident, resolveIncident, closeIncident, notifyClientOfIncident } from "@/actions/incidents";
+import { Input } from "@/components/ui/form";
+import { clientPhoneFor } from "@/lib/sms/client-updates";
+import { getSettings } from "@/lib/settings";
+import { getTemplateBody, renderTemplate } from "@/lib/sms/templates";
 import { fmtDateTime, fmtTime, fmtDate } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 
@@ -24,6 +28,16 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
   const i = await db.incident.findUnique({ where: { id }, include: { guard: true, location: { include: { client: true } }, supervisor: true, shift: { include: { checkIns: { include: { smsMessage: { select: { body: true, direction: true } } }, orderBy: [{ at: "asc" }, { id: "asc" }] } } } } });
   if (!i) notFound();
   const open = i.status === "OPEN" || i.status === "ACKNOWLEDGED";
+  const urgent = i.category === "EMERGENCY" || i.severity === "CRITICAL";
+  const canNotifyClient = can.notifyClients(user) && urgent;
+  let clientDraft = { to: "", body: "" };
+  if (canNotifyClient) {
+    const settings = await getSettings();
+    clientDraft = {
+      to: clientPhoneFor(i.location) ?? "",
+      body: renderTemplate(await getTemplateBody("CLIENT_EMERGENCY"), { company: settings["general.companyName"], control_phone: settings["general.controlRoomPhone"], client_name: i.location.client.name, site: i.location.name, guard_name: `${i.guard.firstName} ${i.guard.lastName}`, time: fmtTime(i.occurredAt), date: fmtDate(i.occurredAt), incident_no: i.incidentNo }),
+    };
+  }
   return (
     <div>
       <PageHeader title={`${i.incidentNo} · ${CATEGORY_LABEL[i.category]}`} description={`${i.location.name} · ${fmtDateTime(i.occurredAt)} · reported ${i.source === "SMS" ? "by SMS" : i.source === "EMERGENCY" ? "by EMERGENCY SMS" : "by an administrator"}`} actions={can.manageIncidents(user) && (
@@ -45,6 +59,19 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
               <CardBody>
                 <ActionForm action={resolveIncident.bind(null, i.id)} submitLabel="Mark resolved" successMessage="Incident resolved.">
                   <Field label="Resolution notes" required><Textarea name="resolutionNotes" required placeholder="Who attended, what was found, what happens next" /></Field>
+                </ActionForm>
+              </CardBody>
+            </Card>
+          )}
+          {canNotifyClient && (
+            <Card className={i.clientNotifiedAt ? "" : "border-critical/40"}>
+              <CardHeader title="Notify the client" description={i.clientNotifiedAt ? `Client notified ${fmtDateTime(i.clientNotifiedAt)}. You can send a follow-up.` : `Text ${i.location.client.name} about this ${i.category === "EMERGENCY" ? "emergency" : "critical incident"}. Review the message before it goes out.`} />
+              <CardBody>
+                <ActionForm action={notifyClientOfIncident.bind(null, i.id)} submitLabel={i.clientNotifiedAt ? "Send follow-up" : "Send to client"} successMessage="Client notified by SMS.">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field label="Client phone" required hint={clientDraft.to ? "From the site's client-update settings." : "No client number on this site. Enter one."}><Input name="to" defaultValue={clientDraft.to} placeholder="+263 7…" required /></Field>
+                    <Field label="Message" required className="sm:col-span-2"><Textarea name="body" defaultValue={clientDraft.body} required className="min-h-28" /></Field>
+                  </div>
                 </ActionForm>
               </CardBody>
             </Card>
@@ -73,6 +100,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
               <Meta label="Supervisor">{i.supervisor?.name ?? "Unassigned"}</Meta>
               <Meta label="Acknowledged">{i.acknowledgedAt ? fmtDateTime(i.acknowledgedAt) : "Not yet"}</Meta>
               <Meta label="Resolved">{i.resolvedAt ? fmtDateTime(i.resolvedAt) : "—"}</Meta>
+              <Meta label="Client notified">{i.clientNotifiedAt ? fmtDateTime(i.clientNotifiedAt) : "No"}</Meta>
               <Meta label="Site contact">{i.location.contactName ?? "—"}{i.location.contactPhone ? ` · ${i.location.contactPhone}` : ""}</Meta>
             </div>
           </CardBody></Card>

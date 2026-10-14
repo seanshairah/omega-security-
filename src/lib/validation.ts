@@ -2,6 +2,8 @@ import { z } from "zod";
 import { normalisePhone, isValidPhone } from "@/lib/phone";
 
 export const phoneSchema = z.string().trim().min(6, "Phone number is required").transform((v) => normalisePhone(v)).refine(isValidPhone, "Enter a valid phone number, e.g. 0772 123 456");
+/** Checkbox: present ("on") when ticked, absent when not. */
+const flag = z.preprocess((v) => v === "on" || v === "true" || v === true, z.boolean());
 const opt = (s: z.ZodString) => s.trim().optional().transform((v) => (v ? v : null));
 
 export const guardSchema = z.object({
@@ -45,6 +47,11 @@ export const locationSchema = z.object({
   shiftPattern: z.enum(["DAY_8", "NIGHT_8", "DAY_12", "NIGHT_12", "CUSTOM"]),
   supervisorId: opt(z.string()),
   specialInstructions: opt(z.string()),
+  clientUpdates: flag,
+  clientUpdatePhone: opt(z.string()),
+  notifyClientArrival: flag,
+  notifyClientWelfare: flag,
+  notifyClientCompletion: flag,
 });
 
 export const shiftSchema = z.object({

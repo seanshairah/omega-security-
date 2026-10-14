@@ -17,6 +17,16 @@ export function Select({ className, children, ...props }: React.SelectHTMLAttrib
 export function Textarea({ className, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return <textarea className={cn(control, "w-full h-auto min-h-24 py-2 leading-relaxed", className)} {...props} />;
 }
+/** Labelled checkbox. Submits "on" when ticked, nothing when not. */
+export function Checkbox({ label, hint, className, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string; hint?: string }) {
+  return (
+    <label className={cn("flex cursor-pointer items-start gap-3 rounded-[10px] border border-line bg-surface px-3 py-2.5 text-[13px] text-ink hover:bg-surface-2 has-[:checked]:border-accent/50 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60", className)}>
+      <input type="checkbox" className="mt-0.5 size-4 shrink-0 accent-[var(--color-accent)]" {...props} />
+      <span className="min-w-0"><span className="block font-medium">{label}</span>{hint && <span className="block text-[12px] text-ink-3">{hint}</span>}</span>
+    </label>
+  );
+}
+
 export function Field({ label, hint, children, className, required }: { label: string; hint?: string; children: React.ReactNode; className?: string; required?: boolean }) {
   return (
     <label className={cn("block", className)}>

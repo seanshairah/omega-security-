@@ -55,6 +55,7 @@ model Client {
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   locations    Location[]
+  smsMessages  SmsMessage[]
 }
 
 enum ShiftPattern {
@@ -80,6 +81,12 @@ model Location {
   supervisorId        String?
   supervisor          User?        @relation("LocationSupervisor", fields: [supervisorId], references: [id])
   specialInstructions String?
+  // Client site-status updates by SMS (arrival, welfare OK, shift ended, emergencies)
+  clientUpdates       Boolean      @default(false)
+  clientUpdatePhone   String?
+  notifyClientArrival    Boolean   @default(true)
+  notifyClientWelfare    Boolean   @default(true)
+  notifyClientCompletion Boolean   @default(true)
   latitude            Float?
   longitude           Float?
   active              Boolean      @default(true)
@@ -294,6 +301,7 @@ enum CheckInType {
   SHIFT_MISSED
   SHIFT_CANCELLED
   ADMIN_NOTE
+  CLIENT_NOTIFIED
   UNRECOGNISED_REPLY
 }
 
@@ -397,6 +405,7 @@ model Incident {
   acknowledgedAt  DateTime?
   resolutionNotes String?
   resolvedAt      DateTime?
+  clientNotifiedAt DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   notifications   Notification[]
@@ -424,6 +433,7 @@ enum SmsType {
   HANDOVER
   EMERGENCY
   CLARIFICATION
+  CLIENT_UPDATE
   GENERAL
 }
 
@@ -461,6 +471,8 @@ model SmsMessage {
   shift             Shift?       @relation(fields: [shiftId], references: [id])
   locationId        String?
   location          Location?    @relation(fields: [locationId], references: [id])
+  clientId          String?
+  client            Client?      @relation(fields: [clientId], references: [id])
   createdAt         DateTime     @default(now())
   checkIns          ShiftCheckIn[]
 
@@ -470,6 +482,7 @@ model SmsMessage {
   @@index([type])
   @@index([direction])
   @@index([channel])
+  @@index([clientId, createdAt])
 }
 
 model PushSubscription {

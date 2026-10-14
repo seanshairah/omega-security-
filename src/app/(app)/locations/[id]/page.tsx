@@ -15,6 +15,7 @@ import { ConfirmButton } from "@/components/ui/confirm-button";
 import { ShiftStatusLabel } from "@/components/shift-status";
 import { setLocationActive } from "@/actions/locations";
 import { fmtDate, fmtTime, fmtShort } from "@/lib/time";
+import { clientPhoneFor } from "@/lib/sms/client-updates";
 
 export const metadata = { title: "Location" };
 const PATTERN: Record<string, string> = { DAY_8: "Day · 8 h", NIGHT_8: "Night · 8 h", DAY_12: "Day · 12 h", NIGHT_12: "Night · 12 h", CUSTOM: "Custom" };
@@ -87,6 +88,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
               <Meta label="Required guards">{l.requiredGuards}</Meta><Meta label="Supervisor">{l.supervisor?.name ?? "—"}</Meta>
               <Meta label="Site contact" className="col-span-2">{l.contactName ?? "—"}{l.contactPhone ? ` · ${l.contactPhone}` : ""}</Meta>
               <Meta label="Status" className="col-span-2">{l.active ? <Status tone="ok">Active</Status> : <Status tone="muted">Inactive</Status>}</Meta>
+              <Meta label="Client updates" className="col-span-2">{l.clientUpdates ? <span>{[l.notifyClientArrival && "arrival", l.notifyClientWelfare && "all well", l.notifyClientCompletion && "shift ended"].filter(Boolean).join(", ") || "none selected"} · to {clientPhoneFor(l) ?? <span className="text-critical">no number set</span>}</span> : <span className="text-ink-3">Off</span>}</Meta>
             </div>
             {l.specialInstructions && <div className="mt-4 border-t border-dashed border-line pt-3"><div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">Special instructions</div><p className="mt-1 text-[13px] text-ink">{l.specialInstructions}</p></div>}
           </CardBody></Card>

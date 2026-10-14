@@ -18,8 +18,9 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "completion.responseMinutes", label: "Completion response window", description: "Minutes after the shift end to wait for confirmation before closing the shift as unconfirmed.", group: "completion", default: "30", type: "number" },
   { key: "handover.notifyMinutes", label: "Handover notice", description: "Minutes before a relieving shift starts to tell both guards about the handover.", group: "handover", default: "30", type: "number" },
   { key: "recurrence.horizonDays", label: "Recurring shift horizon", description: "How many days ahead recurring shifts are created.", group: "recurrence", default: "14", type: "number" },
-  { key: "general.companyName", label: "Company name", description: "Shown in the portal and in message signatures.", group: "general", default: "Omega Security", type: "text" },
-  { key: "general.smsSignature", label: "SMS signature", description: "Appended to every outbound message. Leave blank for none.", group: "general", default: "- Omega Security", type: "text" },
+  { key: "general.companyName", label: "Company name", description: "Shown in the portal and in message signatures.", group: "general", default: "Omega Protection Services", type: "text" },
+  { key: "general.controlRoomPhone", label: "Control room phone", description: "Quoted in client messages so the client knows who to call.", group: "general", default: "+263 772 100 100", type: "text" },
+  { key: "general.smsSignature", label: "SMS signature", description: "Appended to every outbound message. Leave blank for none.", group: "general", default: "- Omega Protection Services", type: "text" },
 ];
 
 export type Settings = Record<string, string>;

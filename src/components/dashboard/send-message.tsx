@@ -25,6 +25,7 @@ export function SendMessage({ guards }: { guards: { id: string; name: string; st
         <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Type a message" rows={4} maxLength={320} className="w-full resize-none rounded-t-[12px] bg-transparent px-3.5 py-3 text-[14px] text-ink placeholder:text-ink-3 focus:outline-none" />
         <div className="flex items-center justify-between gap-2 px-2 pb-2">
           <Select value={guardId} onChange={(e) => setGuardId(e.target.value)} className="h-8 w-auto max-w-[220px] border-0 bg-surface-2 text-[13px]">
+            {guards.length === 0 && <option value="">No guards yet</option>}
             {guards.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.status}</option>)}
           </Select>
           <div className="flex items-center gap-2">

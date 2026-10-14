@@ -1,6 +1,6 @@
-# Omega Security operations portal — system design
+# Omega Protection Services operations portal — system design
 
-The portal is the guard workforce and shift management system for Omega Security.
+The portal is the guard workforce and shift management system for Omega Protection Services.
 Admins run operations from a web portal. Guards interact only by two-way SMS.
 
 This document is the design that the code implements. It covers:
@@ -321,7 +321,7 @@ Screens: Dashboard · Active operations · Shifts (+ new, + recurring, + detail/
 ├── docs/ARCHITECTURE.md          this document
 ├── prisma/
 │   ├── schema.prisma
-│   └── seed.ts                   demo data (Omega Security, 5 clients, 8 sites, 16 guards, live shifts)
+│   └── seed.ts                   baseline (settings, templates, super admin); seed-demo.ts holds demo data
 ├── scripts/tick.ts               run one automation tick from the shell / cron
 ├── src/
 │   ├── app/

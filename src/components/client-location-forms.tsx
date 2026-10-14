@@ -1,6 +1,6 @@
 import type { Client, Location, User } from "@prisma/client";
 import { ActionForm } from "@/components/ui/action-form";
-import { Field, Input, Select, Textarea, FormSection } from "@/components/ui/form";
+import { Field, Input, Select, Textarea, FormSection, Checkbox } from "@/components/ui/form";
 import type { ActionState } from "@/actions/_helpers";
 
 type A = (s: ActionState, fd: FormData) => Promise<ActionState>;
@@ -47,6 +47,13 @@ export function LocationForm({ action, location, clients, supervisors, submitLab
         <Field label="Site contact person"><Input name="contactName" defaultValue={l?.contactName ?? ""} /></Field>
         <Field label="Site contact phone"><Input name="contactPhone" defaultValue={l?.contactPhone ?? ""} /></Field>
         <Field label="Special instructions" className="sm:col-span-2"><Textarea name="specialInstructions" defaultValue={l?.specialInstructions ?? ""} placeholder="Patrol routes, keys, radio channels, who to call" /></Field>
+      </FormSection>
+      <FormSection title="Client site-status updates" description="Text the client as the shift progresses. Uses the number below, else the site contact, else the client's contact phone.">
+        <Checkbox name="clientUpdates" label="Send SMS updates to the client for this site" hint="Off by default. Each message is logged under Message logs." defaultChecked={l?.clientUpdates ?? false} className="sm:col-span-2" />
+        <Field label="Client update number" hint="Leave blank to use the site or client contact phone." className="sm:col-span-2"><Input name="clientUpdatePhone" defaultValue={l?.clientUpdatePhone ?? ""} placeholder="+263 7…" /></Field>
+        <Checkbox name="notifyClientArrival" label="Guard has arrived" hint="When the guard confirms arrival." defaultChecked={l?.notifyClientArrival ?? true} />
+        <Checkbox name="notifyClientWelfare" label="Everything going well" hint="When the mid-shift welfare check comes back fine." defaultChecked={l?.notifyClientWelfare ?? true} />
+        <Checkbox name="notifyClientCompletion" label="Shift ended" hint="When the shift is completed or closed." defaultChecked={l?.notifyClientCompletion ?? true} />
       </FormSection>
     </ActionForm>
   );
