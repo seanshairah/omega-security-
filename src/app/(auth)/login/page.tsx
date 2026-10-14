@@ -28,7 +28,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <Field label="Email"><Input name="email" type="email" required autoComplete="email" defaultValue="admin@omegasecurity.co.zw" /></Field>
             <Field label="Password"><Input name="password" type="password" required autoComplete="current-password" /></Field>
             <Button type="submit" variant="primary" className="w-full">Sign in</Button>
-            <p className="text-center text-[12px] text-ink-3">Demo password: Sentinel123!</p>
           </form>
           <p className="mt-6 text-center text-[12px] text-ink-3">{COMPANY.domain}</p>
         </div>

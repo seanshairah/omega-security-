@@ -10,6 +10,7 @@ import { addMinutes } from "date-fns";
 import { getSettingNumber } from "@/lib/settings";
 import { notify } from "@/lib/notifications";
 import { sendTemplated } from "@/lib/sms/outbound";
+import { sendClientUpdate } from "@/lib/sms/client-updates";
 import { materialiseRecurrences, recordEvent, shiftInclude, LIVE_STATUSES, ON_SITE_STATUSES } from "@/lib/services/shifts";
 import { fmtTime } from "@/lib/time";
 
@@ -173,6 +174,7 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
           await db.attendance.update({ where: { shiftId: s.id }, data: { status: s.attendance?.status === "INCIDENT" ? "INCIDENT" : "COMPLETED" } });
           await recordEvent(s.id, s.guardId, "COMPLETION_TIMEOUT", { at: now, note: `No reply to the end-of-shift check within ${completionWindow} min. Closed as completed, unconfirmed.` });
           await recordEvent(s.id, s.guardId, "SHIFT_COMPLETED", { at: now, note: "Shift closed by the system." });
+          await sendClientUpdate(s, "SHIFT_ENDED", now);
         }
         await notify({ type: "SHIFT_UNCONFIRMED", severity: "WARNING", title: `${s.guard.firstName} ${s.guard.lastName} did not confirm shift completion`, body: `${s.location.name}, ended ${fmtTime(s.endAt)}. ${stillOnDuty ? "Guard reported still on duty." : "Closed as completed without confirmation."}`, guardId: s.guardId, shiftId: s.id });
         report.completionTimedOut++;

@@ -26,6 +26,7 @@ const META: Record<CheckInType, { label: string; tone: "ok" | "warn" | "critical
   SHIFT_MISSED: { label: "Shift missed", tone: "critical", icon: XCircleIcon },
   SHIFT_CANCELLED: { label: "Shift cancelled", tone: "neutral", icon: XCircleIcon },
   ADMIN_NOTE: { label: "Note", tone: "neutral", icon: NoteIcon },
+  CLIENT_NOTIFIED: { label: "Client updated", tone: "ok", icon: NoteIcon },
   UNRECOGNISED_REPLY: { label: "Reply not understood", tone: "warn", icon: QuestionIcon },
 };
 const ring = { ok: "border-ok text-ok", warn: "border-warn text-warn", critical: "border-critical text-critical", neutral: "border-line-strong text-ink-3", info: "border-info text-info" };

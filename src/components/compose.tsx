@@ -20,7 +20,7 @@ const QUICK = [
   { label: "Confirm you are on post", body: "CONTROL ROOM: Please confirm you are on post. Reply YES if on site, NO if not." },
   { label: "Radio check", body: "CONTROL ROOM: Radio check. Reply 1 if all is well, 2 if you need assistance." },
   { label: "Relief delayed", body: "NOTICE: Your relief is delayed. Remain on post until handover is confirmed. Reply YES to acknowledge." },
-  { label: "Report to office", body: "Please report to the Omega Security office tomorrow at 08:00. Reply YES to confirm." },
+  { label: "Report to office", body: "Please report to the Omega Protection Services office tomorrow at 08:00. Reply YES to confirm." },
 ];
 
 export function Compose({ guards, locations, channels, initialGuardId }: Props) {

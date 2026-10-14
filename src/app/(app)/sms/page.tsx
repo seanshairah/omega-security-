@@ -14,7 +14,7 @@ import { activeProviderName } from "@/lib/sms";
 import { Rows, CardRow } from "@/components/ui/rows";
 
 export const metadata = { title: "Message logs" };
-const TYPES = ["ARRIVAL", "ARRIVAL_REMINDER", "WELFARE", "INCIDENT", "ASSISTANCE", "COMPLETION", "HANDOVER", "EMERGENCY", "CLARIFICATION", "GENERAL"];
+const TYPES = ["ARRIVAL", "ARRIVAL_REMINDER", "WELFARE", "INCIDENT", "ASSISTANCE", "COMPLETION", "HANDOVER", "EMERGENCY", "CLARIFICATION", "CLIENT_UPDATE", "GENERAL"];
 
 export default async function SmsLogsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireUser();

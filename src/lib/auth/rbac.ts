@@ -18,6 +18,7 @@ export function hasRole(user: SessionUser | null, minimum: Role): boolean {
 /** Capabilities, so pages and routes never compare role strings directly. */
 export const can = {
   manageUsers: (u: SessionUser | null) => hasRole(u, "SUPER_ADMIN"),
+  notifyClients: (u: SessionUser | null) => hasRole(u, "SUPER_ADMIN"),
   configureSystem: (u: SessionUser | null) => hasRole(u, "SUPER_ADMIN"),
   viewAudit: (u: SessionUser | null) => hasRole(u, "SUPER_ADMIN"),
   manageGuards: (u: SessionUser | null) => hasRole(u, "ADMIN"),

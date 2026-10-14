@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 export type TemplateDef = { key: string; name: string; description: string; body: string; variables: string[] };
 
 const V = ["guard_name", "location", "start_time", "end_time", "supervisor_name", "date", "company"];
+/** Variables for messages to clients. */
+const CV = ["company", "client_name", "site", "guard_name", "start_time", "end_time", "time", "date", "control_phone"];
 
 export const TEMPLATE_DEFS: TemplateDef[] = [
   { key: "ARRIVAL", name: "Arrival check", description: "Sent at shift start.", variables: V,
@@ -43,6 +45,15 @@ export const TEMPLATE_DEFS: TemplateDef[] = [
     body: "Sorry, reply not understood. Reply YES - shift completed, NO - still on duty, or INCIDENT." },
   { key: "NO_ACTIVE_SHIFT", name: "No active shift", description: "A known guard writes outside any shift window.", variables: V,
     body: "Message received, {{guard_name}}. You have no active shift right now. Your supervisor will see your message. Reply EMERGENCY only in an emergency." },
+  // ── client site-status updates (sent to the client's contact, not the guard)
+  { key: "CLIENT_ARRIVAL", name: "Client: guard on site", description: "To the client when the guard confirms arrival.", variables: CV,
+    body: "{{company}} update for {{site}}: {{guard_name}} is on site and has taken over the post at {{time}}. Shift {{start_time}}-{{end_time}}." },
+  { key: "CLIENT_WELFARE_OK", name: "Client: all well", description: "To the client when the mid-shift welfare check comes back fine.", variables: CV,
+    body: "{{company}} update for {{site}}: welfare check at {{time}}, everything is in order and the guard is on post." },
+  { key: "CLIENT_SHIFT_ENDED", name: "Client: shift ended", description: "To the client when the shift is completed.", variables: CV,
+    body: "{{company}} update for {{site}}: the shift ({{start_time}}-{{end_time}}) has ended and {{guard_name}} has completed duty at {{time}}." },
+  { key: "CLIENT_EMERGENCY", name: "Client: emergency notice", description: "Sent by the super admin from an emergency incident. Editable before sending.", variables: [...CV, "incident_no"],
+    body: "URGENT from {{company}}: an emergency has been reported at {{site}} at {{time}} ({{incident_no}}). Our control room and supervisor are responding. We will update you shortly. Contact us on {{control_phone}}." },
   { key: "UNKNOWN_NUMBER", name: "Unknown number", description: "Sender is not a registered guard.", variables: ["company"],
     body: "This number is not registered with {{company}}. Please contact your supervisor." },
 ];

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/cn";
 
-/** Omega Security mark: an omega inside a shield. One colour, works at 16px. */
+/** Omega Protection Services mark: an omega inside a shield. One colour, works at 16px. */
 export function BrandMark({ size = 32, className }: { size?: number; className?: string }) {
   return (
     <span className={cn("inline-flex shrink-0 items-center justify-center rounded-[9px] bg-accent text-white", className)} style={{ width: size, height: size }} aria-hidden>
@@ -12,7 +12,7 @@ export function BrandMark({ size = 32, className }: { size?: number; className?:
 }
 
 export const COMPANY = {
-  name: "Omega Security",
+  name: "Omega Protection Services",
   portal: "Operations portal",
   tagline: "Guarding and site operations across Zimbabwe",
   city: "Harare, Zimbabwe",

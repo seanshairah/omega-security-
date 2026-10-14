@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 
 export const metadata = { title: "Message templates" };
-const SAMPLE = { guard_name: "John Moyo", location: "ABC Warehouse", start_time: "18:00", end_time: "06:00", supervisor_name: "Tawanda Mhlanga", date: "13 Oct 2026", company: "Omega Security", other_guard: "Peter Ncube" };
+const SAMPLE = { guard_name: "John Moyo", location: "ABC Warehouse", start_time: "18:00", end_time: "06:00", supervisor_name: "Tawanda Mhlanga", date: "13 Oct 2026", company: "Omega Protection Services", other_guard: "Peter Ncube", client_name: "ABC Logistics", site: "ABC Warehouse", time: "18:04", control_phone: "+263 772 100 100", incident_no: "INC-0042" };
 
 export default async function TemplatesPage() {
   const user = await requireUser();

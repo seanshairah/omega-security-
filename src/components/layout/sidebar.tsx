@@ -50,7 +50,7 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
       <div className={cn("flex h-16 items-center border-b border-line", collapsed ? "justify-center px-0" : "justify-between px-5")}>
         <Link href="/dashboard" className="flex min-w-0 items-center gap-2.5">
           <BrandMark size={32} />
-          {!collapsed && <span className="min-w-0"><span className="block truncate text-[15px] font-semibold leading-tight tracking-[-0.01em] text-ink">{COMPANY.name}</span><span className="block text-[11px] leading-tight text-ink-3">{COMPANY.portal}</span></span>}
+          {!collapsed && <span className="min-w-0"><span className="block text-[14px] font-semibold leading-[1.15] line-clamp-2 tracking-[-0.01em] text-ink">{COMPANY.name}</span><span className="block text-[11px] leading-tight text-ink-3">{COMPANY.portal}</span></span>}
         </Link>
         {!collapsed && (
           <>

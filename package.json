@@ -1,8 +1,8 @@
 {
-  "name": "omega-security-portal",
+  "name": "omega-protection-portal",
   "version": "0.1.0",
   "private": true,
-  "description": "Omega Security operations portal: guard workforce and shift management over two-way SMS",
+  "description": "Omega Protection Services operations portal: guard workforce and shift management over two-way SMS",
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -14,6 +14,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:demo": "tsx prisma/seed-demo.ts",
+    "db:purge": "tsx scripts/purge-data.ts --yes",
     "db:reset": "prisma migrate reset --force",
     "automation:tick": "tsx scripts/tick.ts"
   },
