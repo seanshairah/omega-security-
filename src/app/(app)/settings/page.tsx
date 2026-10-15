@@ -19,6 +19,7 @@ const GROUPS: { key: string; title: string; description: string }[] = [
   { key: "handover", title: "Handover", description: "When both guards are told about the handover." },
   { key: "recurrence", title: "Recurring shifts", description: "How far ahead recurring patterns are turned into shifts." },
   { key: "general", title: "Company", description: "Names used in the portal and in messages." },
+  { key: "geofence", title: "GPS and geofencing", description: "Guard devices check their position on this schedule during shifts. The phone applies the same rules offline; changes reach it with the next heartbeat." },
   { key: "gateway", title: "Call gateway", description: "Android gateway phones: how often they report in, when they count as offline, how long calls are kept, and which call alerts are raised." },
 ];
 

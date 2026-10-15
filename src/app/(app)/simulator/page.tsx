@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/ui/page";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Simulator } from "@/components/simulator";
 import { CallSimulator } from "@/components/calls/call-simulator";
+import { LocationSimulator } from "@/components/location/location-simulator";
+import { findLiveShiftForGuard } from "@/lib/services/shifts";
 import { effectiveStatus, gatewayInclude } from "@/lib/gateway/service";
 import { getSettingNumber } from "@/lib/settings";
 import { activeProviderName } from "@/lib/sms";
@@ -17,12 +19,15 @@ export default async function SimulatorPage() {
   await requireUser("ADMIN");
   const shifts = await db.shift.findMany({ where: { status: { notIn: CLOSED_STATUSES }, startAt: { lte: new Date(Date.now() + 6 * 3600_000) } }, include: { ...shiftInclude, smsMessages: { orderBy: { createdAt: "desc" }, take: 6 } }, orderBy: { startAt: "asc" } });
   const provider = activeProviderName();
+  const guardDevices = await db.gatewayDevice.findMany({ where: { mode: "GUARD", activationStatus: "ACTIVE", status: { not: "REVOKED" }, guardId: { not: null } }, include: { guard: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { deviceName: "asc" } });
+  const guardDeviceRows = await Promise.all(guardDevices.map(async (d) => { const live = await findLiveShiftForGuard(d.guardId!); return { id: d.id, deviceName: d.deviceName, guardName: `${d.guard!.firstName} ${d.guard!.lastName}`, site: live ? { name: live.location.name, lat: live.location.latitude, lng: live.location.longitude, radiusM: live.location.geofenceRadiusM } : null }; }));
   const [gateways, guards, offlineMinutes] = await Promise.all([db.gatewayDevice.findMany({ where: { status: { not: "REVOKED" } }, include: gatewayInclude, orderBy: { deviceName: "asc" } }), db.guard.findMany({ where: { active: true }, orderBy: { lastName: "asc" }, select: { id: true, firstName: true, lastName: true, phone: true } }), getSettingNumber("gateway.offlineMinutes")]);
   return (
     <div>
       <PageHeader title="SMS simulator" description={`Play the guard's phone. Replies go through the same pipeline as the live webhook. Outbound provider: ${provider}${provider === "simulated" ? " (nothing is really sent)" : " (real messages will be attempted)"}.`} />
       <Simulator shifts={shifts.map((s) => ({ id: s.id, guardId: s.guardId, guardName: `${s.guard.firstName} ${s.guard.lastName}`, phone: s.guard.phone, location: s.location.name, start: fmtTime(s.startAt), end: fmtTime(s.endAt), status: STATUS_META[s.status].label, pending: s.pendingPrompt, messages: s.smsMessages.reverse().map((m) => ({ id: m.id, direction: m.direction, body: m.body, at: fmtTime(m.createdAt), status: m.status })) }))} />
       <div className="mt-4"><CallSimulator gateways={gateways.map((g) => ({ id: g.id, deviceName: g.deviceName, status: effectiveStatus(g, offlineMinutes), location: g.location?.name ?? null }))} guards={guards.map((g) => ({ id: g.id, name: `${g.firstName} ${g.lastName}`, phone: g.phone }))} /></div>
+      <div className="mt-4"><LocationSimulator devices={guardDeviceRows} /></div>
       <Card className="mt-4">
         <CardHeader title="How the flow runs" description="What the engine does on each minute tick, and what the guard is asked." />
         <CardBody className="grid gap-3 text-[13px] text-ink-2 sm:grid-cols-5">

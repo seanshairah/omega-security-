@@ -9,7 +9,8 @@ export async function POST(req: Request) {
   const rl = rateLimit(`hb:${auth.device.id}`, 30, 60_000);
   if (!rl.ok) return NextResponse.json({ error: "Too many heartbeats" }, { status: 429, headers: { "Retry-After": String(rl.retryAfterSeconds) } });
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
-  const { device, config } = await heartbeat(auth.device, { appVersion: s(b.appVersion), androidVersion: s(b.androidVersion), deviceModel: s(b.deviceModel), batteryLevel: typeof b.batteryLevel === "number" ? b.batteryLevel : undefined, networkType: s(b.networkType) }, clientIp(req));
-  return NextResponse.json({ ok: true, deviceId: device.id, deviceName: device.deviceName, phoneNumber: device.phoneNumber, status: device.status, location: device.location ? { id: device.location.id, name: device.location.name, client: device.location.client.name } : null, config });
+  const ll = b.lastLocation && typeof b.lastLocation === "object" ? (b.lastLocation as { latitude: number; longitude: number; accuracyM?: number; at?: string; state?: string }) : undefined;
+  const { device, config } = await heartbeat(auth.device, { appVersion: s(b.appVersion), androidVersion: s(b.androidVersion), deviceModel: s(b.deviceModel), batteryLevel: typeof b.batteryLevel === "number" ? b.batteryLevel : undefined, networkType: s(b.networkType), locationPermission: s(b.locationPermission), callPermission: s(b.callPermission), monitoringState: s(b.monitoringState), mockLocation: b.mockLocation === true, lastLocation: ll }, clientIp(req));
+  return NextResponse.json({ ok: true, deviceId: device.id, deviceName: device.deviceName, phoneNumber: device.phoneNumber, status: device.status, mode: device.mode, guard: device.guard ? { id: device.guard.id, name: `${device.guard.firstName} ${device.guard.lastName}` } : null, location: device.location ? { id: device.location.id, name: device.location.name, client: device.location.client.name } : null, config });
 }
 const s = (v: unknown) => (typeof v === "string" ? v : undefined);

@@ -1,5 +1,7 @@
 # Android call gateway
 
+> The same app now has two modes: **OPERATIONS_GATEWAY** (this page) and **GUARD** ([GUARD_ANDROID_APP.md](GUARD_ANDROID_APP.md): GPS, geofencing, offline monitoring). The mode comes from the device record in the portal at activation.
+
 The call gateway is an Android app (`android/`, package `zw.co.omega.gateway`, app name **Security Gateway**) installed on a company phone with a SIM that guards call. It reports **call metadata only** (number, direction, timestamps, duration, outcome) to the portal, where calls are matched to guards and their live shifts. It never records audio.
 
 It is a separate module from the SMS system. The two share nothing but the database: if every gateway phone is switched off, SMS sending, receiving, templates, automation and attendance continue exactly as before.

@@ -12,6 +12,6 @@ export const POST = guarded("ADMIN", async (req, _ctx, user) => {
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   if (typeof b.deviceName !== "string" || b.deviceName.trim().length < 2) return error("deviceName is required");
   if (typeof b.phoneNumber !== "string") return error("phoneNumber is required");
-  const g = await createGateway({ deviceName: b.deviceName, phoneNumber: b.phoneNumber, locationId: typeof b.locationId === "string" ? b.locationId : null, notes: typeof b.notes === "string" ? b.notes : null, actor: { userId: user.id, name: user.name } });
+  const g = await createGateway({ deviceName: b.deviceName, phoneNumber: b.phoneNumber, locationId: typeof b.locationId === "string" ? b.locationId : null, notes: typeof b.notes === "string" ? b.notes : null, mode: b.mode === "GUARD" ? "GUARD" : "OPERATIONS_GATEWAY", guardId: typeof b.guardId === "string" ? b.guardId : null, actor: { userId: user.id, name: user.name } });
   return json({ ...g, tokenHash: undefined }, 201);
 });

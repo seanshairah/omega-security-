@@ -37,7 +37,7 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
       { href: "/sms", label: "Message logs", icon: ChatTextIcon },
       { href: "/sms/templates", label: "Templates", icon: ArticleIcon },
       { href: "/calls", label: "Calls", icon: PhoneCallIcon },
-      { href: "/gateways", label: "Gateway phones", icon: CellSignalFullIcon },
+      { href: "/gateways", label: "Devices", icon: CellSignalFullIcon },
     ] },
   ];
   const singles: Item[] = [

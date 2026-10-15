@@ -15,6 +15,7 @@ import { notify } from "@/lib/notifications";
 import { getSettingNumber, getSettings } from "@/lib/settings";
 import { getTemplateBody, renderTemplate } from "./templates";
 import { sendClientUpdate } from "./client-updates";
+import { verifyArrivalFromSms } from "@/lib/gateway/location-events";
 import { sendSms, sendTemplated } from "./outbound";
 import { findLiveShiftForGuard, recordEvent, shiftInclude, type ShiftWithRelations } from "@/lib/services/shifts";
 import { createIncident } from "@/lib/services/incidents";
@@ -210,6 +211,7 @@ async function applyInterpretation(shift: ShiftWithRelations, interpreted: Inter
         if (isLate) await notify({ type: "GUARD_LATE", severity: "WARNING", title: `${guardName} arrived late at ${shift.location.name}`, body: `Confirmed at ${fmtTime(now)}, ${lateMinutes} min after the ${fmtTime(shift.startAt)} start.`, guardId: shift.guardId, shiftId: shift.id });
         await sendTemplated(await reload(shift.id), "ARRIVAL_CONFIRMED", "ARRIVAL");
         const cu = await sendClientUpdate(shift, "ARRIVAL", now);
+        await verifyArrivalFromSms(shift.id, shift.guardId, now); // GPS correlation for Android guards; no-op for feature phones
         return { action: `${isLate ? `Arrival confirmed, ${lateMinutes} min late` : "Arrival confirmed, on time"}${cu.sent ? "; client updated" : ""}`, replySent: true };
       }
       if (shift.pendingPrompt === "COMPLETION") {

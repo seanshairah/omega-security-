@@ -12,18 +12,27 @@ import { getSettingBool } from "@/lib/settings";
 import { fmtTime } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 import { CALL_EVENT_TYPES, DEVICE_EVENT_TYPES, fmtCallDuration, initialCallState, isTerminal, reduceCall, saneTimestamp, type IncomingGatewayEvent } from "./call-state";
+import { LOCATION_EVENT_TYPES, applyLocationEvent, validateLocationEvent, type IncomingLocationEvent } from "./location-events";
+import type { LocationState } from "@prisma/client";
 
 export type EventAck = { eventId: string; status: "ok" | "duplicate" | "rejected"; callLogId?: string; error?: string };
 
-const ALL_TYPES: string[] = [...CALL_EVENT_TYPES, ...DEVICE_EVENT_TYPES];
+const STATUS_EVENT_TYPES = ["DEVICE_STATUS", "HEARTBEAT"] as const;
+const ALL_TYPES: string[] = [...CALL_EVENT_TYPES, ...DEVICE_EVENT_TYPES, ...LOCATION_EVENT_TYPES, ...STATUS_EVENT_TYPES];
 
-export function validateEvent(raw: unknown): { ok: true; event: IncomingGatewayEvent } | { ok: false; error: string; eventId?: string } {
+export type AnyIncomingEvent = ({ kind: "call" | "device" | "status" } & IncomingGatewayEvent) | ({ kind: "location" } & IncomingLocationEvent);
+
+export function validateEvent(raw: unknown): { ok: true; event: AnyIncomingEvent } | { ok: false; error: string; eventId?: string } {
   if (!raw || typeof raw !== "object") return { ok: false, error: "event must be an object" };
   const e = raw as Record<string, unknown>;
   const eventId = typeof e.eventId === "string" ? e.eventId.trim() : "";
   if (!eventId || eventId.length > 120) return { ok: false, error: "eventId is required" };
   const eventType = typeof e.eventType === "string" ? e.eventType.toUpperCase() : "";
   if (!ALL_TYPES.includes(eventType)) return { ok: false, error: `unknown eventType ${eventType || "(blank)"}`, eventId };
+  if ((LOCATION_EVENT_TYPES as readonly string[]).includes(eventType)) {
+    const v = validateLocationEvent(e, eventId, eventType);
+    return v.ok ? { ok: true, event: { kind: "location", ...v.event } } : { ok: false, error: v.error, eventId };
+  }
   const timestamp = typeof e.timestamp === "string" || e.timestamp instanceof Date ? e.timestamp : new Date().toISOString();
   const isCall = (CALL_EVENT_TYPES as readonly string[]).includes(eventType);
   const callId = typeof e.callId === "string" ? e.callId.trim() : "";
@@ -32,7 +41,11 @@ export function validateEvent(raw: unknown): { ok: true; event: IncomingGatewayE
   const direction = e.direction === "OUTGOING" ? "OUTGOING" : e.direction === "INCOMING" ? "INCOMING" : undefined;
   const durationSeconds = typeof e.durationSeconds === "number" && Number.isFinite(e.durationSeconds) ? Math.max(0, Math.round(e.durationSeconds)) : undefined;
   const answered = typeof e.answered === "boolean" ? e.answered : undefined;
-  return { ok: true, event: { eventId, eventType: eventType as IncomingGatewayEvent["eventType"], callId: callId || undefined, phoneNumber: phoneNumber || undefined, direction, timestamp, durationSeconds, answered, meta: typeof e.meta === "object" && e.meta ? (e.meta as Record<string, unknown>) : undefined } };
+  const kind = isCall ? "call" : (STATUS_EVENT_TYPES as readonly string[]).includes(eventType) ? "status" : "device";
+  const meta = typeof e.meta === "object" && e.meta ? (e.meta as Record<string, unknown>) : undefined;
+  // Guard devices attach their latest fix to call events.
+  const loc = typeof e.location === "object" && e.location ? (e.location as Record<string, unknown>) : undefined;
+  return { ok: true, event: { kind, eventId, eventType: eventType as IncomingGatewayEvent["eventType"], callId: callId || undefined, phoneNumber: phoneNumber || undefined, direction, timestamp, durationSeconds, answered, meta: loc ? { ...(meta ?? {}), location: loc } : meta } };
 }
 
 /** Match a caller to exactly one guard. Never guesses: no match or an ambiguous match is an unknown caller. */
@@ -55,15 +68,23 @@ export async function processGatewayEvents(device: GatewayDevice, rawEvents: unk
   return acks;
 }
 
-async function processOne(device: GatewayDevice, ev: IncomingGatewayEvent, opts: { simulated?: boolean; ip?: string | null }): Promise<EventAck> {
+/** DEVICE_STATUS / HEARTBEAT events carry permission and monitoring state from guard phones. */
+async function applyStatusEvent(device: GatewayDevice, ev: IncomingGatewayEvent): Promise<string> {
+  const m = ev.meta ?? {};
+  const s = (k: string) => (typeof m[k] === "string" ? (m[k] as string).slice(0, 30) : undefined);
+  await db.gatewayDevice.update({ where: { id: device.id }, data: { ...(s("locationPermission") ? { locationPermission: s("locationPermission") } : {}), ...(s("callPermission") ? { callPermission: s("callPermission") } : {}), ...(s("monitoringState") ? { monitoringState: s("monitoringState") } : {}), ...(m.mock === true ? { mockLocationSeen: true } : {}) } });
+  return `status: ${s("monitoringState") ?? "—"} · location ${s("locationPermission") ?? "—"}`;
+}
+
+async function processOne(device: GatewayDevice, ev: AnyIncomingEvent, opts: { simulated?: boolean; ip?: string | null }): Promise<EventAck> {
   const now = new Date();
   const at = saneTimestamp(ev.timestamp, now);
   // 1. raw record; the unique eventId is the deduplication key
   try {
-    await db.gatewayEvent.create({ data: { eventId: ev.eventId, gatewayDeviceId: device.id, eventType: ev.eventType, callId: ev.callId ?? null, phoneNumber: ev.phoneNumber ?? null, occurredAt: at, payload: { ...ev, timestamp: String(ev.timestamp), simulated: Boolean(opts.simulated) } as Prisma.InputJsonObject } });
+    await db.gatewayEvent.create({ data: { eventId: ev.eventId, gatewayDeviceId: device.id, eventType: ev.eventType, callId: ev.callId ?? null, phoneNumber: ev.kind === "location" ? null : ev.phoneNumber ?? null, occurredAt: at, payload: { ...ev, timestamp: String(ev.timestamp), simulated: Boolean(opts.simulated) } as Prisma.InputJsonObject } });
   } catch (e) {
     if (/Unique constraint/.test((e as Error).message)) {
-      const existing = ev.callId ? await db.callLog.findUnique({ where: { gatewayDeviceId_callId: { gatewayDeviceId: device.id, callId: ev.callId } } }) : null;
+      const existing = ev.kind === "call" && ev.callId ? await db.callLog.findUnique({ where: { gatewayDeviceId_callId: { gatewayDeviceId: device.id, callId: ev.callId } } }) : null;
       return { eventId: ev.eventId, status: "duplicate", callLogId: existing?.id };
     }
     throw e;
@@ -71,7 +92,11 @@ async function processOne(device: GatewayDevice, ev: IncomingGatewayEvent, opts:
   let outcome = "stored";
   let callLogId: string | undefined;
   try {
-    if (ev.eventType === "DEVICE_ONLINE" || ev.eventType === "DEVICE_OFFLINE") {
+    if (ev.kind === "location") {
+      outcome = (await applyLocationEvent(device, ev, { simulated: opts.simulated })).outcome;
+    } else if (ev.kind === "status") {
+      outcome = await applyStatusEvent(device, ev);
+    } else if (ev.eventType === "DEVICE_ONLINE" || ev.eventType === "DEVICE_OFFLINE") {
       outcome = await applyDeviceEvent(device, ev, at);
     } else {
       const r = await applyCallEvent(device, ev, at, Boolean(opts.simulated));
@@ -109,7 +134,9 @@ async function applyCallEvent(device: GatewayDevice, ev: IncomingGatewayEvent, a
 async function createCall(device: GatewayDevice, ev: IncomingGatewayEvent, at: Date, simulated: boolean): Promise<{ outcome: string; callLogId: string }> {
   const raw = ev.phoneNumber ?? "";
   const normalized = raw ? safeNormalise(raw) : "";
-  const guard = normalized ? await matchGuardByPhone(normalized) : null;
+  // On a guard's own phone the call is the guard's, whoever is on the other end (usually operations).
+  const guard = device.mode === "GUARD" && device.guardId ? await db.guard.findUnique({ where: { id: device.guardId } }) : normalized ? await matchGuardByPhone(normalized) : null;
+  const fix = device.mode === "GUARD" ? readFix(ev) : null;
   const shift = guard ? await findLiveShiftForGuard(guard.id, at) : null;
   const state = initialCallState(ev, at);
   const unknown = !guard;
@@ -122,19 +149,44 @@ async function createCall(device: GatewayDevice, ev: IncomingGatewayEvent, at: D
       phoneNumber: raw || "unknown", normalizedPhoneNumber: normalized || "unknown",
       direction: state.direction, status: state.status, startedAt: state.startedAt, answeredAt: state.answeredAt, endedAt: state.endedAt, durationSeconds: state.durationSeconds,
       unknownCaller: unknown, simulated,
+      latitude: fix?.latitude ?? null, longitude: fix?.longitude ?? null, locationState: fix?.state ?? null,
     },
   });
   await db.gatewayDevice.update({ where: { id: device.id }, data: { lastCallAt: at } });
+  await correlateCall(call.id, device, normalized, state.direction, at);
   if (shift) {
     const who = `${guard!.firstName} ${guard!.lastName}`;
     await recordEvent(shift.id, guard!.id, state.direction === "INCOMING" ? "CALL_INCOMING" : "CALL_OUTGOING", { at: state.startedAt, source: "APP", note: `${state.direction === "INCOMING" ? "Incoming call from" : "Outgoing call to"} ${who} via ${device.deviceName}.` });
   }
-  if (unknown && raw && state.direction === "INCOMING" && (await getSettingBool("gateway.unknownCallerAlert"))) {
+  if (unknown && raw && state.direction === "INCOMING" && device.mode !== "GUARD" && (await getSettingBool("gateway.unknownCallerAlert"))) {
     await notify({ type: "UNKNOWN_CALLER", severity: "INFO", title: `Unknown caller on ${device.deviceName}`, body: `${formatPhone(normalized || raw)} called at ${fmtTime(at)} and is not a registered guard.`, url: `/calls/${call.id}` });
   }
   // A single event can already be terminal (for example a CALL_MISSED arriving first).
   await afterTransition(device, call, "RINGING", at, true);
   return { outcome: `created ${call.status}${guard ? ` · ${guard.firstName} ${guard.lastName}` : " · unknown caller"}${shift ? " · on live shift" : ""}`, callLogId: call.id };
+}
+
+function readFix(ev: IncomingGatewayEvent): { latitude: number; longitude: number; state: LocationState } | null {
+  const l = ev.meta?.location as Record<string, unknown> | undefined;
+  if (!l || typeof l.latitude !== "number" || typeof l.longitude !== "number") return null;
+  const st = l.locationState;
+  return { latitude: l.latitude, longitude: l.longitude, state: st === "INSIDE" || st === "OUTSIDE" ? st : "UNKNOWN" };
+}
+
+/**
+ * Link the two sides of one conversation: an operations-gateway call and a guard-device call with
+ * the same number, opposite directions, within 90 seconds. Both rows point at each other.
+ */
+async function correlateCall(callId: string, device: GatewayDevice, normalized: string, direction: CallLog["direction"], at: Date) {
+  if (!normalized || normalized === "unknown") return;
+  const other = await db.callLog.findFirst({
+    where: { id: { not: callId }, gatewayDeviceId: { not: device.id }, correlatedCallId: null, direction: direction === "INCOMING" ? "OUTGOING" : "INCOMING", startedAt: { gte: new Date(at.getTime() - 90_000), lte: new Date(at.getTime() + 90_000) }, gateway: { mode: device.mode === "GUARD" ? "OPERATIONS_GATEWAY" : "GUARD" },
+      ...(device.mode === "GUARD" ? { normalizedPhoneNumber: device.phoneNumber } : { guard: { devices: { some: { phoneNumber: normalized } } } }) },
+    orderBy: { startedAt: "desc" },
+  });
+  if (!other) return;
+  await db.callLog.update({ where: { id: callId }, data: { correlatedCallId: other.id } });
+  await db.callLog.update({ where: { id: other.id }, data: { correlatedCallId: callId } });
 }
 
 function safeNormalise(raw: string): string {
@@ -152,7 +204,7 @@ async function afterTransition(device: GatewayDevice, call: CallLog, previous: C
     if (call.status === "ENDED") await recordEvent(call.shiftId, guard.id, "CALL_ENDED", { at: call.endedAt ?? at, source: "APP", note: `Call ended · ${fmtCallDuration(call.durationSeconds)}.` });
     if (call.status === "MISSED") await recordEvent(call.shiftId, guard.id, "CALL_MISSED", { at: call.endedAt ?? at, source: "APP", note: `Missed call from ${who} on ${device.deviceName}.` });
   }
-  if (call.status === "MISSED" && call.direction === "INCOMING" && guard) {
+  if (call.status === "MISSED" && call.direction === "INCOMING" && guard && device.mode !== "GUARD") {
     const onDuty = Boolean(call.shiftId);
     if (onDuty || (await getSettingBool("gateway.missedCallAlert"))) {
       await notify({

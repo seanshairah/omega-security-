@@ -17,6 +17,6 @@ export const PATCH = guarded<Ctx>("ADMIN", async (req, ctx, user) => {
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const actor = { userId: user.id, name: user.name };
   if (typeof b.disabled === "boolean") await setGatewayDisabled(id, b.disabled, actor);
-  const g = await updateGateway(id, { deviceName: typeof b.deviceName === "string" ? b.deviceName : undefined, phoneNumber: typeof b.phoneNumber === "string" ? b.phoneNumber : undefined, locationId: b.locationId === null || typeof b.locationId === "string" ? (b.locationId as string | null) : undefined, notes: typeof b.notes === "string" ? b.notes : undefined }, actor);
+  const g = await updateGateway(id, { deviceName: typeof b.deviceName === "string" ? b.deviceName : undefined, phoneNumber: typeof b.phoneNumber === "string" ? b.phoneNumber : undefined, locationId: b.locationId === null || typeof b.locationId === "string" ? (b.locationId as string | null) : undefined, notes: typeof b.notes === "string" ? b.notes : undefined, mode: b.mode === "GUARD" || b.mode === "OPERATIONS_GATEWAY" ? b.mode : undefined, guardId: b.guardId === null || typeof b.guardId === "string" ? (b.guardId as string | null) : undefined }, actor);
   return json({ ...g, tokenHash: undefined });
 });

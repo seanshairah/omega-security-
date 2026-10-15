@@ -19,7 +19,10 @@ export async function createGatewayAction(_: ActionState, fd: FormData): Promise
     const user = await actor("ADMIN");
     const deviceName = String(fd.get("deviceName") ?? "").trim();
     if (deviceName.length < 2) return { error: "Give the gateway a name, e.g. Control Room Phone 01." };
-    const g = await createGateway({ deviceName, phoneNumber: String(fd.get("phoneNumber") ?? ""), locationId: String(fd.get("locationId") ?? "") || null, notes: String(fd.get("notes") ?? "") || null, actor: who(user) });
+    const mode = fd.get("mode") === "GUARD" ? "GUARD" : "OPERATIONS_GATEWAY";
+    const guardId = String(fd.get("guardId") ?? "") || null;
+    if (mode === "GUARD" && !guardId) return { error: "Choose the guard this phone belongs to." };
+    const g = await createGateway({ deviceName, phoneNumber: String(fd.get("phoneNumber") ?? ""), locationId: String(fd.get("locationId") ?? "") || null, notes: String(fd.get("notes") ?? "") || null, mode, guardId, actor: who(user) });
     id = g.id;
   } catch (e) {
     return fail(e);
@@ -33,7 +36,10 @@ export async function updateGatewayAction(id: string, _: ActionState, fd: FormDa
     const user = await actor("ADMIN");
     const deviceName = String(fd.get("deviceName") ?? "").trim();
     if (deviceName.length < 2) return { error: "Give the gateway a name." };
-    await updateGateway(id, { deviceName, phoneNumber: String(fd.get("phoneNumber") ?? ""), locationId: String(fd.get("locationId") ?? "") || null, notes: String(fd.get("notes") ?? "") || null }, who(user));
+    const mode = fd.get("mode") === "GUARD" ? "GUARD" : "OPERATIONS_GATEWAY";
+    const guardId = String(fd.get("guardId") ?? "") || null;
+    if (mode === "GUARD" && !guardId) return { error: "Choose the guard this phone belongs to." };
+    await updateGateway(id, { deviceName, phoneNumber: String(fd.get("phoneNumber") ?? ""), locationId: String(fd.get("locationId") ?? "") || null, notes: String(fd.get("notes") ?? "") || null, mode, guardId }, who(user));
   } catch (e) {
     return fail(e);
   }

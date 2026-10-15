@@ -21,6 +21,10 @@ import { formatPhone } from "@/lib/phone";
 import { callInclude } from "@/lib/gateway/calls";
 import { CallList } from "@/components/calls/call-list";
 import { CommunicationHistory } from "@/components/calls/communication-history";
+import { DevicePanel } from "@/components/location/location-panel";
+import { LocationEventList } from "@/components/location/location-events";
+import { getSettingNumber } from "@/lib/settings";
+import { audit } from "@/lib/audit";
 
 export const metadata = { title: "Guard" };
 
@@ -39,10 +43,16 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
     db.auditLog.findMany({ where: { entity: "Guard", entityId: id }, orderBy: { createdAt: "desc" }, take: 20 }),
     db.callLog.findMany({ where: { guardId: id }, include: callInclude, orderBy: { startedAt: "desc" }, take: 60 }),
   ]);
+  const [device, locEvents, offlineMinutes] = await Promise.all([
+    db.gatewayDevice.findFirst({ where: { guardId: id, mode: "GUARD", status: { not: "REVOKED" } }, orderBy: { createdAt: "desc" } }),
+    tab === "location" ? db.locationEvent.findMany({ where: { guardId: id }, include: { shift: { select: { id: true, startAt: true, endAt: true } }, location: { select: { id: true, name: true } } }, orderBy: { occurredAt: "desc" }, take: 80 }) : Promise.resolve([]),
+    getSettingNumber("gateway.offlineMinutes"),
+  ]);
+  if (tab === "location") await audit({ userId: user.id, actor: user.name, action: "LOCATION_VIEWED", entity: "Guard", entityId: id });
   const name = `${g.firstName} ${g.lastName}`;
   const live = guardLiveStatus(g, Boolean(deployed));
   const tone = { DEPLOYED: "ok", AVAILABLE: "neutral", ON_LEAVE: "warn", SUSPENDED: "critical", INACTIVE: "muted" } as const;
-  const tabs = [["shifts", "Shifts & attendance"], ["incidents", `Incidents (${incidents.length})`], ["messages", "Messages"], ["calls", `Calls (${calls.length})`], ["communication", "Communication"], ["history", "History"]];
+  const tabs = [["shifts", "Shifts & attendance"], ["incidents", `Incidents (${incidents.length})`], ["messages", "Messages"], ["calls", `Calls (${calls.length})`], ["communication", "Communication"], ...(g.deviceKind === "ANDROID_GUARD" ? [["location", "Location"]] : []), ["history", "History"]];
 
   return (
     <div>
@@ -129,6 +139,7 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
             )}
             {tab === "calls" && <CallList calls={calls} showGuard={false} emptyTitle="No calls from this guard yet" />}
             {tab === "communication" && <CardBody><CommunicationHistory messages={messages} calls={calls} /></CardBody>}
+            {tab === "location" && <LocationEventList events={locEvents} showShift emptyTitle="No location events yet" />}
             {tab === "history" && (
               <Table>
                 <THead><tr><th>When</th><th>Action</th><th>By</th><th>Details</th></tr></THead>
@@ -158,6 +169,10 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
                 <Meta label="Usual location">{g.homeLocation ? <Link href={`/locations/${g.homeLocation.id}`} className="hover:underline">{g.homeLocation.name}</Link> : "—"}</Meta>
                 <Meta label="Address" className="col-span-2">{g.address ?? "—"}</Meta>
                 <Meta label="Emergency contact" className="col-span-2">{g.emergencyContactName ? `${g.emergencyContactName} · ${g.emergencyContactPhone ?? ""}` : "—"}</Meta>
+              </div>
+              <div className="mt-4 border-t border-dashed border-line pt-3">
+                <div className="mb-2 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">Device</span><Status tone={g.deviceKind === "ANDROID_GUARD" ? "ok" : "neutral"}>{g.deviceKind === "ANDROID_GUARD" ? "Android guard" : "Feature phone (SMS and calls)"}</Status></div>
+                {device ? <DevicePanel device={device} offlineMinutes={offlineMinutes} /> : <p className="text-[13px] text-ink-3">No guard phone linked. {can.manageGuards(user) && <Link href="/gateways/new" className="underline">Register one</Link>} to add GPS verification; SMS and calls work without it.</p>}
               </div>
               {g.notes && <p className="mt-4 border-t border-dashed border-line pt-3 text-[13px] text-ink-2">{g.notes}</p>}
               {!g.active && <p className="mt-3 text-[12px] text-critical">Deactivated {fmtDate(g.deactivatedAt)}.</p>}

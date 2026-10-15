@@ -16,6 +16,8 @@ data class GatewayEvent(
     val timestampMs: Long,
     val durationSeconds: Int? = null,
     val answered: Boolean? = null,
+    /** Extra top-level fields (location events) or a `location` object (guard-device calls). */
+    val extra: JSONObject? = null,
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("eventId", eventId)
@@ -26,6 +28,7 @@ data class GatewayEvent(
         put("timestamp", iso(timestampMs))
         durationSeconds?.let { put("durationSeconds", it) }
         answered?.let { put("answered", it) }
+        extra?.let { x -> x.keys().forEach { k -> put(k, x.get(k)) } }
     }
 
     companion object {
@@ -45,9 +48,10 @@ data class GatewayEvent(
             timestampMs = o.optLong("timestampMs", System.currentTimeMillis()),
             durationSeconds = if (o.has("durationSeconds")) o.getInt("durationSeconds") else null,
             answered = if (o.has("answered")) o.getBoolean("answered") else null,
+            extra = o.optJSONObject("extra"),
         )
 
         /** Storage form keeps the raw millis so the ISO string is rebuilt on send. */
-        fun toStorageJson(e: GatewayEvent): String = e.toJson().put("timestampMs", e.timestampMs).toString()
+        fun toStorageJson(e: GatewayEvent): String = e.toJson().put("timestampMs", e.timestampMs).apply { e.extra?.let { put("extra", it) } }.toString()
     }
 }

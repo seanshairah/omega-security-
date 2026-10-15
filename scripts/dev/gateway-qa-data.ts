@@ -11,6 +11,7 @@ import { addHours, subMinutes } from "date-fns";
 import { db } from "../../src/lib/db";
 import { createGateway, activateGateway } from "../../src/lib/gateway/service";
 import { processGatewayEvents } from "../../src/lib/gateway/events";
+import { applyLocationEvent } from "../../src/lib/gateway/location-events";
 import { processIncomingMessage } from "../../src/lib/sms/pipeline";
 import { runAutomationTick } from "../../src/lib/automation/engine";
 
@@ -22,7 +23,8 @@ async function clean() {
   const gws = await db.gatewayDevice.findMany({ where: { deviceName: { startsWith: "QA " } }, select: { id: true } });
   const gwIds = gws.map((g) => g.id);
   await db.$transaction([
-    db.notification.deleteMany({ where: { OR: [{ guardId: { in: gIds } }, { type: "GATEWAY_OFFLINE", title: { contains: "QA " } }, { type: "UNKNOWN_CALLER", title: { contains: "QA " } }] } }),
+    db.notification.deleteMany({ where: { OR: [{ guardId: { in: gIds } }, { type: { in: ["GATEWAY_OFFLINE", "DEVICE_OFFLINE", "UNKNOWN_CALLER", "DEVICE_LOW_BATTERY", "LOCATION_INTEGRITY"] }, title: { contains: "QA " } }] } }),
+    db.locationEvent.deleteMany({ where: { OR: [{ gatewayDeviceId: { in: gwIds } }, { shiftId: { in: sIds } }] } }),
     db.shiftCheckIn.deleteMany({ where: { shiftId: { in: sIds } } }), db.welfareCheck.deleteMany({ where: { shiftId: { in: sIds } } }),
     db.incident.deleteMany({ where: { guardId: { in: gIds } } }), db.smsMessage.deleteMany({ where: { guardId: { in: gIds } } }),
     db.callLog.deleteMany({ where: { gatewayDeviceId: { in: gwIds } } }), db.gatewayEvent.deleteMany({ where: { gatewayDeviceId: { in: gwIds } } }),
@@ -38,7 +40,7 @@ async function main() {
   if (process.argv.includes("--clean")) { console.log("cleaned"); return; }
   const admin = await db.user.findFirstOrThrow({ where: { role: "SUPER_ADMIN" } });
   const client = await db.client.create({ data: { code: "QA", name: "ABC Logistics", contactPhone: "+263242300200" } });
-  const wh = await db.location.create({ data: { code: "QA-01", name: "ABC Warehouse", clientId: client.id, address: "12 Plymouth Rd, Graniteside", supervisorId: admin.id } });
+  const wh = await db.location.create({ data: { code: "QA-01", name: "ABC Warehouse", clientId: client.id, address: "12 Plymouth Rd, Graniteside", supervisorId: admin.id, latitude: -17.8292, longitude: 31.0522, geofenceRadiusM: 150 } });
   const mall = await db.location.create({ data: { code: "QA-02", name: "City Mall", clientId: client.id, address: "Harare CBD", supervisorId: admin.id } });
   const john = await db.guard.create({ data: { guardNo: "G-QA01", firstName: "John", lastName: "Moyo", phone: "+263771234567", nationalId: "QA-63-1", dateEmployed: new Date(), homeLocationId: wh.id, photoUrl: "/avatars/guard-1.svg" } });
   await db.guard.create({ data: { guardNo: "G-QA02", firstName: "Peter", lastName: "Ncube", phone: "+263772345002", nationalId: "QA-63-2", dateEmployed: new Date(), homeLocationId: mall.id, photoUrl: "/avatars/guard-2.svg" } });
@@ -66,6 +68,17 @@ async function main() {
     { eventId: "qa-4-1", eventType: "CALL_STARTED", callId: "qa-4", phoneNumber: "+263772345002", timestamp: t(0.5) },
     { eventId: "qa-4-2", eventType: "CALL_ANSWERED", callId: "qa-4", timestamp: t(0.3) },
   ]);
-  console.log(JSON.stringify({ gateway: g1.id, guard: john.id, shift: shift.id, call: (await db.callLog.findFirst({ where: { callId: "qa-3" } }))!.id, unknown: (await db.callLog.findFirst({ where: { callId: "qa-2" } }))!.id }));
+  // Guard device for John with a shift-long location story: inside, exit, outside, return (synced late)
+  const gd = await createGateway({ deviceName: "QA John's phone", phoneNumber: "+263771234567", mode: "GUARD", guardId: john.id, actor });
+  const ga = await activateGateway(gd.activationCode!, { appVersion: "1.1.0", androidVersion: "13 (API 33)", deviceModel: "Samsung Galaxy A12", batteryLevel: 64, networkType: "mobile", locationPermission: "background", callPermission: "granted" }, "41.0.0.3");
+  const off = (m: number) => m / 111_000;
+  const fx = (m: number, acc = 12) => ({ latitude: -17.8292 + off(m), longitude: 31.0522, accuracyM: acc, distanceM: m, geofenceRadiusM: 150, shiftId: shift.id, provider: "gps" });
+  const L = async (type: string, m: number | null, minsAgo: number, extra: Record<string, unknown> = {}) => applyLocationEvent(ga.device, { eventId: `qa-loc-${type}-${minsAgo}`, eventType: type as never, timestamp: subMinutes(now, minsAgo), locationState: m == null ? "UNKNOWN" : m <= 150 ? "INSIDE" : "OUTSIDE", ...(m == null ? { shiftId: shift.id } : fx(m)), ...extra }, { simulated: true });
+  await L("SHIFT_STARTED", 20, 245); await L("LOCATION_CHECK", 25, 180); await L("LOCATION_CHECK", 18, 120);
+  await L("LOCATION_EXIT", 420, 95); await L("LOCATION_OUTSIDE", 480, 85);
+  await db.locationEvent.updateMany({ where: { gatewayDeviceId: gd.id, eventType: { in: ["LOCATION_EXIT", "LOCATION_OUTSIDE"] } }, data: { syncStatus: "SYNCED_LATE" } });
+  await L("LOCATION_RETURNED", 38, 45, { durationOutsideSeconds: 50 * 60 }); await L("LOCATION_CHECK", 22, 8);
+  await db.gatewayDevice.update({ where: { id: gd.id }, data: { monitoringState: "MONITORING" } });
+  console.log(JSON.stringify({ guardDevice: gd.id, gateway: g1.id, guard: john.id, shift: shift.id, call: (await db.callLog.findFirst({ where: { callId: "qa-3" } }))!.id, unknown: (await db.callLog.findFirst({ where: { callId: "qa-2" } }))!.id }));
 }
 main().catch((e) => { console.error(e); process.exit(1); }).finally(() => db.$disconnect());

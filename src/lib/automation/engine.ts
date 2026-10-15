@@ -14,6 +14,7 @@ import { sendClientUpdate } from "@/lib/sms/client-updates";
 import { materialiseRecurrences, recordEvent, shiftInclude, LIVE_STATUSES, ON_SITE_STATUSES } from "@/lib/services/shifts";
 import { fmtTime } from "@/lib/time";
 import { gatewayMaintenance } from "@/lib/gateway/service";
+import { locationMaintenance } from "@/lib/gateway/location-events";
 
 export type TickReport = {
   at: string;
@@ -28,13 +29,15 @@ export type TickReport = {
   completionTimedOut: number;
   missed: number;
   gatewaysOffline: number;
+  locationOverdue: number;
+  locationEscalated: number;
   errors: string[];
 };
 
 let running = false;
 
 export async function runAutomationTick(now = new Date()): Promise<TickReport> {
-  const report: TickReport = { at: now.toISOString(), recurrencesCreated: 0, arrivalSent: 0, remindersSent: 0, escalated: 0, welfareSent: 0, welfareMissed: 0, handoverNotices: 0, completionSent: 0, completionTimedOut: 0, missed: 0, gatewaysOffline: 0, errors: [] };
+  const report: TickReport = { at: now.toISOString(), recurrencesCreated: 0, arrivalSent: 0, remindersSent: 0, escalated: 0, welfareSent: 0, welfareMissed: 0, handoverNotices: 0, completionSent: 0, completionTimedOut: 0, missed: 0, gatewaysOffline: 0, locationOverdue: 0, locationEscalated: 0, errors: [] };
   if (running) {
     report.errors.push("tick already running");
     return report;
@@ -205,6 +208,14 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
       report.gatewaysOffline = g.offline;
     } catch (e) {
       report.errors.push(`gateway ${(e as Error).message}`);
+    }
+    // 12. guard-device location monitoring — overdue checks, extended absence, retention; isolated as above
+    try {
+      const l = await locationMaintenance(now);
+      report.locationOverdue = l.overdue;
+      report.locationEscalated = l.escalated;
+    } catch (e) {
+      report.errors.push(`location ${(e as Error).message}`);
     }
   } finally {
     running = false;
