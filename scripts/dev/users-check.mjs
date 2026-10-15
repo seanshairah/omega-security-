@@ -3,7 +3,7 @@ const base = "http://localhost:3000";
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
 page.on("pageerror", (e) => console.log("PAGEERROR", e.message.slice(0, 300)));
-await page.goto(base + "/login"); await page.fill('input[name=email]', "admin@omegasecurity.co.zw"); await page.fill('input[name=password]', "Zvesh@2000");
+await page.goto(base + "/login"); await page.fill('input[name=email]', (process.env.QA_EMAIL ?? "admin@omegasecurity.co.zw")); await page.fill('input[name=password]', (process.env.QA_PASSWORD ?? "Zvesh@2000"));
 await Promise.all([page.waitForURL("**/dashboard", { timeout: 120000 }), page.click('button[type=submit]')]);
 await page.goto(base + "/users", { waitUntil: "networkidle" });
 const rows = await page.$$eval("tbody tr", (trs) => trs.map((t) => t.innerText.replace(/\n/g, " | ").slice(0, 120)));

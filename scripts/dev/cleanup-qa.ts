@@ -1,5 +1,11 @@
 // Remove records created by scripts/dev/e2e.mjs (names prefixed Test / QA).
 import { config } from "dotenv"; config();
+// Guard rail: these scripts create and delete records by name pattern. Never run them against a production database.
+const dbUrl = process.env.DATABASE_URL ?? "";
+if (!/localhost|127\.0\.0\.1/.test(dbUrl) && process.env.ALLOW_LIVE_DB !== "1") {
+  console.error("Refusing to run against a non-local DATABASE_URL. Set ALLOW_LIVE_DB=1 only for a database that holds no real data.");
+  process.exit(2);
+}
 import { db } from "../../src/lib/db";
 async function main() {
   const guards = await db.guard.findMany({ where: { OR: [{ lastName: { startsWith: "Guard" }, firstName: "Test" }, { firstName: "Dup" }] }, select: { id: true } });

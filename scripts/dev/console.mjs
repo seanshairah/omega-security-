@@ -4,8 +4,8 @@ const page = await (await browser.newContext({ viewport: { width: 1200, height: 
 page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") console.log("CONSOLE", m.type(), m.text().slice(0, 400)); });
 page.on("pageerror", (e) => console.log("PAGEERROR", e.message.slice(0, 400)));
 await page.goto("http://localhost:3000/login");
-await page.fill('input[name=email]', "admin@omegasecurity.co.zw");
-await page.fill("input[name=password]", "Zvesh@2000");
+await page.fill('input[name=email]', (process.env.QA_EMAIL ?? "admin@omegasecurity.co.zw"));
+await page.fill("input[name=password]", (process.env.QA_PASSWORD ?? "Zvesh@2000"));
 await Promise.all([page.waitForURL("**/dashboard"), page.click('button[type=submit]')]);
 await page.waitForTimeout(4000);
 console.log("svg paths in chart:", await page.locator(".recharts-line").count());

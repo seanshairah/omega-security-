@@ -34,7 +34,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const qs = `from=${from.toISOString()}&to=${to.toISOString()}`;
   return (
     <div>
-      <PageHeader title="Reports" description="Attendance and performance by guard and by client. Export any range as CSV." actions={<a href={`/api/reports/attendance.csv?${qs}`} className="inline-flex h-9 items-center rounded-[8px] border border-line bg-surface px-3.5 text-sm font-medium hover:bg-surface-2">Export attendance CSV</a>} />
+      <PageHeader title="Reports" description="Attendance and performance by guard and by client. Export any range as CSV." actions={<><Link href="/reports/calls" className="inline-flex h-9 items-center rounded-[8px] border border-line bg-surface px-3.5 text-sm font-medium hover:bg-surface-2">Call report</Link><a href={`/api/reports/attendance.csv?${qs}`} className="inline-flex h-9 items-center rounded-[8px] border border-line bg-surface px-3.5 text-sm font-medium hover:bg-surface-2">Export attendance CSV</a></>} />
       <Segments className="mb-4" items={[{ href: "/reports?range=7d", label: "Last 7 days", active: range === "7d" }, { href: "/reports?range=30d", label: "Last 30 days", active: range === "30d" }, { href: "/reports?range=month", label: "This month", active: range === "month" }, { href: "/reports?range=90d", label: "Last 90 days", active: range === "90d" }]} />
       <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
         <Card>

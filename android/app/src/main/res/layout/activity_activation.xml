@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="@string/app_name" android:textAllCaps="true" android:textColor="@color/ink" android:textSize="22sp" android:textStyle="bold" android:letterSpacing="0.08" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/activation_help" android:textColor="@color/ink2" android:textSize="14sp" />
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:background="@drawable/card" android:orientation="vertical" android:padding="20dp">
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/server_label" />
+            <EditText android:id="@+id/server" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textUri" android:textSize="16sp" android:hint="https://your-domain.com" android:autofillHints="url" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/code_label" />
+            <EditText android:id="@+id/code" android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="textCapCharacters|textNoSuggestions" android:maxLength="8" android:textSize="28sp" android:letterSpacing="0.3" android:hint="@string/code_hint" android:autofillHints="" />
+            <TextView android:id="@+id/error" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/critical" android:textSize="13sp" />
+            <Button android:id="@+id/activate" android:layout_width="match_parent" android:layout_height="52dp" android:layout_marginTop="16dp" android:text="@string/activate_device" android:textStyle="bold" />
+        </LinearLayout>
+        <TextView android:id="@+id/version" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:textColor="@color/ink3" android:textSize="12sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/privacy_line" android:textColor="@color/ink3" android:textSize="12sp" />
+    </LinearLayout>
+</ScrollView>

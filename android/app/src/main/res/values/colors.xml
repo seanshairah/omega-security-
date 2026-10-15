@@ -1,0 +1,11 @@
+<resources>
+    <color name="ink">#1B1F1A</color>
+    <color name="ink2">#5E665C</color>
+    <color name="ink3">#8C948A</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="surface2">#F3F4F1</color>
+    <color name="line">#E3E6DF</color>
+    <color name="accent">#2E7D32</color>
+    <color name="accent_strong">#1B5E20</color>
+    <color name="critical">#C62828</color>
+</resources>

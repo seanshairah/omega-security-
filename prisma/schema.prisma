@@ -56,6 +56,7 @@ model Client {
   updatedAt    DateTime   @updatedAt
   locations    Location[]
   smsMessages  SmsMessage[]
+  callLogs     CallLog[]
 }
 
 enum ShiftPattern {
@@ -98,6 +99,8 @@ model Location {
   incidents   Incident[]
   recurrences ShiftRecurrence[]
   smsMessages SmsMessage[]
+  gateways    GatewayDevice[]
+  callLogs    CallLog[]
 
   @@index([clientId])
   @@index([active])
@@ -155,6 +158,7 @@ model Guard {
   smsMessages SmsMessage[]
   recurrences ShiftRecurrence[]
   notifications Notification[]
+  callLogs    CallLog[]
 
   @@index([lastName, firstName])
   @@index([active])
@@ -245,6 +249,7 @@ model Shift {
   incidents     Incident[]
   smsMessages   SmsMessage[]
   notifications Notification[]
+  callLogs      CallLog[]
 
   @@index([startAt])
   @@index([endAt])
@@ -303,6 +308,11 @@ enum CheckInType {
   ADMIN_NOTE
   CLIENT_NOTIFIED
   UNRECOGNISED_REPLY
+  CALL_INCOMING
+  CALL_ANSWERED
+  CALL_ENDED
+  CALL_MISSED
+  CALL_OUTGOING
 }
 
 enum CheckInSource {
@@ -561,4 +571,119 @@ model AuditLog {
   @@index([createdAt])
   @@index([action])
   @@index([entity, entityId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Android call gateway. Separate from the SMS system: a gateway phone reports
+// call metadata (never audio) which is matched to guards and live shifts.
+// ─────────────────────────────────────────────────────────────────────────────
+enum GatewayStatus {
+  ONLINE
+  OFFLINE
+  DISABLED
+  REVOKED
+}
+enum GatewayActivation {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+model GatewayDevice {
+  id               String            @id @default(cuid())
+  deviceName       String
+  phoneNumber      String
+  locationId       String?
+  location         Location?         @relation(fields: [locationId], references: [id])
+  status           GatewayStatus     @default(OFFLINE)
+  activationStatus GatewayActivation @default(PENDING)
+  activationCode   String?           @unique
+  activationExpiresAt DateTime?
+  activatedAt      DateTime?
+  tokenHash        String?           @unique
+  tokenIssuedAt    DateTime?
+  lastSeenAt       DateTime?
+  lastIp           String?
+  androidVersion   String?
+  appVersion       String?
+  deviceModel      String?
+  batteryLevel     Int?
+  networkType      String?
+  lastCallAt       DateTime?
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  revokedAt        DateTime?
+  disabledAt       DateTime?
+
+  events   GatewayEvent[]
+  callLogs CallLog[]
+
+  @@index([status])
+  @@index([locationId])
+  @@index([lastSeenAt])
+}
+/** Every event a gateway sends, kept raw. `eventId` is generated on the phone and makes retries idempotent. */
+model GatewayEvent {
+  id              String        @id @default(cuid())
+  eventId         String        @unique
+  gatewayDeviceId String
+  gateway         GatewayDevice @relation(fields: [gatewayDeviceId], references: [id])
+  eventType       String
+  callId          String?
+  phoneNumber     String?
+  occurredAt      DateTime
+  receivedAt      DateTime      @default(now())
+  payload         Json?
+  outcome         String?
+
+  @@index([gatewayDeviceId, receivedAt])
+  @@index([eventType])
+}
+enum CallDirection {
+  INCOMING
+  OUTGOING
+}
+enum CallStatus {
+  RINGING
+  ANSWERED
+  MISSED
+  ENDED
+  FAILED
+  UNKNOWN
+}
+model CallLog {
+  id                    String        @id @default(cuid())
+  callId                String        // stable id from the phone for one call; dedupes state events
+  gatewayDeviceId       String
+  gateway               GatewayDevice @relation(fields: [gatewayDeviceId], references: [id])
+  guardId               String?
+  guard                 Guard?        @relation(fields: [guardId], references: [id])
+  locationId            String?
+  location              Location?     @relation(fields: [locationId], references: [id])
+  clientId              String?
+  client                Client?       @relation(fields: [clientId], references: [id])
+  shiftId               String?
+  shift                 Shift?        @relation(fields: [shiftId], references: [id])
+  phoneNumber           String
+  normalizedPhoneNumber String
+  direction             CallDirection @default(INCOMING)
+  status                CallStatus    @default(RINGING)
+  startedAt             DateTime
+  answeredAt            DateTime?
+  endedAt               DateTime?
+  durationSeconds       Int?
+  unknownCaller         Boolean       @default(false)
+  unknownResolution     String?       // IGNORED | BLOCKED | LINKED
+  simulated             Boolean       @default(false)
+  note                  String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@unique([gatewayDeviceId, callId])
+  @@index([startedAt])
+  @@index([status])
+  @@index([guardId, startedAt])
+  @@index([locationId, startedAt])
+  @@index([normalizedPhoneNumber])
+  @@index([unknownCaller])
 }

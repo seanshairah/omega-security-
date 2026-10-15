@@ -7,3 +7,9 @@ out
 .DS_Store
 tsconfig.tsbuildinfo
 next-env.d.ts
+android/.gradle
+android/build
+android/app/build
+android/local.properties
+android/keystore.properties
+android/*.jks

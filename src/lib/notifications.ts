@@ -19,6 +19,9 @@ export type NotifyInput = {
     | "EMERGENCY"
     | "STILL_ON_DUTY"
     | "SHIFT_MISSED"
+    | "MISSED_CALL"
+    | "UNKNOWN_CALLER"
+    | "GATEWAY_OFFLINE"
     | "GENERAL";
   severity?: NotificationSeverity;
   title: string;
@@ -26,6 +29,8 @@ export type NotifyInput = {
   guardId?: string | null;
   shiftId?: string | null;
   incidentId?: string | null;
+  /** Where a push notification opens; defaults to the incident, shift or guard. */
+  url?: string;
 };
 
 export async function notify(input: NotifyInput) {
@@ -40,7 +45,7 @@ export async function notify(input: NotifyInput) {
   const n = await db.notification.create({
     data: { type: input.type, severity, title, body: input.body, guardId: input.guardId ?? null, shiftId: input.shiftId ?? null, incidentId: input.incidentId ?? null },
   });
-  const url = input.incidentId ? `/incidents/${input.incidentId}` : input.shiftId ? `/shifts/${input.shiftId}` : input.guardId ? `/guards/${input.guardId}` : "/notifications";
+  const url = input.url ?? (input.incidentId ? `/incidents/${input.incidentId}` : input.shiftId ? `/shifts/${input.shiftId}` : input.guardId ? `/guards/${input.guardId}` : "/notifications");
   if (severity !== "INFO" || watched?.watched) {
     pushToAll({ title, body: input.body, url, tag: n.id, critical: severity === "CRITICAL" }).catch(() => undefined);
   }

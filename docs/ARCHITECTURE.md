@@ -1,7 +1,7 @@
 # Omega Protection Services operations portal — system design
 
 The portal is the guard workforce and shift management system for Omega Protection Services.
-Admins run operations from a web portal. Guards interact only by two-way SMS.
+Admins run operations from a web portal. Guards interact by two-way SMS and by phoning the company's gateway phones.
 
 This document is the design that the code implements. It covers:
 
@@ -13,6 +13,7 @@ This document is the design that the code implements. It covers:
 6. Automation logic
 7. Dashboard structure
 8. Project folder structure
+9. Android call gateway (added module)
 
 ---
 
@@ -353,3 +354,57 @@ Screens: Dashboard · Active operations · Shifts (+ new, + recurring, + detail/
 ├── .env.example
 └── README.md
 ```
+
+---
+
+## 9. Android call gateway
+
+An additive module. The SMS system is the foundation; the gateway is a second, independent channel.
+
+```mermaid
+flowchart TB
+  Admin[Admin browser] --> Web[Web dashboard<br/>Next.js pages + server actions]
+  Web --> API[Backend API<br/>/api/* route handlers]
+  API --> DB[(PostgreSQL<br/>Prisma)]
+  subgraph SMS [SMS · existing]
+    Prov[SMS provider<br/>Sendai / Africa's Talking / Twilio] --> Hook[/api/sms/webhook/provider]
+    Out[lib/sms/outbound] --> Prov
+  end
+  subgraph Calls [Calls · new]
+    Phone[Android gateway phone<br/>Security Gateway app] -->|HTTPS Bearer token| GW[/api/gateways/heartbeat · events/]
+  end
+  Hook --> DB
+  GW --> DB
+  Engine[Automation engine<br/>every minute] --> Out
+  Engine --> Maint[gatewayMaintenance<br/>offline · retention]
+  Maint --> DB
+```
+
+```mermaid
+sequenceDiagram
+  participant G as Guard (phone)
+  participant P as Gateway phone (app)
+  participant S as Backend
+  participant D as Dashboard
+  G->>P: rings
+  P->>P: PHONE_STATE RINGING → CALL_STARTED (queued in SQLite)
+  P->>S: POST /api/gateways/events
+  S->>S: normalise number → match guard → live shift → CallLog RINGING
+  S-->>D: Live calls: RINGING
+  P->>S: CALL_ANSWERED
+  S-->>D: 🟢 ANSWERED
+  P->>P: IDLE → read call log → CALL_ENDED (duration)
+  P->>S: CALL_ENDED
+  S-->>D: COMPLETED · 03:42 · shift timeline entry
+```
+
+Components: `android/` (Kotlin app: activation, foreground service, call tracker, SQLite outbox, sync with backoff, boot receiver), `src/lib/gateway/*` (auth, service, call state machine, event intake, queries, simulator), routes under `src/app/api/gateways/*` and `src/app/api/calls/*`, pages under `src/app/(app)/gateways`, `(app)/calls`, `(app)/reports/calls`, plus the guard profile's Calls and Communication tabs and the dashboard's Calls card.
+
+Boundaries that matter:
+
+- A call proves communication, not presence. Attendance is still driven by the SMS confirmations.
+- Every event carries a device-generated `eventId` (dedupe) and `callId` (one row per call); timestamps are the phone's, clamped on the server.
+- Offline: events wait in the phone's outbox and are replayed in order when connectivity returns.
+- If every gateway phone disappears, nothing in sections 1–8 changes.
+
+Details: [ANDROID_GATEWAY.md](ANDROID_GATEWAY.md), [DATABASE.md](DATABASE.md), [API.md](API.md).

@@ -18,6 +18,9 @@ import { setGuardActive } from "@/actions/guards";
 import { setGuardWatched } from "@/actions/messages";
 import { fmtDate, fmtTime, fmtDateTime, fmtShort } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
+import { callInclude } from "@/lib/gateway/calls";
+import { CallList } from "@/components/calls/call-list";
+import { CommunicationHistory } from "@/components/calls/communication-history";
 
 export const metadata = { title: "Guard" };
 
@@ -27,18 +30,19 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
   const { tab = "shifts" } = await searchParams;
   const g = await db.guard.findUnique({ where: { id }, include: { homeLocation: true, supervisor: true } });
   if (!g) notFound();
-  const [perf, shifts, incidents, deployed, messages, auditRows] = await Promise.all([
+  const [perf, shifts, incidents, deployed, messages, auditRows, calls] = await Promise.all([
     guardPerformance(id),
     db.shift.findMany({ where: { guardId: id }, include: shiftInclude, orderBy: { startAt: "desc" }, take: 40 }),
     db.incident.findMany({ where: { guardId: id }, include: { location: true }, orderBy: { occurredAt: "desc" } }),
     db.shift.findFirst({ where: { guardId: id, status: { in: ON_SITE_STATUSES } }, include: { location: true } }),
     db.smsMessage.findMany({ where: { guardId: id }, orderBy: { createdAt: "desc" }, take: 30 }),
     db.auditLog.findMany({ where: { entity: "Guard", entityId: id }, orderBy: { createdAt: "desc" }, take: 20 }),
+    db.callLog.findMany({ where: { guardId: id }, include: callInclude, orderBy: { startedAt: "desc" }, take: 60 }),
   ]);
   const name = `${g.firstName} ${g.lastName}`;
   const live = guardLiveStatus(g, Boolean(deployed));
   const tone = { DEPLOYED: "ok", AVAILABLE: "neutral", ON_LEAVE: "warn", SUSPENDED: "critical", INACTIVE: "muted" } as const;
-  const tabs = [["shifts", "Shifts & attendance"], ["incidents", `Incidents (${incidents.length})`], ["messages", "Messages"], ["history", "History"]];
+  const tabs = [["shifts", "Shifts & attendance"], ["incidents", `Incidents (${incidents.length})`], ["messages", "Messages"], ["calls", `Calls (${calls.length})`], ["communication", "Communication"], ["history", "History"]];
 
   return (
     <div>
@@ -123,6 +127,8 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
                 </ul>
               </CardBody>
             )}
+            {tab === "calls" && <CallList calls={calls} showGuard={false} emptyTitle="No calls from this guard yet" />}
+            {tab === "communication" && <CardBody><CommunicationHistory messages={messages} calls={calls} /></CardBody>}
             {tab === "history" && (
               <Table>
                 <THead><tr><th>When</th><th>Action</th><th>By</th><th>Details</th></tr></THead>

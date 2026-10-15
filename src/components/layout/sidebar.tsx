@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { HouseIcon, ShieldCheckIcon, BroadcastIcon, EyeIcon, PaperPlaneTiltIcon, CalendarBlankIcon, ClipboardTextIcon, WarningOctagonIcon, UsersThreeIcon, BuildingsIcon, MapPinIcon, ChatTextIcon, ArticleIcon, ChartBarIcon, UserGearIcon, GearSixIcon, ListMagnifyingGlassIcon, CaretUpIcon, CaretDownIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, DeviceMobileIcon, XIcon } from "@phosphor-icons/react";
+import { HouseIcon, ShieldCheckIcon, BroadcastIcon, EyeIcon, PaperPlaneTiltIcon, CalendarBlankIcon, ClipboardTextIcon, WarningOctagonIcon, UsersThreeIcon, BuildingsIcon, MapPinIcon, ChatTextIcon, ArticleIcon, ChartBarIcon, UserGearIcon, GearSixIcon, ListMagnifyingGlassIcon, CaretUpIcon, CaretDownIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, DeviceMobileIcon, XIcon, PhoneCallIcon, CellSignalFullIcon } from "@phosphor-icons/react";
 import { BrandMark, COMPANY } from "./brand";
 import { cn } from "@/lib/cn";
 import { Count } from "@/components/ui/status";
@@ -36,6 +36,8 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
       { href: "/messages/new", label: "Compose", icon: PaperPlaneTiltIcon },
       { href: "/sms", label: "Message logs", icon: ChatTextIcon },
       { href: "/sms/templates", label: "Templates", icon: ArticleIcon },
+      { href: "/calls", label: "Calls", icon: PhoneCallIcon },
+      { href: "/gateways", label: "Gateway phones", icon: CellSignalFullIcon },
     ] },
   ];
   const singles: Item[] = [

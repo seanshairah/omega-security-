@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+            <Button android:id="@+id/back" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/back" />
+            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/settings_title" android:textColor="@color/ink" android:textSize="20sp" android:textStyle="bold" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/card" android:orientation="vertical" android:padding="18dp">
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/server_url_label" />
+            <TextView android:id="@+id/serverUrl" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/device_id_label" />
+            <TextView android:id="@+id/deviceId" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13sp" android:fontFamily="monospace" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/connection_label" />
+            <TextView android:id="@+id/gatewayStatus" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/heartbeat_label" />
+            <TextView android:id="@+id/heartbeat" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/queue_label" />
+            <TextView android:id="@+id/queue" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_error_label" />
+            <TextView android:id="@+id/lastError" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13sp" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/version_label" />
+            <TextView android:id="@+id/appVersion" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/android_label" />
+            <TextView android:id="@+id/android" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+        </LinearLayout>
+        <Button android:id="@+id/test" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/test_connection" />
+        <TextView android:id="@+id/testResult" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/ink2" android:textSize="13sp" />
+        <Button android:id="@+id/deactivate" style="?attr/borderlessButtonStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="@string/deactivate" android:textColor="@color/critical" />
+    </LinearLayout>
+</ScrollView>

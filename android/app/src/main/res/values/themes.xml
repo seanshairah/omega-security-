@@ -1,0 +1,24 @@
+<resources>
+    <style name="Theme.Gateway" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/accent</item>
+        <item name="colorPrimaryVariant">@color/accent_strong</item>
+        <item name="colorOnPrimary">@color/surface</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="android:windowBackground">@color/surface2</item>
+        <item name="android:statusBarColor">@color/surface2</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:textColorPrimary">@color/ink</item>
+    </style>
+    <style name="Label">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/ink3</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:layout_marginTop">14dp</item>
+    </style>
+    <style name="Value">
+        <item name="android:textSize">17sp</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:layout_marginTop">2dp</item>
+    </style>
+</resources>
