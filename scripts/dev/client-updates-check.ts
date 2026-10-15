@@ -1,6 +1,12 @@
 /** Exercise client site-status updates end to end with the simulated provider, then remove everything it created. */
 process.env.SMS_PROVIDER = "simulated";
 import { config } from "dotenv"; config();
+// Guard rail: these scripts create and delete records by name pattern. Never run them against a production database.
+const dbUrl = process.env.DATABASE_URL ?? "";
+if (!/localhost|127\.0\.0\.1/.test(dbUrl) && process.env.ALLOW_LIVE_DB !== "1") {
+  console.error("Refusing to run against a non-local DATABASE_URL. Set ALLOW_LIVE_DB=1 only for a database that holds no real data.");
+  process.exit(2);
+}
 import { addHours, subMinutes } from "date-fns";
 import { db } from "../../src/lib/db";
 import { processIncomingMessage } from "../../src/lib/sms/pipeline";
@@ -46,7 +52,7 @@ async function cleanup() {
     db.notification.deleteMany({ where: { guardId: { in: gIds } } }), db.shiftCheckIn.deleteMany({ where: { shiftId: { in: sIds } } }), db.welfareCheck.deleteMany({ where: { shiftId: { in: sIds } } }),
     db.incident.deleteMany({ where: { guardId: { in: gIds } } }), db.smsMessage.deleteMany({ where: { OR: [{ guardId: { in: gIds } }, { clientId: { in: cIds } }] } }), db.attendance.deleteMany({ where: { shiftId: { in: sIds } } }),
     db.shift.deleteMany({ where: { id: { in: sIds } } }), db.guard.deleteMany({ where: { id: { in: gIds } } }), db.location.deleteMany({ where: { code: "QA-CU-01" } }), db.client.deleteMany({ where: { id: { in: cIds } } }),
-    db.auditLog.deleteMany({ where: { OR: [{ entity: "SmsMessage" }, { entityId: { in: gIds } }] } }),
+    db.auditLog.deleteMany({ where: { OR: [{ entityId: { in: [...gIds, ...sIds] } }, { action: { in: ["SMS_SENT", "SMS_FAILED"] }, details: { path: ["to"], equals: "+263771000222" } }] } }),
   ]);
   console.log("cleaned up");
 }

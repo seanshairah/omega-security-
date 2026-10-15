@@ -4,8 +4,8 @@ const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromi
 const ctx = await browser.newContext({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1, isMobile: +w < 800, hasTouch: +w < 800 });
 const page = await ctx.newPage();
 await page.goto("http://localhost:3000/login");
-await page.fill('input[name=email]', "admin@omegasecurity.co.zw");
-await page.fill("input[name=password]", "Zvesh@2000");
+await page.fill('input[name=email]', (process.env.QA_EMAIL ?? "admin@omegasecurity.co.zw"));
+await page.fill("input[name=password]", (process.env.QA_PASSWORD ?? "Zvesh@2000"));
 await Promise.all([page.waitForURL("**/dashboard"), page.click('button[type=submit]')]);
 await page.goto("http://localhost:3000" + path, { waitUntil: "networkidle" });
 if (openMenu) await page.click('button[aria-label="Open menu"]');

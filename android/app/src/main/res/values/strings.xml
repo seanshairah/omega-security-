@@ -1,0 +1,75 @@
+<resources>
+    <string name="app_name">Security Gateway</string>
+    <string name="version_line">Version %1$s</string>
+
+    <!-- Activation -->
+    <string name="server_label">Server</string>
+    <string name="code_label">Activation code</string>
+    <string name="code_hint">A8F42X</string>
+    <string name="activate_device">ACTIVATE DEVICE</string>
+    <string name="activating">Activating…</string>
+    <string name="activation_help">Ask the administrator to register this phone under Gateway phones in the portal. They will give you a 6-character code.</string>
+    <string name="err_server">Enter the server address, starting with https://</string>
+    <string name="err_code">Enter the 6-character activation code.</string>
+    <string name="err_network">Could not reach the server. Check mobile data or Wi‑Fi. %1$s</string>
+    <string name="activated_as">Activated as %1$s</string>
+
+    <!-- Dashboard -->
+    <string name="status_online">ONLINE</string>
+    <string name="status_offline">OFFLINE</string>
+    <string name="status_rejected">REVOKED</string>
+    <string name="device_label">Device:</string>
+    <string name="location_label">Location:</string>
+    <string name="phone_label">Phone:</string>
+    <string name="last_sync_label">Last Sync:</string>
+    <string name="battery_label">Battery:</string>
+    <string name="network_label">Network:</string>
+    <string name="version_label">App version:</string>
+    <string name="last_call_label">Last Call:</string>
+    <string name="status_label">Status:</string>
+    <string name="head_office">Head office</string>
+    <string name="no_calls_yet">No calls yet</string>
+    <string name="net_mobile">Mobile Data</string>
+    <string name="net_wifi">Wi‑Fi</string>
+    <string name="net_none">No connection</string>
+    <string name="net_other">Other</string>
+    <string name="conn_connected">CONNECTED</string>
+    <string name="conn_queued">CONNECTED · %1$d event(s) waiting to send</string>
+    <string name="conn_no_internet">NO INTERNET · %1$d event(s) saved on the phone</string>
+    <string name="conn_waiting">RECONNECTING · %1$s</string>
+    <string name="conn_rejected">DEVICE REVOKED · ask the administrator</string>
+    <string name="conn_no_permission">PHONE PERMISSION NEEDED · tap Grant permissions</string>
+    <string name="conn_no_call_log">CALL LOG PERMISSION NEEDED · numbers will not be seen</string>
+    <string name="grant_permissions">Grant permissions</string>
+    <string name="battery_button">Allow running in background</string>
+    <string name="sync_now">Sync now</string>
+    <string name="open_settings">Settings</string>
+    <string name="privacy_line">This app records only call metadata: number, time, duration and outcome. It never records audio.</string>
+
+    <!-- Notification -->
+    <string name="notif_starting">Starting…</string>
+    <string name="notif_online">Online · %1$d queued</string>
+    <string name="notif_offline">Offline · retrying</string>
+    <string name="notif_rejected">Device revoked · ask the administrator</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="server_url_label">Server URL</string>
+    <string name="device_id_label">Device ID</string>
+    <string name="connection_label">Connection status</string>
+    <string name="heartbeat_label">Heartbeat</string>
+    <string name="every_seconds">Every %1$d seconds</string>
+    <string name="queue_label">Events waiting to send</string>
+    <string name="last_error_label">Last error</string>
+    <string name="android_label">Android</string>
+    <string name="none">None</string>
+    <string name="test_connection">Test connection</string>
+    <string name="testing">Testing…</string>
+    <string name="test_ok">Connected. The portal shows this phone as online.</string>
+    <string name="test_fail">Could not reach the server: %1$s</string>
+    <string name="test_rejected">Server refused this device: %1$s</string>
+    <string name="deactivate">Deactivate device</string>
+    <string name="deactivate_title">Deactivate this phone?</string>
+    <string name="deactivate_body">The phone stops reporting calls and forgets its credentials. An administrator must also revoke or re-activate it in the portal.</string>
+    <string name="back">Back</string>
+</resources>

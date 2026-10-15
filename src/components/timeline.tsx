@@ -1,5 +1,5 @@
 import type { CheckInType, ShiftCheckIn } from "@prisma/client";
-import { CheckCircleIcon, ChatCircleDotsIcon, WarningOctagonIcon, SirenIcon, FirstAidIcon, ClockIcon, FlagIcon, XCircleIcon, NoteIcon, QuestionIcon, ArrowsLeftRightIcon, PaperPlaneTiltIcon } from "@phosphor-icons/react/dist/ssr";
+import { CheckCircleIcon, ChatCircleDotsIcon, WarningOctagonIcon, SirenIcon, FirstAidIcon, ClockIcon, FlagIcon, XCircleIcon, NoteIcon, QuestionIcon, ArrowsLeftRightIcon, PaperPlaneTiltIcon, PhoneIncomingIcon, PhoneOutgoingIcon, PhoneCallIcon, PhoneXIcon, PhoneDisconnectIcon } from "@phosphor-icons/react/dist/ssr";
 import { fmtTime, fmtDate } from "@/lib/time";
 import { cn } from "@/lib/cn";
 
@@ -28,6 +28,11 @@ const META: Record<CheckInType, { label: string; tone: "ok" | "warn" | "critical
   ADMIN_NOTE: { label: "Note", tone: "neutral", icon: NoteIcon },
   CLIENT_NOTIFIED: { label: "Client updated", tone: "ok", icon: NoteIcon },
   UNRECOGNISED_REPLY: { label: "Reply not understood", tone: "warn", icon: QuestionIcon },
+  CALL_INCOMING: { label: "Incoming call from guard", tone: "info", icon: PhoneIncomingIcon },
+  CALL_OUTGOING: { label: "Outgoing call to guard", tone: "info", icon: PhoneOutgoingIcon },
+  CALL_ANSWERED: { label: "Call answered", tone: "ok", icon: PhoneCallIcon },
+  CALL_ENDED: { label: "Call ended", tone: "neutral", icon: PhoneDisconnectIcon },
+  CALL_MISSED: { label: "Missed call from guard", tone: "critical", icon: PhoneXIcon },
 };
 const ring = { ok: "border-ok text-ok", warn: "border-warn text-warn", critical: "border-critical text-critical", neutral: "border-line-strong text-ink-3", info: "border-info text-info" };
 

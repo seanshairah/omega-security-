@@ -6,8 +6,8 @@ const browser = await chromium.launch({ executablePath: exe, args: ["--no-sandbo
 const ctx = await browser.newContext({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1 });
 const page = await ctx.newPage();
 await page.goto("http://localhost:3000/login");
-await page.fill('input[name=email]', "admin@omegasecurity.co.zw");
-await page.fill("input[name=password]", "Zvesh@2000");
+await page.fill('input[name=email]', (process.env.QA_EMAIL ?? "admin@omegasecurity.co.zw"));
+await page.fill("input[name=password]", (process.env.QA_PASSWORD ?? "Zvesh@2000"));
 await Promise.all([page.waitForURL("**/dashboard"), page.click('button[type=submit]')]);
 await page.goto("http://localhost:3000" + path, { waitUntil: "networkidle" });
 await page.screenshot({ path: out, fullPage: true });

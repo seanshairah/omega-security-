@@ -17,7 +17,13 @@
     "db:seed:demo": "tsx prisma/seed-demo.ts",
     "db:purge": "tsx scripts/purge-data.ts --yes",
     "db:reset": "prisma migrate reset --force",
-    "automation:tick": "tsx scripts/tick.ts"
+    "automation:tick": "tsx scripts/tick.ts",
+    "test": "tsx --test tests/*.test.ts",
+    "test:gateway-e2e": "tsx scripts/dev/gateway-e2e.ts",
+    "android:sync": "node scripts/android.mjs sync",
+    "android:build": "node scripts/android.mjs build",
+    "android:debug": "node scripts/android.mjs debug",
+    "android:release": "node scripts/android.mjs release"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -1,0 +1,92 @@
+package zw.co.omega.gateway.call
+
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
+import android.provider.CallLog
+import android.telephony.TelephonyManager
+import android.util.Log
+import androidx.core.content.ContextCompat
+import zw.co.omega.gateway.data.EventQueue
+import zw.co.omega.gateway.data.Prefs
+import zw.co.omega.gateway.model.GatewayEvent
+import zw.co.omega.gateway.service.GatewayService
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+/**
+ * Process-wide bridge from phone-state broadcasts to the outbox. Both the manifest receiver and
+ * the service's dynamic receiver land here, so a broadcast delivered twice is coalesced by the
+ * tracker's state machine.
+ */
+object CallMonitor {
+    private const val TAG = "CallMonitor"
+    private val handler = Handler(Looper.getMainLooper())
+    private var tracker: CallTracker? = null
+
+    private fun tracker(context: Context): CallTracker {
+        val app = context.applicationContext
+        return tracker ?: CallTracker(sink = { event -> enqueue(app, event) }).also { tracker = it }
+    }
+
+    private fun enqueue(app: Context, event: GatewayEvent) {
+        EventQueue(app).enqueue(event)
+        val prefs = Prefs(app)
+        if (event.eventType == GatewayEvent.CALL_STARTED || event.eventType == GatewayEvent.CALL_ENDED || event.eventType == GatewayEvent.CALL_MISSED) {
+            val label = when (event.eventType) { GatewayEvent.CALL_STARTED -> if (event.direction == "OUTGOING") "Dialling" else "Ringing"; GatewayEvent.CALL_MISSED -> "Missed"; else -> "Ended ${event.durationSeconds ?: 0}s" }
+            prefs.lastCallSummary = "${event.phoneNumber ?: "unknown number"} · $label"
+            prefs.lastCallAt = event.timestampMs
+        }
+        Log.i(TAG, "queued ${event.eventType} call=${event.callId}")
+        GatewayService.requestSync(app)
+    }
+
+    fun onOutgoing(context: Context, number: String?) = tracker(context).onOutgoingNumber(number)
+
+    fun onPhoneState(context: Context, state: String?, incomingNumber: String?) {
+        if (state.isNullOrBlank()) return
+        val app = context.applicationContext
+        val finished = tracker(app).onPhoneState(state, incomingNumber) ?: return
+        // The system writes the call log a moment after IDLE; read it for the authoritative verdict.
+        handler.postDelayed({ tracker(app).complete(finished, readCallLog(app, finished)) }, 2500)
+    }
+
+    private fun readCallLog(context: Context, f: CallTracker.Finished): CallTracker.LogInfo? {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) return null
+        return try {
+            context.contentResolver.query(CallLog.Calls.CONTENT_URI, arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DURATION, CallLog.Calls.DATE), "${CallLog.Calls.DATE} >= ?", arrayOf((f.startedAt - 60_000).toString()), "${CallLog.Calls.DATE} DESC")?.use { c ->
+                if (!c.moveToFirst()) return null
+                val number = c.getString(0)
+                val type = c.getInt(1)
+                val duration = c.getInt(2)
+                val answered = when (type) {
+                    CallLog.Calls.MISSED_TYPE, CallLog.Calls.REJECTED_TYPE, CallLog.Calls.BLOCKED_TYPE -> false
+                    CallLog.Calls.INCOMING_TYPE -> duration > 0
+                    CallLog.Calls.OUTGOING_TYPE -> duration > 0
+                    else -> duration > 0
+                }
+                CallTracker.LogInfo(answered, duration, number)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "call log read failed: ${e.message}")
+            null
+        }
+    }
+
+    fun fmt(ms: Long): String = if (ms <= 0) "—" else SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(ms))
+
+    /** True when the app can see call states and numbers. */
+    fun canMonitor(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED
+
+    fun canSeeNumbers(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG) == PackageManager.PERMISSION_GRANTED
+
+    @Suppress("DEPRECATION")
+    fun extraState(intent: android.content.Intent): String? = intent.getStringExtra(TelephonyManager.EXTRA_STATE)
+    @Suppress("DEPRECATION")
+    fun extraNumber(intent: android.content.Intent): String? = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER)
+}

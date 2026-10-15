@@ -4,7 +4,7 @@ export type SettingDef = {
   key: string;
   label: string;
   description: string;
-  group: "arrival" | "welfare" | "completion" | "handover" | "recurrence" | "general";
+  group: "arrival" | "welfare" | "completion" | "handover" | "recurrence" | "general" | "gateway";
   default: string;
   type: "number" | "text" | "boolean";
 };
@@ -20,6 +20,12 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "recurrence.horizonDays", label: "Recurring shift horizon", description: "How many days ahead recurring shifts are created.", group: "recurrence", default: "14", type: "number" },
   { key: "general.companyName", label: "Company name", description: "Shown in the portal and in message signatures.", group: "general", default: "Omega Protection Services", type: "text" },
   { key: "general.controlRoomPhone", label: "Control room phone", description: "Quoted in client messages so the client knows who to call.", group: "general", default: "+263 772 100 100", type: "text" },
+  // Android call gateway
+  { key: "gateway.heartbeatSeconds", label: "Heartbeat interval", description: "Seconds between heartbeats from each gateway phone. Sent to the phone on activation and on every heartbeat.", group: "gateway", default: "120", type: "number" },
+  { key: "gateway.offlineMinutes", label: "Offline threshold", description: "Minutes without a heartbeat before a gateway is shown as offline and a warning is raised.", group: "gateway", default: "5", type: "number" },
+  { key: "gateway.callRetentionDays", label: "Call retention", description: "Days to keep call records. Older records are removed by the automation engine. 0 keeps everything.", group: "gateway", default: "365", type: "number" },
+  { key: "gateway.unknownCallerAlert", label: "Alert on unknown callers", description: "Raise a notification when a number that is not a registered guard calls a gateway.", group: "gateway", default: "true", type: "boolean" },
+  { key: "gateway.missedCallAlert", label: "Alert on missed calls", description: "Raise a notification when a guard's call to a gateway goes unanswered. Calls from guards on duty are always critical.", group: "gateway", default: "true", type: "boolean" },
   { key: "general.smsSignature", label: "SMS signature", description: "Appended to every outbound message. Leave blank for none.", group: "general", default: "- Omega Protection Services", type: "text" },
 ];
 
@@ -35,6 +41,11 @@ export async function getSettings(): Promise<Settings> {
   for (const row of rows) values[row.key] = row.value;
   cache = { at: Date.now(), values };
   return values;
+}
+
+export async function getSettingBool(key: string): Promise<boolean> {
+  const s = await getSettings();
+  return (s[key] ?? SETTING_DEFS.find((d) => d.key === key)?.default ?? "false") === "true";
 }
 
 export async function getSettingNumber(key: string): Promise<number> {

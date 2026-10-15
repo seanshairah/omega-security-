@@ -11,6 +11,11 @@ import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Status } from "@/components/ui/status";
 import { STATUS_META, ON_SITE_STATUSES } from "@/lib/services/shifts";
 import { fmtTime } from "@/lib/time";
+import { subDays } from "date-fns";
+import { liveCalls, callInclude } from "@/lib/gateway/calls";
+import { LiveCallCards } from "@/components/calls/live-calls";
+import { getSettingNumber } from "@/lib/settings";
+import { effectiveStatus } from "@/lib/gateway/service";
 import { cn } from "@/lib/cn";
 
 export const metadata = { title: "Overview" };
@@ -19,10 +24,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const user = await requireUser();
   const sp = await searchParams;
   const range = (["12h", "24h", "7d"].includes(sp.range ?? "") ? sp.range : "12h") as "12h" | "24h" | "7d";
-  const [o, series, trend, rate, attention, onDutyGuards] = await Promise.all([
+  const [o, series, trend, rate, attention, onDutyGuards, live, missedCalls, gateways, offlineMinutes] = await Promise.all([
     todayOverview(), dailySeries(), activityTrend(range), attendanceRate(), needsAttention(),
     db.shift.findMany({ where: { status: { in: [...ON_SITE_STATUSES, "LATE", "NOT_CONFIRMED", "AWAITING_ARRIVAL"] } }, include: { guard: true }, orderBy: { guard: { lastName: "asc" } } }),
+    liveCalls(),
+    db.callLog.findMany({ where: { status: "MISSED", direction: "INCOMING", note: null, guardId: { not: null }, startedAt: { gte: subDays(new Date(), 1) } }, include: callInclude, orderBy: { startedAt: "desc" }, take: 6 }),
+    db.gatewayDevice.findMany({ where: { status: { notIn: ["REVOKED"] } }, select: { id: true, deviceName: true, status: true, lastSeenAt: true, activationStatus: true } }),
+    getSettingNumber("gateway.offlineMinutes"),
   ]);
+  const gatewayOnline = gateways.filter((g) => effectiveStatus(g, offlineMinutes) === "ONLINE").length;
+  const showCalls = gateways.length > 0 || live.length > 0 || missedCalls.length > 0;
   const last = (a: number[]) => a[a.length - 1] - a[a.length - 2];
   const posture = rate.pct >= 85 ? { word: "Strong", tone: "ok" as const, line: "Guards are reporting for duty on time." } : rate.pct >= 60 ? { word: "Watch", tone: "warn" as const, line: "Several guards have not confirmed arrival." } : { word: "Weak", tone: "critical" as const, line: "Attendance is well below target. Call the sites." };
 
@@ -65,6 +76,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </CardBody>
         </Card>
       </div>
+
+      {showCalls && (
+        <Card className={missedCalls.some((c) => c.shiftId) ? "border-critical" : ""}>
+          <CardHeader title={missedCalls.some((c) => c.shiftId) ? "Active guard missed call" : "Calls"} description={`${gatewayOnline} of ${gateways.length} gateway phone${gateways.length === 1 ? "" : "s"} online. Ringing and in-progress calls, then missed calls from the last 24 hours that nobody has handled.`} action={<Link href="/calls" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-strong hover:underline">All calls <CaretRightIcon size={12} weight="bold" /></Link>} />
+          <CardBody className="pt-3"><LiveCallCards live={live} missed={missedCalls} /></CardBody>
+        </Card>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_480px]">
         <Card>

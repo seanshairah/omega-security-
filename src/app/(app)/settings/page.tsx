@@ -6,7 +6,7 @@ import { updateSettings } from "@/actions/admin";
 import { PageHeader, Meta } from "@/components/ui/page";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { ActionForm } from "@/components/ui/action-form";
-import { Field, Input } from "@/components/ui/form";
+import { Field, Input, Select } from "@/components/ui/form";
 import { Status } from "@/components/ui/status";
 import { PushToggle } from "@/components/push-toggle";
 import { pushConfigured } from "@/lib/push";
@@ -19,6 +19,7 @@ const GROUPS: { key: string; title: string; description: string }[] = [
   { key: "handover", title: "Handover", description: "When both guards are told about the handover." },
   { key: "recurrence", title: "Recurring shifts", description: "How far ahead recurring patterns are turned into shifts." },
   { key: "general", title: "Company", description: "Names used in the portal and in messages." },
+  { key: "gateway", title: "Call gateway", description: "Android gateway phones: how often they report in, when they count as offline, how long calls are kept, and which call alerts are raised." },
 ];
 
 export default async function SettingsPage() {
@@ -84,14 +85,14 @@ export default async function SettingsPage() {
                   <div><h3 className="text-[14px] font-semibold text-ink">{g.title}</h3><p className="mt-1 text-[13px] text-ink-2">{g.description}</p></div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {SETTING_DEFS.filter((d) => d.group === g.key).map((d) => (
-                      <Field key={d.key} label={d.label} hint={d.description}><Input name={d.key} type={d.type === "number" ? "number" : "text"} min={0} defaultValue={values[d.key]} /></Field>
+                      <Field key={d.key} label={d.label} hint={d.description}>{d.type === "boolean" ? <Select name={d.key} defaultValue={values[d.key]}><option value="true">Yes</option><option value="false">No</option></Select> : <Input name={d.key} type={d.type === "number" ? "number" : "text"} min={0} defaultValue={values[d.key]} />}</Field>
                     ))}
                   </div>
                 </div>
               ))}
             </ActionForm>
           ) : (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">{SETTING_DEFS.map((d) => <Meta key={d.key} label={d.label}>{values[d.key]}{d.type === "number" && d.key.includes("Minutes") ? " min" : d.key.includes("Percent") ? "%" : d.key.includes("Days") ? " days" : ""}</Meta>)}</div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">{SETTING_DEFS.map((d) => <Meta key={d.key} label={d.label}>{d.type === "boolean" ? (values[d.key] === "true" ? "Yes" : "No") : values[d.key]}{d.type === "number" && d.key.includes("Minutes") ? " min" : d.key.includes("Seconds") ? " s" : d.key.includes("Percent") ? "%" : d.key.includes("Days") ? " days" : ""}</Meta>)}</div>
           )}
         </CardBody>
       </Card>

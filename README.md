@@ -15,6 +15,28 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 - Attendance reports with CSV export, guard performance, client breakdown.
 - A simulator so the whole workflow can be demonstrated without sending real messages.
 
+## Documentation
+
+| Document | What it covers |
+| --- | --- |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | system design, schema, flows, API, automation, the call gateway module |
+| [docs/DATABASE.md](docs/DATABASE.md) | tables, new gateway/call tables, normalisation, deduplication, retention |
+| [docs/API.md](docs/API.md) | every route with auth, request and response examples |
+| [docs/SMS_WORKFLOW.md](docs/SMS_WORKFLOW.md) | the existing SMS system, unchanged |
+| [docs/ANDROID_GATEWAY.md](docs/ANDROID_GATEWAY.md) | the Android call gateway: app, events, backend, Android limits, privacy |
+| [docs/ANDROID_INSTALLATION.md](docs/ANDROID_INSTALLATION.md) | installing and activating the app on a phone, for administrators |
+| [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md) | running everything on a fresh computer, building the APK |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel, Neon, Sendai, gateway settings, APK rollout, security checklist |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | calls not detected, gateway offline, wrong guard, duplicates, SMS regression |
+
+## Call gateway
+
+An Android phone with a SIM runs the **Security Gateway** app (`android/`). Guards call it; the app reports call metadata (never audio) to `POST /api/gateways/events`, the portal matches the number to a guard and their live shift, shows live and missed calls, alerts on missed calls from guards on duty, lists unknown callers for review, and adds calls to the shift timeline and the guard's Communication history. Register phones under **Communications → Gateway phones**; demo everything without a phone from **Simulator → Call gateway simulator**.
+
+```bash
+npm run android:build     # artifacts/android/security-gateway-{debug,release}.apk
+```
+
 ## Stack
 
 Next.js 15 (App Router, server actions), TypeScript, Tailwind CSS 4, Prisma 6, PostgreSQL 16 (Neon or self-hosted), Phosphor icons, Recharts.
@@ -88,6 +110,14 @@ GET  /api/shifts/active
 POST /api/shifts            { guardId, locationId, date, startTime, endTime }
 POST /api/sms/simulate      { guardId | phone, body }     demo inbound
 GET  /api/reports/attendance.csv?from=&to=&locationId=
+```
+
+## Tests
+
+```bash
+npm test                   # unit tests (tests/*.test.ts)
+npm run test:gateway-e2e   # 33-step call-gateway scenario over HTTP against a running dev server
+cd android && ./gradlew testDebugUnitTest   # Android unit tests
 ```
 
 ## Scripts
