@@ -27,7 +27,25 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 | [docs/ANDROID_INSTALLATION.md](docs/ANDROID_INSTALLATION.md) | installing and activating the app on a phone, for administrators |
 | [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md) | running everything on a fresh computer, building the APK |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Vercel, Neon, Sendai, gateway settings, APK rollout, security checklist |
-| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | calls not detected, gateway offline, wrong guard, duplicates, SMS regression |
+| [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | calls not detected, gateway offline, wrong guard, duplicates, location unavailable, SMS regression |
+| [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) | the whole platform after the Android and GPS work, with diagrams |
+| [docs/GUARD_ANDROID_APP.md](docs/GUARD_ANDROID_APP.md) | guard mode: permissions, location monitoring, exits and returns, calls with location |
+| [docs/OPERATIONS_GATEWAY.md](docs/OPERATIONS_GATEWAY.md) | operations mode and call correlation |
+| [docs/CALL_GATEWAY.md](docs/CALL_GATEWAY.md) | backend call processing |
+| [docs/GPS_AND_GEOFENCING.md](docs/GPS_AND_GEOFENCING.md) | classification, state machine, alerts, battery, spoofing |
+| [docs/OFFLINE_MODE.md](docs/OFFLINE_MODE.md) | what works without internet or airtime, the outbox, sync status |
+| [docs/PERMISSIONS.md](docs/PERMISSIONS.md) | every Android permission and why |
+| [docs/GUARD_INSTALLATION.md](docs/GUARD_INSTALLATION.md) | setting up a guard's phone |
+| [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) | how operations staff use the portal |
+| [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) | endpoints added for devices and GPS |
+| [docs/SMS_INTEGRATION.md](docs/SMS_INTEGRATION.md) | how the unchanged SMS system relates to the rest |
+| [docs/SECURITY_AND_PRIVACY.md](docs/SECURITY_AND_PRIVACY.md) | access control, audit, data collected, wording policy |
+| [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | notes for developers beyond local setup |
+| [docs/TESTING.md](docs/TESTING.md) | suites, the 15 critical cases, what is still manual |
+
+## Guard devices, GPS and geofencing
+
+The same app in **Guard** mode runs on a guard's own phone. Before a shift it caches the site's coordinates, radius and timing policy; during the shift it takes one GPS fix every 10 minutes, decides locally whether the phone is inside the site, verifies an outside reading after 60 seconds before recording a **LOCATION EXIT**, updates every 3 minutes while outside, records **LOCATION RETURNED** with the time outside, and reports **LOCATION UNAVAILABLE** when it cannot see where it is. None of that needs internet or airtime; events wait in the phone's outbox and arrive marked *synced late*. A YES by SMS plus a fix inside the site gives **ARRIVAL VERIFIED**; a fix outside gives a neutral **Location exception**. Guards without a smartphone keep working by SMS and calls exactly as before.
 
 ## Call gateway
 

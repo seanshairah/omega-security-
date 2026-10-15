@@ -72,4 +72,53 @@
     <string name="deactivate_title">Deactivate this phone?</string>
     <string name="deactivate_body">The phone stops reporting calls and forgets its credentials. An administrator must also revoke or re-activate it in the portal.</string>
     <string name="back">Back</string>
+
+    <!-- Guard mode -->
+    <string name="mode_ops">Operations gateway phone</string>
+    <string name="mode_guard">Guard phone · %1$s</string>
+    <string name="shift_label">Shift:</string>
+    <string name="shift_none">No shift to monitor. Location is not checked outside shifts.</string>
+    <string name="shift_active">%1$s · %2$s–%3$s · site radius %4$d m</string>
+    <string name="shift_upcoming">%1$s · starts %2$s · monitoring begins 10 min before</string>
+    <string name="monitoring_label">Location monitoring:</string>
+    <string name="mon_inside">INSIDE SITE · checking every few minutes</string>
+    <string name="mon_verifying">OUTSIDE READING · verifying</string>
+    <string name="mon_outside">OUTSIDE SITE · reported</string>
+    <string name="mon_unavailable">LOCATION UNAVAILABLE · turn on location</string>
+    <string name="mon_offline">MONITORING OFFLINE · events saved on the phone</string>
+    <string name="mon_waiting">WAITING FOR SHIFT</string>
+    <string name="mon_off">NOT ON SHIFT</string>
+    <string name="last_check_label">Last location check:</string>
+    <string name="last_check">%1$s · %2$s · %3$s from site · ±%4$d m</string>
+    <string name="last_check_none">None yet</string>
+    <string name="location_perm_label">Location permission:</string>
+    <string name="perm_bg">Allowed all the time</string>
+    <string name="perm_fg">Only while using the app · monitoring will stop in the background</string>
+    <string name="perm_denied">Not allowed · no location monitoring</string>
+    <string name="notif_mon_inside">on site</string>
+    <string name="notif_mon_outside">outside site</string>
+    <string name="notif_mon_unavailable">location unavailable</string>
+    <string name="notif_mon_offline">monitoring offline</string>
+    <string name="notif_mon_waiting">waiting for shift</string>
+    <string name="notif_mon_off">not on shift</string>
+
+    <!-- Permissions onboarding -->
+    <string name="perm_title">Before your first shift</string>
+    <string name="perm_intro">This phone is registered to you as a guard. During your shifts the app checks every few minutes whether the phone is inside your assigned site, and reports your calls to the operations room. Nothing is tracked outside shifts, and no audio is ever recorded.</string>
+    <string name="perm_location">Location</string>
+    <string name="perm_location_hint">Used only during shifts to tell whether you are inside the site. GPS works without airtime or data.</string>
+    <string name="perm_background">Location all the time</string>
+    <string name="perm_background_hint">Android needs “Allow all the time” so checks continue with the screen off.</string>
+    <string name="perm_background_hint_r">Android needs “Allow all the time”. Tap below, open Permissions → Location and choose “Allow all the time”.</string>
+    <string name="perm_phone">Phone and call log</string>
+    <string name="perm_phone_hint">To report when you call operations or they call you: number, time and length only.</string>
+    <string name="perm_notifications">Notifications</string>
+    <string name="perm_notifications_hint">A small permanent notification keeps the app running during shifts.</string>
+    <string name="perm_battery">Run in background</string>
+    <string name="perm_battery_hint">Stops the phone from putting the app to sleep halfway through a shift.</string>
+    <string name="perm_allow">Allow</string>
+    <string name="perm_open_settings">Open settings</string>
+    <string name="perm_summary">Location: %1$s · Phone: %2$s</string>
+    <string name="perm_privacy">What is collected: your position during shifts (with its accuracy), call times and numbers, battery and network. What is not: audio, messages, contacts, photos, or your position outside shifts.</string>
+    <string name="perm_done">Start</string>
 </resources>

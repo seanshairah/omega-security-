@@ -1,5 +1,5 @@
 import type { CheckInType, ShiftCheckIn } from "@prisma/client";
-import { CheckCircleIcon, ChatCircleDotsIcon, WarningOctagonIcon, SirenIcon, FirstAidIcon, ClockIcon, FlagIcon, XCircleIcon, NoteIcon, QuestionIcon, ArrowsLeftRightIcon, PaperPlaneTiltIcon, PhoneIncomingIcon, PhoneOutgoingIcon, PhoneCallIcon, PhoneXIcon, PhoneDisconnectIcon } from "@phosphor-icons/react/dist/ssr";
+import { CheckCircleIcon, ChatCircleDotsIcon, WarningOctagonIcon, SirenIcon, FirstAidIcon, ClockIcon, FlagIcon, XCircleIcon, NoteIcon, QuestionIcon, ArrowsLeftRightIcon, PaperPlaneTiltIcon, PhoneIncomingIcon, PhoneOutgoingIcon, PhoneCallIcon, PhoneXIcon, PhoneDisconnectIcon, MapPinIcon, MapPinLineIcon, CompassIcon, NavigationArrowIcon, CellSignalSlashIcon, ShieldCheckIcon, ShieldWarningIcon } from "@phosphor-icons/react/dist/ssr";
 import { fmtTime, fmtDate } from "@/lib/time";
 import { cn } from "@/lib/cn";
 
@@ -33,6 +33,14 @@ const META: Record<CheckInType, { label: string; tone: "ok" | "warn" | "critical
   CALL_ANSWERED: { label: "Call answered", tone: "ok", icon: PhoneCallIcon },
   CALL_ENDED: { label: "Call ended", tone: "neutral", icon: PhoneDisconnectIcon },
   CALL_MISSED: { label: "Missed call from guard", tone: "critical", icon: PhoneXIcon },
+  LOCATION_VERIFIED: { label: "Arrival verified by GPS", tone: "ok", icon: ShieldCheckIcon },
+  LOCATION_EXCEPTION: { label: "Location exception", tone: "warn", icon: ShieldWarningIcon },
+  LOCATION_INSIDE: { label: "Location check · inside", tone: "ok", icon: MapPinIcon },
+  LOCATION_EXIT: { label: "LOCATION EXIT", tone: "critical", icon: NavigationArrowIcon },
+  LOCATION_OUTSIDE: { label: "Still outside the site", tone: "critical", icon: MapPinLineIcon },
+  LOCATION_RETURNED: { label: "LOCATION RETURNED", tone: "ok", icon: CompassIcon },
+  LOCATION_UNAVAILABLE: { label: "Location unavailable", tone: "warn", icon: CellSignalSlashIcon },
+  LOCATION_OVERDUE: { label: "Location verification overdue", tone: "warn", icon: CellSignalSlashIcon },
 };
 const ring = { ok: "border-ok text-ok", warn: "border-warn text-warn", critical: "border-critical text-critical", neutral: "border-line-strong text-ink-3", info: "border-info text-info" };
 

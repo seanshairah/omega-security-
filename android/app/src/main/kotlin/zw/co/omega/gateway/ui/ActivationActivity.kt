@@ -50,6 +50,8 @@ class ActivationActivity : AppCompatActivity() {
                 prefs.deviceName = r.deviceName
                 prefs.phoneNumber = r.phoneNumber
                 prefs.locationName = r.locationName ?: ""
+                prefs.mode = r.mode
+                prefs.guardName = r.guardName ?: ""
                 prefs.heartbeatSeconds = r.heartbeatSeconds
                 prefs.lastHeartbeatOk = true
                 prefs.lastSyncAt = System.currentTimeMillis()
@@ -57,7 +59,7 @@ class ActivationActivity : AppCompatActivity() {
                 GatewayService.start(this@ActivationActivity)
                 SyncWorker.schedule(this@ActivationActivity)
                 Toast.makeText(this@ActivationActivity, getString(R.string.activated_as, r.deviceName), Toast.LENGTH_LONG).show()
-                startActivity(Intent(this@ActivationActivity, MainActivity::class.java))
+                startActivity(Intent(this@ActivationActivity, if (prefs.isGuardMode && !prefs.onboardingDone) PermissionsActivity::class.java else MainActivity::class.java))
                 finish()
             } catch (e: ApiClient.ApiException) {
                 b.error.text = e.message

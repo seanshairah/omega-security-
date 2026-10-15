@@ -46,6 +46,23 @@ Treat this as a serious regression. The call gateway does not touch SMS; verify:
 6. Database: `SmsMessage`, `MessageTemplate`, `Setting` rows are intact (`npx tsx scripts/dev/db-counts.ts`).
 7. Rule out the gateway completely: it can be disabled by disabling every device; SMS continues regardless.
 
+## Guard phone shows "Location unavailable" or no checks
+
+1. Permissions on the phone: Settings → Apps → Security Gateway → Permissions → Location must be **Allow all the time**; the app's screen says "Only while using the app" otherwise. Location services must be on.
+2. The site needs coordinates (Locations → Edit → Position and geofence). Reason `site_has_no_coordinates`.
+3. A shift must exist for the guard; monitoring starts 10 minutes before it. The app shows NOT ON SHIFT / WAITING FOR SHIFT.
+4. Indoors or in a vehicle the GPS fix can be worse than the 100 m limit → `poor_accuracy` → UNKNOWN, never OUTSIDE. Raise *Worst usable GPS accuracy* only if the site is large.
+5. Battery managers: the overdue alert means the phone was online but sent no check; see the per-brand settings in ANDROID_INSTALLATION.md.
+6. `adb logcat -s LocationMonitor GatewayService` shows each check and its classification.
+
+## Guard shown outside but is on site
+
+GPS error, a fence that is too small for the site, or the wrong coordinates. Check the accuracy on the event (±m), compare the map with the real site, and enlarge the radius or move the centre. The exit alert says "GPS is not exact" for this reason; call the guard.
+
+## Events arrive late or out of order
+
+Expected after an outage: they are marked SYNCED LATE and keep their original times. If the phone shows "Events waiting to send" for a long time with internet available, open Settings → Test connection; a revoked token or a wrong server URL is the usual cause.
+
 ## Android build fails
 
 - `SDK location not found`: set `ANDROID_HOME` and run `npm run android:sync`.

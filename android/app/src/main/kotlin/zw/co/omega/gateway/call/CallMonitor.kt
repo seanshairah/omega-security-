@@ -13,6 +13,8 @@ import zw.co.omega.gateway.data.EventQueue
 import zw.co.omega.gateway.data.Prefs
 import zw.co.omega.gateway.model.GatewayEvent
 import zw.co.omega.gateway.service.GatewayService
+import zw.co.omega.gateway.location.LocationMonitor
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -32,9 +34,12 @@ object CallMonitor {
         return tracker ?: CallTracker(sink = { event -> enqueue(app, event) }).also { tracker = it }
     }
 
-    private fun enqueue(app: Context, event: GatewayEvent) {
-        EventQueue(app).enqueue(event)
+    private fun enqueue(app: Context, raw: GatewayEvent) {
         val prefs = Prefs(app)
+        // Guard phone: attach where the guard was at the time of the call. Never a fresh stream, just the last fix.
+        val event = if (prefs.isGuardMode) LocationMonitor(app).lastFixJson()?.let { raw.copy(extra = JSONObject().put("location", it)) } ?: raw else raw
+        EventQueue(app).enqueue(event)
+        if (prefs.isGuardMode && event.eventType == GatewayEvent.CALL_STARTED) GatewayService.requestLocationCheck(app) // refresh the fix around the call
         if (event.eventType == GatewayEvent.CALL_STARTED || event.eventType == GatewayEvent.CALL_ENDED || event.eventType == GatewayEvent.CALL_MISSED) {
             val label = when (event.eventType) { GatewayEvent.CALL_STARTED -> if (event.direction == "OUTGOING") "Dialling" else "Ringing"; GatewayEvent.CALL_MISSED -> "Missed"; else -> "Ended ${event.durationSeconds ?: 0}s" }
             prefs.lastCallSummary = "${event.phoneNumber ?: "unknown number"} · $label"

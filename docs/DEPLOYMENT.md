@@ -41,6 +41,10 @@ In the Sendai dashboard register the sender ID, top up, enable inbound SMS, and 
 
 Settings → Call gateway: heartbeat interval (default 120 s), offline threshold (5 min), call retention (365 days), alert on unknown callers, alert on missed calls. Changes reach phones with the next heartbeat.
 
+## 4b. GPS configuration
+
+Settings → GPS and geofencing: check interval (10 min), exit verification delay (60 s), interval while outside (3 min), extended absence escalation (10 min), worst usable accuracy (100 m), overdue intervals (2), location retention (180 days). Every site that will be monitored needs latitude, longitude and a radius (Locations → Edit).
+
 ## 5. Android APK
 
 Build a release APK with a real keystore (see LOCAL_DEVELOPMENT.md) and set the production server as the default: `GATEWAY_DEFAULT_SERVER_URL=https://<your-domain> npm run android:release`. Distribute `artifacts/android/security-gateway-release.apk` and follow ANDROID_INSTALLATION.md on each phone. Register each phone under Gateway phones and activate it with its code.

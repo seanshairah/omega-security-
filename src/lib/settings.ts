@@ -4,7 +4,7 @@ export type SettingDef = {
   key: string;
   label: string;
   description: string;
-  group: "arrival" | "welfare" | "completion" | "handover" | "recurrence" | "general" | "gateway";
+  group: "arrival" | "welfare" | "completion" | "handover" | "recurrence" | "general" | "gateway" | "geofence";
   default: string;
   type: "number" | "text" | "boolean";
 };
@@ -26,6 +26,14 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "gateway.callRetentionDays", label: "Call retention", description: "Days to keep call records. Older records are removed by the automation engine. 0 keeps everything.", group: "gateway", default: "365", type: "number" },
   { key: "gateway.unknownCallerAlert", label: "Alert on unknown callers", description: "Raise a notification when a number that is not a registered guard calls a gateway.", group: "gateway", default: "true", type: "boolean" },
   { key: "gateway.missedCallAlert", label: "Alert on missed calls", description: "Raise a notification when a guard's call to a gateway goes unanswered. Calls from guards on duty are always critical.", group: "gateway", default: "true", type: "boolean" },
+  // GPS verification and geofencing (guard devices)
+  { key: "geofence.checkMinutes", label: "Location check interval", description: "Minutes between location checks during a shift when the guard is inside the site.", group: "geofence", default: "10", type: "number" },
+  { key: "geofence.verifySeconds", label: "Exit verification delay", description: "Seconds to wait before a second reading confirms that a guard has left the site.", group: "geofence", default: "60", type: "number" },
+  { key: "geofence.outsideCheckMinutes", label: "Check interval while outside", description: "Minutes between location updates while a guard is outside the site.", group: "geofence", default: "3", type: "number" },
+  { key: "geofence.escalationMinutes", label: "Extended absence escalation", description: "Minutes outside the site before the alert is raised to critical.", group: "geofence", default: "10", type: "number" },
+  { key: "geofence.accuracyMaxM", label: "Worst usable GPS accuracy", description: "Metres. Fixes less accurate than this count as location unavailable, never as outside.", group: "geofence", default: "100", type: "number" },
+  { key: "geofence.overdueIntervals", label: "Overdue after", description: "Number of missed check intervals before a monitored shift is flagged as location verification overdue.", group: "geofence", default: "2", type: "number" },
+  { key: "geofence.locationRetentionDays", label: "Location event retention", description: "Days to keep location events. 0 keeps everything.", group: "geofence", default: "180", type: "number" },
   { key: "general.smsSignature", label: "SMS signature", description: "Appended to every outbound message. Leave blank for none.", group: "general", default: "- Omega Protection Services", type: "text" },
 ];
 

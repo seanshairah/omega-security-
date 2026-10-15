@@ -22,6 +22,15 @@ export type NotifyInput = {
     | "MISSED_CALL"
     | "UNKNOWN_CALLER"
     | "GATEWAY_OFFLINE"
+    | "LOCATION_EXIT"
+    | "LOCATION_EXTENDED"
+    | "LOCATION_RETURNED"
+    | "LOCATION_UNAVAILABLE"
+    | "LOCATION_OVERDUE"
+    | "LOCATION_EXCEPTION"
+    | "LOCATION_INTEGRITY"
+    | "DEVICE_OFFLINE"
+    | "DEVICE_LOW_BATTERY"
     | "GENERAL";
   severity?: NotificationSeverity;
   title: string;

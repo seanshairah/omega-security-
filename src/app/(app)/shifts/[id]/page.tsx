@@ -18,6 +18,9 @@ import { ATTENDANCE_LABEL } from "@/lib/services/attendance";
 import { addMinutes } from "date-fns";
 import { SimulatorInline } from "@/components/simulator-inline";
 import { CATEGORY_LABEL } from "@/lib/services/incidents";
+import { SiteMap } from "@/components/map/site-map";
+import { LocationEventList, SyncBadge } from "@/components/location/location-events";
+import { LOCATION_STATE_META, freshness } from "@/lib/geofence";
 
 export const metadata = { title: "Shift" };
 
@@ -34,6 +37,13 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
     db.shift.findFirst({ where: { locationId: s.locationId, id: { not: s.id }, startAt: { gte: addMinutes(s.endAt, -90), lte: addMinutes(s.endAt, 90) }, status: { not: "CANCELLED" } }, include: { guard: true, attendance: true } }),
   ]);
   const att = s.attendance ? ATTENDANCE_LABEL[s.attendance.status] : null;
+  const androidGuard = s.guard.deviceKind === "ANDROID_GUARD";
+  const locEvents = androidGuard ? await db.locationEvent.findMany({ where: { shiftId: s.id }, orderBy: { occurredAt: "asc" } }) : [];
+  const latestFix = [...locEvents].reverse().find((e) => e.latitude != null) ?? null;
+  const exits = locEvents.filter((e) => e.eventType === "LOCATION_EXIT").length;
+  const outsideSeconds = locEvents.filter((e) => e.eventType === "LOCATION_RETURNED").reduce((n, e) => n + (e.durationOutsideSeconds ?? 0), 0);
+  const verification = s.attendance?.locationVerification ?? "NOT_APPLICABLE";
+  const VERIFY: Record<string, { label: string; tone: "ok" | "warn" | "muted" | "neutral" }> = { NOT_APPLICABLE: { label: androidGuard ? "Awaiting SMS confirmation and a GPS fix" : "Not applicable (feature phone)", tone: "neutral" }, VERIFIED: { label: "ARRIVAL VERIFIED · SMS + GPS inside", tone: "ok" }, EXCEPTION: { label: "LOCATION EXCEPTION · SMS yes, GPS outside", tone: "warn" }, UNAVAILABLE: { label: "Location unavailable at arrival", tone: "muted" } };
 
   return (
     <div>
@@ -49,8 +59,20 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
 
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-4">
+          {androidGuard && (
+            <Card>
+              <CardHeader title="Location" description={`Shift-aware monitoring from the guard's phone. ${exits} exit${exits === 1 ? "" : "s"}${outsideSeconds ? `, ${Math.round(outsideSeconds / 60)} min outside in total` : ""}. GPS is approximate; every point carries its accuracy.`} action={latestFix ? <span className="flex items-center gap-2"><Status tone={freshness(latestFix.occurredAt, new Date(), latestFix.syncStatus).tone}>{freshness(latestFix.occurredAt, new Date(), latestFix.syncStatus).label}</Status><Status tone={LOCATION_STATE_META[latestFix.locationState].tone}>{LOCATION_STATE_META[latestFix.locationState].label}</Status></span> : <Status tone="muted">No fix yet</Status>} />
+              <CardBody>
+                {s.location.latitude != null && s.location.longitude != null ? (
+                  <SiteMap site={{ lat: s.location.latitude, lng: s.location.longitude, radiusM: s.location.geofenceRadiusM, name: s.location.name }} points={locEvents.filter((e) => e.latitude != null).map((e) => ({ lat: e.latitude!, lng: e.longitude!, label: `${e.eventType.replace(/_/g, " ").toLowerCase()} · ${e.locationState.toLowerCase()}`, kind: e === latestFix ? ("latest" as const) : e.eventType === "LOCATION_EXIT" ? ("exit" as const) : e.eventType === "LOCATION_RETURNED" ? ("return" as const) : e.eventType === "LOCATION_CALL" ? ("call" as const) : ("check" as const), at: fmtDateTime(e.occurredAt), freshness: e.syncStatus === "SYNCED_LATE" ? "SYNCED LATE" : e === latestFix ? freshness(e.occurredAt).label : undefined }))} height={280} />
+                ) : <p className="text-[13px] text-warn">{s.location.name} has no coordinates, so the phone cannot judge inside or outside. <Link href={`/locations/${s.locationId}/edit`} className="underline">Add them on the site</Link>.</p>}
+                {latestFix && <p className="mt-3 text-[12.5px] text-ink-3">Latest fix {fmtDateTime(latestFix.occurredAt)} <SyncBadge s={latestFix.syncStatus} /> · {latestFix.distanceM != null ? `${Math.round(latestFix.distanceM)} m from the centre` : "distance unknown"}{latestFix.accuracyM != null ? ` · ±${Math.round(latestFix.accuracyM)} m` : ""}.</p>}
+              </CardBody>
+              <LocationEventList events={[...locEvents].reverse()} emptyTitle="No location events on this shift yet" />
+            </Card>
+          )}
           <Card>
-            <CardHeader title="Timeline" description="Every automated check, reply and decision on this shift, in order." action={<ShiftStatusLabel status={s.status} />} />
+            <CardHeader title="Timeline" description="Every automated check, reply, call and location event on this shift, in order." action={<ShiftStatusLabel status={s.status} />} />
             <CardBody><Timeline events={s.checkIns} showDates={s.durationMinutes > 12 * 60} /></CardBody>
             {live && can.simulate(user) && (
               <div className="border-t border-dashed border-line px-5 py-4">
@@ -116,6 +138,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
                 <Meta label="Missed checks">{s.attendance?.missedChecks ?? 0}</Meta>
                 <Meta label="Awaiting reply">{s.pendingPrompt === "NONE" ? "Nothing" : s.pendingPrompt.toLowerCase().replace("_", " ")}</Meta>
                 <Meta label="Status">{STATUS_META[s.status].label}</Meta>
+                <Meta label="GPS verification" className="col-span-2"><Status tone={VERIFY[verification].tone}>{VERIFY[verification].label}</Status></Meta>
               </div>
             </CardBody>
           </Card>

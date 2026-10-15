@@ -29,6 +29,8 @@ import zw.co.omega.gateway.R
 import zw.co.omega.gateway.call.CallMonitor
 import zw.co.omega.gateway.data.Prefs
 import zw.co.omega.gateway.ui.MainActivity
+import zw.co.omega.gateway.location.LocationMonitor
+import zw.co.omega.gateway.geofence.Phase
 
 /**
  * Long-running foreground service: keeps the process alive (as far as the manufacturer allows),
@@ -40,6 +42,8 @@ class GatewayService : Service() {
     private val syncRequests = Channel<Unit>(Channel.CONFLATED)
     private var heartbeatJob: Job? = null
     private var syncJob: Job? = null
+    private var monitorJob: Job? = null
+    private val monitor by lazy { LocationMonitor(this) }
     private lateinit var prefs: Prefs
     private lateinit var engine: SyncEngine
     private var phoneReceiver: BroadcastReceiver? = null
@@ -62,11 +66,29 @@ class GatewayService : Service() {
         if (!prefs.isActivated) { stopSelf(); return START_NOT_STICKY }
         if (intent?.action == ACTION_SYNC) syncRequests.trySend(Unit)
         if (intent?.action == ACTION_HEARTBEAT) { heartbeatJob?.cancel(); heartbeatJob = heartbeatLoop() }
+        if (intent?.action == ACTION_CHECK_LOCATION) { monitorJob?.cancel(); monitorJob = monitorLoop() }
+        if (prefs.isGuardMode && monitorJob == null) monitorJob = monitorLoop()
         return START_STICKY
+    }
+
+    /**
+     * Guard mode: shift-aware location checks. The wait between checks comes from the state
+     * machine (10 min inside, 60 s to verify an exit, 3 min while outside; shorter while waiting
+     * for a shift to start). Works with no internet: events go to the outbox.
+     */
+    private fun monitorLoop(): Job = scope.launch {
+        while (true) {
+            if (!prefs.isGuardMode) { delay(15 * 60_000L); continue }
+            val r = try { monitor.step() } catch (e: Exception) { Log.e(TAG, "monitor step: ${e.message}"); null }
+            if (r != null && r.phase != Phase.NOT_ON_SHIFT && r.phase != Phase.WAITING_FOR_SHIFT) syncRequests.trySend(Unit)
+            updateNotification()
+            delay(((r?.nextCheckSeconds ?: 600).coerceIn(30, 15 * 60)) * 1000L)
+        }
     }
 
     private fun startLoops() {
         heartbeatJob = heartbeatLoop()
+        if (prefs.isGuardMode) monitorJob = monitorLoop()
         syncJob = scope.launch {
             var backoff = 5_000L
             while (true) {
@@ -117,10 +139,13 @@ class GatewayService : Service() {
 
     private fun startInForeground(text: String) {
         val n = buildNotification(text)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        val type = if (prefs.isGuardMode && hasFineLocation()) ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION or ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) startForeground(NOTIF_ID, n, type)
         else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) startForeground(NOTIF_ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST)
         else startForeground(NOTIF_ID, n)
     }
+
+    private fun hasFineLocation() = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
     private fun buildNotification(text: String): Notification {
         val pi = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -136,11 +161,13 @@ class GatewayService : Service() {
     }
 
     private fun updateNotification() {
-        val text = when {
+        val mon = when (prefs.monitoringState) { "MONITORING", "INSIDE" -> getString(R.string.notif_mon_inside); "OUTSIDE", "VERIFYING_OUTSIDE" -> getString(R.string.notif_mon_outside); "LOCATION_UNAVAILABLE" -> getString(R.string.notif_mon_unavailable); "OFFLINE_MONITORING" -> getString(R.string.notif_mon_offline); "WAITING_FOR_SHIFT" -> getString(R.string.notif_mon_waiting); else -> getString(R.string.notif_mon_off) }
+        val base = when {
             prefs.authRejected -> getString(R.string.notif_rejected)
             !prefs.lastHeartbeatOk -> getString(R.string.notif_offline)
             else -> getString(R.string.notif_online, engine.queueSize())
         }
+        val text = if (prefs.isGuardMode) "$base · $mon" else base
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
         nm.notify(NOTIF_ID, buildNotification(text))
     }
@@ -149,7 +176,7 @@ class GatewayService : Service() {
         phoneReceiver?.let { runCatching { unregisterReceiver(it) } }
         networkCallback?.let { runCatching { (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) } }
         scope.launch { }.cancel()
-        heartbeatJob?.cancel(); syncJob?.cancel()
+        heartbeatJob?.cancel(); syncJob?.cancel(); monitorJob?.cancel()
         super.onDestroy()
     }
 
@@ -158,6 +185,7 @@ class GatewayService : Service() {
         const val NOTIF_ID = 1001
         const val ACTION_SYNC = "zw.co.omega.gateway.SYNC"
         const val ACTION_HEARTBEAT = "zw.co.omega.gateway.HEARTBEAT"
+        const val ACTION_CHECK_LOCATION = "zw.co.omega.gateway.CHECK_LOCATION"
 
         fun start(context: Context) {
             if (!Prefs(context).isActivated) return
@@ -178,6 +206,11 @@ class GatewayService : Service() {
         fun requestHeartbeat(context: Context) {
             val i = Intent(context, GatewayService::class.java).setAction(ACTION_HEARTBEAT)
             try { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ContextCompat.startForegroundService(context, i) else context.startService(i) } catch (e: Exception) { Log.w(TAG, "heartbeat request: ${e.message}") }
+        }
+
+        fun requestLocationCheck(context: Context) {
+            val i = Intent(context, GatewayService::class.java).setAction(ACTION_CHECK_LOCATION)
+            try { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ContextCompat.startForegroundService(context, i) else context.startService(i) } catch (e: Exception) { Log.w(TAG, "location check request: ${e.message}") }
         }
 
         fun stop(context: Context) = context.stopService(Intent(context, GatewayService::class.java))

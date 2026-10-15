@@ -6,6 +6,8 @@ import zw.co.omega.gateway.data.EventQueue
 import zw.co.omega.gateway.data.Prefs
 import zw.co.omega.gateway.net.ApiClient
 import zw.co.omega.gateway.util.DeviceInfo
+import zw.co.omega.gateway.data.ShiftConfig
+import zw.co.omega.gateway.location.LocationMonitor
 
 /** Drains the outbox and sends heartbeats. Shared by the foreground service and the WorkManager fallback. */
 class SyncEngine(private val context: Context) {
@@ -51,7 +53,13 @@ class SyncEngine(private val context: Context) {
         if (!prefs.isActivated) return Outcome.Rejected("not activated")
         if (!DeviceInfo.isOnline(context)) { prefs.lastHeartbeatOk = false; return Outcome.Retry("offline") }
         return try {
-            val r = ApiClient(prefs.serverUrl, prefs.deviceToken).heartbeat(DeviceInfo.json(context))
+            val api = ApiClient(prefs.serverUrl, prefs.deviceToken)
+            val info = DeviceInfo.json(context).put("monitoringState", prefs.monitoringState).put("mockLocation", prefs.mockSeen)
+            if (prefs.isGuardMode) LocationMonitor(context).lastFixJson()?.let { info.put("lastLocation", it) }
+            val r = api.heartbeat(info)
+            prefs.mode = r.mode
+            r.guardName?.let { prefs.guardName = it }
+            if (prefs.isGuardMode) refreshConfig(api)
             prefs.deviceName = r.deviceName.ifBlank { prefs.deviceName }
             prefs.phoneNumber = r.phoneNumber.ifBlank { prefs.phoneNumber }
             prefs.locationName = r.locationName ?: ""
@@ -67,6 +75,19 @@ class SyncEngine(private val context: Context) {
         } catch (e: Exception) {
             prefs.lastHeartbeatOk = false; prefs.lastError = e.message
             Outcome.Retry(e.message ?: "network error")
+        }
+    }
+
+    /** Pull the shift/site/policy for offline monitoring. Failures keep the cached copy. */
+    fun refreshConfig(api: ApiClient = ApiClient(prefs.serverUrl, prefs.deviceToken)): ShiftConfig? {
+        return try {
+            val r = api.config()
+            val cfg = ShiftConfig.fromServer(r)
+            ShiftConfig.save(context, cfg)
+            cfg
+        } catch (e: Exception) {
+            Log.w(TAG, "config refresh failed: ${e.message}")
+            ShiftConfig.load(context)
         }
     }
 

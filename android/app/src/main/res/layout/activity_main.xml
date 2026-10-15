@@ -11,6 +11,19 @@
             <TextView android:id="@+id/statusWord" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:textColor="@color/ink" android:textSize="26sp" android:textStyle="bold" android:letterSpacing="0.06" />
         </LinearLayout>
 
+        <TextView android:id="@+id/modeLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/ink2" android:textSize="13sp" />
+
+        <LinearLayout android:id="@+id/guardRows" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/card" android:orientation="vertical" android:padding="18dp" android:visibility="gone">
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/shift_label" />
+            <TextView android:id="@+id/shiftLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/monitoring_label" />
+            <TextView android:id="@+id/monitoringLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_check_label" />
+            <TextView android:id="@+id/lastCheckLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/location_perm_label" />
+            <TextView android:id="@+id/locationPermLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+        </LinearLayout>
+
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/card" android:orientation="vertical" android:padding="18dp">
             <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/device_label" />
             <TextView android:id="@+id/deviceName" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />

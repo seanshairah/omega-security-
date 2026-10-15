@@ -90,6 +90,7 @@ model Location {
   notifyClientCompletion Boolean   @default(true)
   latitude            Float?
   longitude           Float?
+  geofenceRadiusM     Int          @default(150)
   active              Boolean      @default(true)
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
@@ -101,6 +102,7 @@ model Location {
   smsMessages SmsMessage[]
   gateways    GatewayDevice[]
   callLogs    CallLog[]
+  locationEvents LocationEvent[]
 
   @@index([clientId])
   @@index([active])
@@ -149,6 +151,8 @@ model Guard {
   watchedAt             DateTime?
   watchedById           String?
   watchNote             String?
+  // ANDROID_GUARD once a guard device is linked; FEATURE_PHONE guards use SMS and calls only
+  deviceKind            GuardDeviceKind  @default(FEATURE_PHONE)
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
@@ -159,6 +163,8 @@ model Guard {
   recurrences ShiftRecurrence[]
   notifications Notification[]
   callLogs    CallLog[]
+  devices     GatewayDevice[]
+  locationEvents LocationEvent[]
 
   @@index([lastName, firstName])
   @@index([active])
@@ -250,6 +256,7 @@ model Shift {
   smsMessages   SmsMessage[]
   notifications Notification[]
   callLogs      CallLog[]
+  locationEvents LocationEvent[]
 
   @@index([startAt])
   @@index([endAt])
@@ -278,9 +285,22 @@ model Attendance {
   lateMinutes           Int              @default(0)
   completionConfirmedAt DateTime?
   missedChecks          Int              @default(0)
+  // GPS correlation of the SMS confirmation, for guards with an Android device
+  locationVerification  LocationVerification @default(NOT_APPLICABLE)
+  locationVerifiedAt    DateTime?
   updatedAt             DateTime         @updatedAt
 
   @@index([status])
+}
+enum LocationVerification {
+  NOT_APPLICABLE
+  VERIFIED
+  EXCEPTION
+  UNAVAILABLE
+}
+enum GuardDeviceKind {
+  FEATURE_PHONE
+  ANDROID_GUARD
 }
 
 enum CheckInType {
@@ -313,6 +333,14 @@ enum CheckInType {
   CALL_ENDED
   CALL_MISSED
   CALL_OUTGOING
+  LOCATION_VERIFIED
+  LOCATION_EXCEPTION
+  LOCATION_INSIDE
+  LOCATION_EXIT
+  LOCATION_OUTSIDE
+  LOCATION_RETURNED
+  LOCATION_UNAVAILABLE
+  LOCATION_OVERDUE
 }
 
 enum CheckInSource {
@@ -594,6 +622,19 @@ model GatewayDevice {
   phoneNumber      String
   locationId       String?
   location         Location?         @relation(fields: [locationId], references: [id])
+  // One app, two modes: an operations gateway phone, or a guard's own phone
+  mode             DeviceMode        @default(OPERATIONS_GATEWAY)
+  guardId          String?
+  guard            Guard?            @relation(fields: [guardId], references: [id])
+  locationPermission String?         // granted | foreground_only | denied | unknown
+  callPermission   String?           // granted | partial | denied | unknown
+  monitoringState  String?           // NOT_ON_SHIFT … SYNCING, reported by the phone
+  mockLocationSeen Boolean           @default(false)
+  lastLatitude     Float?
+  lastLongitude    Float?
+  lastAccuracyM    Float?
+  lastLocationAt   DateTime?
+  lastLocationState LocationState?
   status           GatewayStatus     @default(OFFLINE)
   activationStatus GatewayActivation @default(PENDING)
   activationCode   String?           @unique
@@ -617,10 +658,77 @@ model GatewayDevice {
 
   events   GatewayEvent[]
   callLogs CallLog[]
+  locationEvents LocationEvent[]
 
   @@index([status])
   @@index([locationId])
   @@index([lastSeenAt])
+  @@index([guardId])
+}
+enum DeviceMode {
+  OPERATIONS_GATEWAY
+  GUARD
+}
+enum LocationState {
+  INSIDE
+  OUTSIDE
+  UNKNOWN
+}
+enum LocationEventType {
+  SHIFT_STARTED
+  LOCATION_CHECK
+  LOCATION_EXIT
+  LOCATION_OUTSIDE
+  LOCATION_RETURNED
+  LOCATION_UNAVAILABLE
+  LOCATION_VERIFICATION_OVERDUE
+  LOCATION_CALL
+}
+enum SyncStatus {
+  LIVE
+  SYNCED
+  SYNCED_LATE
+}
+/**
+ * Location events from guard devices. Event-focused: arrival, periodic checks, exit, outside
+ * updates, return, unavailable. Not a GPS stream. `syncStatus` is derived from the delay between
+ * the phone's timestamp and arrival at the server, so a late upload is never shown as live.
+ */
+model LocationEvent {
+  id              String            @id @default(cuid())
+  eventId         String            @unique
+  gatewayDeviceId String
+  device          GatewayDevice     @relation(fields: [gatewayDeviceId], references: [id])
+  guardId         String?
+  guard           Guard?            @relation(fields: [guardId], references: [id])
+  shiftId         String?
+  shift           Shift?            @relation(fields: [shiftId], references: [id])
+  locationId      String?
+  location        Location?         @relation(fields: [locationId], references: [id])
+  eventType       LocationEventType
+  locationState   LocationState     @default(UNKNOWN)
+  latitude        Float?
+  longitude       Float?
+  accuracyM       Float?
+  distanceM       Float?
+  geofenceRadiusM Int?
+  provider        String?
+  speed           Float?
+  bearing         Float?
+  mock            Boolean           @default(false)
+  reason          String?           // for LOCATION_UNAVAILABLE: permission_revoked, location_disabled, no_fix, poor_accuracy, …
+  durationOutsideSeconds Int?
+  occurredAt      DateTime
+  receivedAt      DateTime          @default(now())
+  syncStatus      SyncStatus        @default(LIVE)
+  simulated       Boolean           @default(false)
+  metadata        Json?
+
+  @@index([shiftId, occurredAt])
+  @@index([guardId, occurredAt])
+  @@index([gatewayDeviceId, occurredAt])
+  @@index([eventType])
+  @@index([occurredAt])
 }
 /** Every event a gateway sends, kept raw. `eventId` is generated on the phone and makes retries idempotent. */
 model GatewayEvent {
@@ -676,6 +784,12 @@ model CallLog {
   unknownResolution     String?       // IGNORED | BLOCKED | LINKED
   simulated             Boolean       @default(false)
   note                  String?
+  // Guard-device calls carry the latest fix; a gateway call and a guard call for the same
+  // conversation are linked both ways.
+  latitude              Float?
+  longitude             Float?
+  locationState         LocationState?
+  correlatedCallId      String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
