@@ -8,4 +8,6 @@
     <color name="accent">#2E7D32</color>
     <color name="accent_strong">#1B5E20</color>
     <color name="critical">#C62828</color>
+    <color name="warn">#B26A00</color>
+    <color name="ok">#2E7D32</color>
 </resources>

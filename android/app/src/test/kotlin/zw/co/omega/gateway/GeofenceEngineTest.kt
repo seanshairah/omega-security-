@@ -49,4 +49,43 @@ class GeofenceEngineTest {
         assertTrue(r.events.isEmpty())
         assertEquals(Phase.LOCATION_UNAVAILABLE, s.phase)
     }
+
+    @Test
+    fun `a single outside reading never emits an exit - a second reading after the verify window does`() {
+        val p = Policy(verifySeconds = 60)
+        val t0 = 1_000_000L
+        val first = stepMonitor(MonitorState(Phase.MONITORING, t0), Observation(t0, LocState.OUTSIDE, 400.0), p)
+        assertTrue(first.events.isEmpty()); assertEquals(Phase.VERIFYING_OUTSIDE, first.next.phase)
+        val tooSoon = stepMonitor(first.next, Observation(t0 + 20_000, LocState.OUTSIDE, 410.0), p)
+        assertTrue("still verifying", tooSoon.events.isEmpty())
+        val back = stepMonitor(first.next, Observation(t0 + 30_000, LocState.INSIDE, 30.0), p)
+        assertEquals("a return during verification cancels the exit quietly", listOf("LOCATION_CHECK"), back.events.map { it.type })
+        val confirmed = stepMonitor(first.next, Observation(t0 + 61_000, LocState.OUTSIDE, 420.0), p)
+        assertEquals(listOf("LOCATION_EXIT"), confirmed.events.map { it.type })
+    }
+
+    @Test
+    fun `unknown readings never change an outside or inside verdict`() {
+        val p = Policy()
+        val inside = MonitorState(Phase.MONITORING, 0)
+        val u = stepMonitor(inside, Observation(1000, LocState.UNKNOWN, reason = "poor_accuracy"), p)
+        assertEquals(Phase.LOCATION_UNAVAILABLE, u.next.phase)
+        assertEquals("LOCATION_UNAVAILABLE", u.events.single().type)
+        assertEquals("poor_accuracy", u.events.single().reason)
+        val again = stepMonitor(u.next, Observation(2000, LocState.UNKNOWN, reason = "no_fix"), p)
+        assertTrue("repeated unknown is not re-announced", again.events.isEmpty())
+        val outside = MonitorState(Phase.OUTSIDE, 0, outsideSince = 0, lastOutsideUpdate = 0)
+        val uo = stepMonitor(outside, Observation(5000, LocState.UNKNOWN, reason = "no_fix"), p)
+        assertEquals("an unknown reading while outside stays outside", Phase.OUTSIDE, uo.next.phase)
+    }
+
+    @Test
+    fun `low battery stretches only routine inside checks`() {
+        assertEquals(1200, adjustForBattery(600, 15, Phase.MONITORING))
+        assertEquals(600, adjustForBattery(600, 50, Phase.MONITORING))
+        assertEquals(180, adjustForBattery(180, 15, Phase.OUTSIDE))
+        assertEquals(60, adjustForBattery(60, 5, Phase.VERIFYING_OUTSIDE))
+        assertEquals(30 * 60, adjustForBattery(20 * 60, 10, Phase.MONITORING))
+        assertEquals("unknown battery level leaves the interval alone", 600, adjustForBattery(600, -1, Phase.MONITORING))
+    }
 }

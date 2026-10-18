@@ -13,14 +13,15 @@ import { fmtTime } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 import { CALL_EVENT_TYPES, DEVICE_EVENT_TYPES, fmtCallDuration, initialCallState, isTerminal, reduceCall, saneTimestamp, type IncomingGatewayEvent } from "./call-state";
 import { LOCATION_EVENT_TYPES, applyLocationEvent, validateLocationEvent, type IncomingLocationEvent } from "./location-events";
+import { ALERT_EVENT_TYPES, applyAlertEvent, validateAlertEvent, type IncomingAlertEvent } from "./alerts";
 import type { LocationState } from "@prisma/client";
 
 export type EventAck = { eventId: string; status: "ok" | "duplicate" | "rejected"; callLogId?: string; error?: string };
 
 const STATUS_EVENT_TYPES = ["DEVICE_STATUS", "HEARTBEAT"] as const;
-const ALL_TYPES: string[] = [...CALL_EVENT_TYPES, ...DEVICE_EVENT_TYPES, ...LOCATION_EVENT_TYPES, ...STATUS_EVENT_TYPES];
+const ALL_TYPES: string[] = [...CALL_EVENT_TYPES, ...DEVICE_EVENT_TYPES, ...LOCATION_EVENT_TYPES, ...STATUS_EVENT_TYPES, ...ALERT_EVENT_TYPES];
 
-export type AnyIncomingEvent = ({ kind: "call" | "device" | "status" } & IncomingGatewayEvent) | ({ kind: "location" } & IncomingLocationEvent);
+export type AnyIncomingEvent = ({ kind: "call" | "device" | "status" } & IncomingGatewayEvent) | ({ kind: "location" } & IncomingLocationEvent) | ({ kind: "alert" } & IncomingAlertEvent);
 
 export function validateEvent(raw: unknown): { ok: true; event: AnyIncomingEvent } | { ok: false; error: string; eventId?: string } {
   if (!raw || typeof raw !== "object") return { ok: false, error: "event must be an object" };
@@ -32,6 +33,10 @@ export function validateEvent(raw: unknown): { ok: true; event: AnyIncomingEvent
   if ((LOCATION_EVENT_TYPES as readonly string[]).includes(eventType)) {
     const v = validateLocationEvent(e, eventId, eventType);
     return v.ok ? { ok: true, event: { kind: "location", ...v.event } } : { ok: false, error: v.error, eventId };
+  }
+  if ((ALERT_EVENT_TYPES as readonly string[]).includes(eventType)) {
+    const v = validateAlertEvent(e, eventId, eventType);
+    return v.ok ? { ok: true, event: { kind: "alert", ...v.event } } : { ok: false, error: v.error, eventId };
   }
   const timestamp = typeof e.timestamp === "string" || e.timestamp instanceof Date ? e.timestamp : new Date().toISOString();
   const isCall = (CALL_EVENT_TYPES as readonly string[]).includes(eventType);
@@ -81,7 +86,7 @@ async function processOne(device: GatewayDevice, ev: AnyIncomingEvent, opts: { s
   const at = saneTimestamp(ev.timestamp, now);
   // 1. raw record; the unique eventId is the deduplication key
   try {
-    await db.gatewayEvent.create({ data: { eventId: ev.eventId, gatewayDeviceId: device.id, eventType: ev.eventType, callId: ev.callId ?? null, phoneNumber: ev.kind === "location" ? null : ev.phoneNumber ?? null, occurredAt: at, payload: { ...ev, timestamp: String(ev.timestamp), simulated: Boolean(opts.simulated) } as Prisma.InputJsonObject } });
+    await db.gatewayEvent.create({ data: { eventId: ev.eventId, gatewayDeviceId: device.id, eventType: ev.eventType, callId: ev.kind === "alert" ? null : ev.callId ?? null, phoneNumber: ev.kind === "location" || ev.kind === "alert" ? null : ev.phoneNumber ?? null, occurredAt: at, payload: { ...ev, timestamp: String(ev.timestamp), simulated: Boolean(opts.simulated) } as Prisma.InputJsonObject } });
   } catch (e) {
     if (/Unique constraint/.test((e as Error).message)) {
       const existing = ev.kind === "call" && ev.callId ? await db.callLog.findUnique({ where: { gatewayDeviceId_callId: { gatewayDeviceId: device.id, callId: ev.callId } } }) : null;
@@ -94,6 +99,8 @@ async function processOne(device: GatewayDevice, ev: AnyIncomingEvent, opts: { s
   try {
     if (ev.kind === "location") {
       outcome = (await applyLocationEvent(device, ev, { simulated: opts.simulated })).outcome;
+    } else if (ev.kind === "alert") {
+      outcome = (await applyAlertEvent(device, ev, { simulated: opts.simulated })).outcome;
     } else if (ev.kind === "status") {
       outcome = await applyStatusEvent(device, ev);
     } else if (ev.eventType === "DEVICE_ONLINE" || ev.eventType === "DEVICE_OFFLINE") {

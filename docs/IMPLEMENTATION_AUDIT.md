@@ -238,3 +238,42 @@ Run on the Pixel 6 Pro with the v1.2.0 debug APK (`zw.co.omega.gateway.debug`): 
 - The release APK is still signed with the debug key (no production keystore in the environment). Set `ANDROID_KEYSTORE_PATH` and friends before distributing.
 - The tester's report quoted `pnpm`; the project uses `npm`. The commands are otherwise the same.
 - The live database has no guard devices yet, so nothing in production depends on the Android changes until a device is activated.
+
+---
+
+# Phase 2 gate results (Stages 4–6)
+
+Branch `claude/brave-hopper-92o6rw` on top of the merged Phase 1 (`56c97cc`). Same environment as Phase 1: local PostgreSQL 16 with the demo seed; the additive `guard_alerts` migration also applied to Neon.
+
+## Checks after Phase 2
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit`, `npm run lint` | clean |
+| `npm test` | 28/28 (`tests/alerts.test.ts` added) |
+| Android JVM tests | 43/43 (geofence: single-reading no-exit, unknown never flips a verdict, battery rule) |
+| `assembleDebug` / `assembleRelease` | ok, v1.3.0 (versionCode 4) |
+| `scripts/dev/gateway-e2e.ts` | 30/30 |
+| `scripts/dev/location-e2e.ts` | 38/38 |
+| `scripts/dev/alerts-e2e.ts` (new) | 20/20, including the SMS `EMERGENCY` keyword regression for a feature-phone guard |
+| `npm run build` | ok |
+| Migration `20261019090000_guard_alerts` | applied locally and on Neon; additive (two enums, enum values, one table) |
+
+## Stage 4 — offline intelligent shift geofencing
+
+Every item of the checklist was already in place from Phase 1 except battery-efficient monitoring, which now stretches routine inside checks (never exit verification or outside updates) while the battery is ≤ 20 %. The mapping is recorded in GPS_AND_GEOFENCING.md → *Stage 4 checklist*. No second sync engine was built: alerts (Stage 5) use the same outbox and `SyncCoordinator`.
+
+## Stage 5 — guard communication and emergencies
+
+- Eight alert/status types, same outbox, `EMERGENCY` priority, never waiting for a fresh fix (last fix + age attached, fresh check requested in parallel).
+- Server: `GuardAlert` rows, incidents for the serious types (source `APP`), shift status that never downgrades, timeline lines, notifications, acknowledgement returned on the heartbeat; `/alerts` page, dashboard card, sidebar count, guard Communication tab.
+- Offline: the guard is told plainly the alert has **not** reached operations and offered **Call operations** / **Send SMS instead** (dialer and SMS intents, no new permissions; the SMS carries the matching keyword so the unchanged SMS pipeline handles it).
+- Verified by `alerts-e2e` (server side) and compilation plus unit tests (phone side). The dialogs, dialer/SMS fallbacks and the acknowledgement appearing on the phone are **UNVERIFIED on device**.
+
+## Stage 6 — APK UI
+
+Guard mode shows connection, quick actions (EMERGENCY, assistance, going well, more), shift + duty site, GPS verification + monitoring + last check, sync + pending count + last sync/heartbeat, communication history and device health; operations mode shows connection, call monitoring with recent call events and delivery state, sync and device health. Documented card by card in ANDROID_UI.md. Rendering was compiled and reasoned through; **layout on real screens is UNVERIFIED** until the APK runs on hardware.
+
+## Device-only items still owed
+
+Run the v1.3.0 debug APK on the Pixel: emergency confirmation and offline fallback dialogs; acknowledgement arriving on the phone within one heartbeat; quick actions from the dashboard; the operations-mode dashboard on a gateway phone; battery-saver line when the battery is low. Production readiness is not claimed on compilation and simulation alone.

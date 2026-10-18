@@ -12,21 +12,21 @@ class ApiClient(private val baseUrl: String, private val token: String? = null) 
 
     class ApiException(val status: Int, message: String) : IOException(message)
 
-    data class Activation(val deviceId: String, val deviceToken: String, val deviceName: String, val phoneNumber: String, val locationName: String?, val heartbeatSeconds: Int, val mode: String, val guardName: String?)
-    data class Heartbeat(val deviceName: String, val phoneNumber: String, val locationName: String?, val status: String, val heartbeatSeconds: Int, val mode: String, val guardName: String?)
+    data class Activation(val deviceId: String, val deviceToken: String, val deviceName: String, val phoneNumber: String, val locationName: String?, val heartbeatSeconds: Int, val mode: String, val guardName: String?, val opsPhone: String?)
+    data class Heartbeat(val deviceName: String, val phoneNumber: String, val locationName: String?, val status: String, val heartbeatSeconds: Int, val mode: String, val guardName: String?, val opsPhone: String?, val alerts: JSONArray?)
     data class Ack(val eventId: String, val status: String, val error: String?)
 
     fun activate(code: String, info: JSONObject): Activation {
         val body = JSONObject(info.toString()).put("activationCode", code.trim().uppercase())
         val r = post("/api/gateways/activate", body, auth = false)
         val loc = r.optJSONObject("location")
-        return Activation(r.getString("deviceId"), r.getString("deviceToken"), r.optString("deviceName"), r.optString("phoneNumber"), loc?.optString("name"), r.optJSONObject("config")?.optInt("heartbeatSeconds", 120) ?: 120, r.optString("mode", "OPERATIONS_GATEWAY"), r.optJSONObject("guard")?.optString("name"))
+        return Activation(r.getString("deviceId"), r.getString("deviceToken"), r.optString("deviceName"), r.optString("phoneNumber"), loc?.optString("name"), r.optJSONObject("config")?.optInt("heartbeatSeconds", 120) ?: 120, r.optString("mode", "OPERATIONS_GATEWAY"), r.optJSONObject("guard")?.optString("name"), r.optJSONObject("config")?.optString("opsPhone")?.ifBlank { null })
     }
 
     fun heartbeat(info: JSONObject): Heartbeat {
         val r = post("/api/gateways/heartbeat", info)
         val loc = r.optJSONObject("location")
-        return Heartbeat(r.optString("deviceName"), r.optString("phoneNumber"), loc?.optString("name"), r.optString("status"), r.optJSONObject("config")?.optInt("heartbeatSeconds", 120) ?: 120, r.optString("mode", "OPERATIONS_GATEWAY"), r.optJSONObject("guard")?.optString("name"))
+        return Heartbeat(r.optString("deviceName"), r.optString("phoneNumber"), loc?.optString("name"), r.optString("status"), r.optJSONObject("config")?.optInt("heartbeatSeconds", 120) ?: 120, r.optString("mode", "OPERATIONS_GATEWAY"), r.optJSONObject("guard")?.optString("name"), r.optJSONObject("config")?.optString("opsPhone")?.ifBlank { null }, r.optJSONArray("alerts"))
     }
 
     /** GET /api/gateways/config — guard, shift, site, policy. */

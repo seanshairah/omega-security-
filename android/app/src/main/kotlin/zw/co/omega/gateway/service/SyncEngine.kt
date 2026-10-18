@@ -58,11 +58,12 @@ class SyncEngine(private val context: Context) {
                     val a = byId[row.event.eventId]
                     when (SyncPlanner.ackOutcome(a?.status)) {
                         AckOutcome.ACKED -> { ok += row.event.eventId; if (a?.status == "duplicate") dups++ else acked++ }
-                        AckOutcome.FAILED_PERMANENT -> { rejected++; Log.w(TAG, "event ${row.event.eventId} rejected: ${a?.error}"); queue.fail(row.event.eventId, a?.error) }
+                        AckOutcome.FAILED_PERMANENT -> { rejected++; Log.w(TAG, "event ${row.event.eventId} rejected: ${a?.error}"); queue.fail(row.event.eventId, a?.error); queue.markCommFailed(row.event.eventId, a?.error) }
                         AckOutcome.UNKNOWN -> retry += row
                     }
                 }
                 queue.ack(ok)
+                queue.markCommSent(ok)
                 if (retry.isNotEmpty()) { retried += retry.size; queue.markRetry(retry, "no ack"); if (retry.size == batch.size) return finish(Outcome.Retry("no acks"), "no acks") }
                 if (ok.isNotEmpty()) { prefs.lastSyncAt = System.currentTimeMillis(); prefs.lastError = null; prefs.authRejected = false }
             } catch (e: ApiClient.ApiException) {
@@ -104,6 +105,15 @@ class SyncEngine(private val context: Context) {
             val r = api.heartbeat(info)
             prefs.mode = r.mode
             r.guardName?.let { prefs.guardName = it }
+            r.opsPhone?.let { prefs.opsPhone = it }
+            r.alerts?.let { arr ->
+                // Operations' acknowledgements for the alerts this guard sent.
+                val iso = { v: String? -> v?.takeIf { it.isNotBlank() }?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() } }
+                for (i in 0 until arr.length()) {
+                    val a = arr.optJSONObject(i) ?: continue
+                    queue.applyServerAlertState(a.optString("eventId"), a.optString("status"), a.optString("acknowledgedBy").ifBlank { null }, iso(a.optString("acknowledgedAt")), a.optString("acknowledgementNote").ifBlank { null }, iso(a.optString("resolvedAt")))
+                }
+            }
             if (prefs.isGuardMode) refreshConfig(api)
             prefs.deviceName = r.deviceName.ifBlank { prefs.deviceName }
             prefs.phoneNumber = r.phoneNumber.ifBlank { prefs.phoneNumber }

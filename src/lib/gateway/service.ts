@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 import type { GatewayDevice, GatewayStatus, Prisma } from "@prisma/client";
 import { audit } from "@/lib/audit";
 import { notify } from "@/lib/notifications";
-import { getSettingNumber } from "@/lib/settings";
+import { getSettingNumber, getSettings } from "@/lib/settings";
 import { normalisePhone, isValidPhone } from "@/lib/phone";
 import { generateActivationCode, generateDeviceToken, hashToken } from "./auth";
 import { effectiveGeofence, configVersionString } from "@/lib/site-config";
@@ -142,7 +142,8 @@ export async function gatewayConfig() {
   const [heartbeatSeconds, offlineMinutes, checkMinutes, verifySeconds, outsideCheckMinutes, escalationMinutes, accuracyMaxM] = await Promise.all([
     getSettingNumber("gateway.heartbeatSeconds"), getSettingNumber("gateway.offlineMinutes"), getSettingNumber("geofence.checkMinutes"), getSettingNumber("geofence.verifySeconds"), getSettingNumber("geofence.outsideCheckMinutes"), getSettingNumber("geofence.escalationMinutes"), getSettingNumber("geofence.accuracyMaxM"),
   ]);
-  return { heartbeatSeconds: Math.max(30, heartbeatSeconds), offlineMinutes, geofence: { checkMinutes: Math.max(1, checkMinutes), verifySeconds: Math.max(15, verifySeconds), outsideCheckMinutes: Math.max(1, outsideCheckMinutes), escalationMinutes, accuracyMaxM }, serverTime: new Date().toISOString() };
+  const opsPhone = (await getSettings())["general.controlRoomPhone"]?.trim() || null;
+  return { heartbeatSeconds: Math.max(30, heartbeatSeconds), offlineMinutes, opsPhone, geofence: { checkMinutes: Math.max(1, checkMinutes), verifySeconds: Math.max(15, verifySeconds), outsideCheckMinutes: Math.max(1, outsideCheckMinutes), escalationMinutes, accuracyMaxM }, serverTime: new Date().toISOString() };
 }
 
 /**

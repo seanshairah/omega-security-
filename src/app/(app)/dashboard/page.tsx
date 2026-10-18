@@ -17,6 +17,8 @@ import { LiveCallCards } from "@/components/calls/live-calls";
 import { getSettingNumber } from "@/lib/settings";
 import { effectiveStatus } from "@/lib/gateway/service";
 import { cn } from "@/lib/cn";
+import { ALERT_META, alertInclude } from "@/lib/gateway/alerts";
+import { ago } from "@/lib/time";
 
 export const metadata = { title: "Overview" };
 
@@ -32,6 +34,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     db.gatewayDevice.findMany({ where: { status: { notIn: ["REVOKED"] } }, select: { id: true, deviceName: true, status: true, lastSeenAt: true, activationStatus: true } }),
     getSettingNumber("gateway.offlineMinutes"),
   ]);
+  const openAlerts = await db.guardAlert.findMany({ where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } }, include: alertInclude, orderBy: [{ status: "asc" }, { occurredAt: "desc" }], take: 6 });
   const gatewayOnline = gateways.filter((g) => effectiveStatus(g, offlineMinutes) === "ONLINE").length;
   const showCalls = gateways.length > 0 || live.length > 0 || missedCalls.length > 0;
   const last = (a: number[]) => a[a.length - 1] - a[a.length - 2];
@@ -47,6 +50,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <KpiCard title="Open incidents" description={`Incidents awaiting resolution, plus ${o.assistance} assistance request${o.assistance === 1 ? "" : "s"}.`} value={o.incidents} delta={last(series.incidents)} deltaGoodWhen="down" series={series.incidents} tone={o.incidents > 0 ? "critical" : "neutral"} />
         <KpiCard title="Completed today" description={`Shifts confirmed complete since midnight. ${o.scheduledToday} scheduled today.`} value={o.completedToday} delta={last(series.completed)} series={series.completed} tone="ok" />
       </div>
+
+      {openAlerts.length > 0 && (
+        <Card className="border-critical/40">
+          <CardHeader title={<><SirenIcon weight="fill" className="mr-1 inline h-4 w-4 text-critical" />Guard alerts from phones · {openAlerts.length} open</>} description="Sent through the guard app. Acknowledge so the guard sees who is handling it." action={<Link href="/alerts" className="text-[13px] font-medium text-accent hover:underline">Open alerts <CaretRightIcon className="inline h-3 w-3" /></Link>} />
+          <CardBody className="pt-2">
+            <ul className="divide-y divide-line">
+              {openAlerts.map((a) => { const m = ALERT_META[a.type]; return (
+                <li key={a.id} className="flex items-center justify-between gap-3 py-2.5">
+                  <div className="min-w-0"><Link href={`/alerts?focus=${a.id}`} className="font-medium text-ink hover:underline"><Status tone={m.tone === "info" || m.tone === "neutral" ? "neutral" : m.tone}>{m.label}</Status> · {a.guard.firstName} {a.guard.lastName}{a.location ? ` · ${a.location.name}` : ""}</Link>{a.message && <p className="truncate text-[12.5px] text-ink-2">“{a.message}”</p>}</div>
+                  <span className="whitespace-nowrap text-[12px] text-ink-3">{ago(a.occurredAt)}{a.status === "ACKNOWLEDGED" ? " · acknowledged" : ""}</span>
+                </li>
+              ); })}
+            </ul>
+          </CardBody>
+        </Card>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
         <Card>

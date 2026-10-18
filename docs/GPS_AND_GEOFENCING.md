@@ -49,3 +49,19 @@ One fix per check (GPS with a 45 s budget, then network provider, then a last-kn
 ## Spoofing
 
 Android apps can fake a location with a mock provider. The app records `Location.isMock` (API 31+) / `isFromMockProvider` and the server stores `mock` on the event and `mockLocationSeen` on the device, raising a *Location integrity warning* once. This is a warning, not proof: rooted phones can hide mocking. Accuracy, provider and timestamps are kept for review. The system makes no anti-spoofing guarantee.
+
+
+## Stage 4 checklist (Phase 2)
+
+| Requirement | Where | Status |
+|---|---|---|
+| Periodic shift location checks | `MonitoringCoordinator` + `LocationMonitor.step`, interval from the policy (`geofence.checkMinutes`) | done |
+| Local GPS classification | `GeofenceEngine.classify`, accuracy-aware, same rule as the server | done |
+| Configurable geofence radius | site radius (map picker) or shift override, versioned config | done |
+| Consecutive-fix exit verification | `VERIFYING_OUTSIDE` needs a second outside reading at least `verifySeconds` later; a single reading never exits (test) | done |
+| `LOCATION_EXIT`, `LOCATION_OUTSIDE`, `LOCATION_RETURNED` | state machine on the phone, re-checked by the server | done |
+| Accurate UNKNOWN states | `poor_accuracy`, `no_fix`, `location_disabled`, `permission_revoked`, `site_has_no_coordinates`, `on_boundary`; UNKNOWN never changes an INSIDE/OUTSIDE verdict (test) | done |
+| Location unavailable events | emitted once per unavailable spell, server alert at most hourly | done |
+| Battery-efficient monitoring | single fix per check, early stop at ≤ 25 m, 60 s cap; routine checks doubled (max 30 min) while inside with battery ≤ 20 % (`adjustForBattery`, test); exit/outside cadence unchanged; dashboard says "battery low, checking every n min" | done |
+| Offline local recording | SQLite outbox, original timestamps | done |
+| Automatic sync through the shared outbox | one `SyncCoordinator`; alerts (Stage 5) use the same path; no second engine | done |

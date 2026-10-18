@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authenticateGateway, clientIp, rateLimit } from "@/lib/gateway/auth";
 import { heartbeat, guardDeviceConfig } from "@/lib/gateway/service";
+import { alertsForDevice } from "@/lib/gateway/alerts";
 
 /** POST /api/gateways/heartbeat  Bearer <deviceToken>  { appVersion, androidVersion, batteryLevel, networkType, timestamp } */
 export async function POST(req: Request) {
@@ -18,6 +19,8 @@ export async function POST(req: Request) {
     lastSyncError: "lastSyncError" in b ? s(b.lastSyncError) ?? null : undefined, lastSyncTrigger: "lastSyncTrigger" in b ? s(b.lastSyncTrigger) ?? null : undefined }, clientIp(req));
   // Guard phones compare this with the version they applied and re-download the shift config when it differs.
   const configVersion = device.mode === "GUARD" ? (await guardDeviceConfig(device)).configVersion : null;
-  return NextResponse.json({ ok: true, deviceId: device.id, deviceName: device.deviceName, phoneNumber: device.phoneNumber, status: device.status, mode: device.mode, guard: device.guard ? { id: device.guard.id, name: `${device.guard.firstName} ${device.guard.lastName}` } : null, location: device.location ? { id: device.location.id, name: device.location.name, client: device.location.client.name } : null, configVersion, config });
+  // Acknowledgements for the alerts this guard sent recently travel back on the heartbeat.
+  const alerts = device.mode === "GUARD" ? await alertsForDevice(device) : [];
+  return NextResponse.json({ ok: true, deviceId: device.id, deviceName: device.deviceName, phoneNumber: device.phoneNumber, status: device.status, mode: device.mode, guard: device.guard ? { id: device.guard.id, name: `${device.guard.firstName} ${device.guard.lastName}` } : null, location: device.location ? { id: device.location.id, name: device.location.name, client: device.location.client.name } : null, configVersion, alerts, config });
 }
 const s = (v: unknown) => (typeof v === "string" ? v : undefined);

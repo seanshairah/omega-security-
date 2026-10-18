@@ -39,7 +39,12 @@ object CallMonitor {
         val prefs = Prefs(app)
         // Guard phone: attach where the guard was at the time of the call. Never a fresh stream, just the last fix.
         val event = if (prefs.isGuardMode) LocationMonitor(app).lastFixJson()?.let { raw.copy(extra = JSONObject().put("location", it)) } ?: raw else raw
-        EventQueue(app).enqueue(event)
+        val q = EventQueue(app)
+        q.enqueue(event)
+        if (event.eventType == GatewayEvent.CALL_STARTED || event.eventType == GatewayEvent.CALL_ENDED || event.eventType == GatewayEvent.CALL_MISSED) {
+            val what = when (event.eventType) { GatewayEvent.CALL_STARTED -> if (event.direction == "OUTGOING") "Outgoing call" else "Incoming call"; GatewayEvent.CALL_MISSED -> "Missed call"; else -> "Call ended · ${event.durationSeconds ?: 0}s" }
+            q.logComm(event.eventId, "CALL", event.eventType, "$what · ${event.phoneNumber ?: "unknown number"}", event.timestampMs, event.extra?.has("location") == true)
+        }
         GatewayService.requestSync(app, Trigger.NEW_EVENT)
         if (prefs.isGuardMode && event.eventType == GatewayEvent.CALL_STARTED) GatewayService.requestLocationCheck(app) // refresh the fix around the call
         if (event.eventType == GatewayEvent.CALL_STARTED || event.eventType == GatewayEvent.CALL_ENDED || event.eventType == GatewayEvent.CALL_MISSED) {
@@ -48,7 +53,6 @@ object CallMonitor {
             prefs.lastCallAt = event.timestampMs
         }
         Log.i(TAG, "queued ${event.eventType} call=${event.callId}")
-        GatewayService.requestSync(app)
     }
 
     fun onOutgoing(context: Context, number: String?) = tracker(context).onOutgoingNumber(number)
