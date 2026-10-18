@@ -277,3 +277,38 @@ Guard mode shows connection, quick actions (EMERGENCY, assistance, going well, m
 ## Device-only items still owed
 
 Run the v1.3.0 debug APK on the Pixel: emergency confirmation and offline fallback dialogs; acknowledgement arriving on the phone within one heartbeat; quick actions from the dashboard; the operations-mode dashboard on a gateway phone; battery-saver line when the battery is low. Production readiness is not claimed on compilation and simulation alone.
+
+---
+
+# Phase 3 gate results (Stages 7–9)
+
+Branch `claude/brave-hopper-92o6rw` on top of the merged Phase 2 (`a07ae44`). Same environment; the additive `device_build_and_storage` migration applied locally and on Neon, status verified with `npm run db:migration-status`.
+
+## Checks after Phase 3
+
+| Check | Result |
+|---|---|
+| `npx tsc --noEmit`, `npm run lint` | clean |
+| `npm test` | 28/28 |
+| Android JVM tests | 43/43 |
+| `assembleDebug` / `assembleRelease` | ok, v1.4.0 (versionCode 5) |
+| `gateway-e2e` / `location-e2e` / `alerts-e2e` | 30/30 · 38/38 · 20/20 |
+| `integration-e2e` (new, Stage 8) | 18/18 |
+| `npm run build` | ok |
+| `db:migration-status` (local and Neon) | all migrations applied |
+
+## Stage 7 — unified dashboard
+
+Live map, Location exceptions and the devices Sync column added; every other required surface already existed and is mapped in ADMIN_DASHBOARD.md. Screenshots taken with seeded data (OpenStreetMap engine).
+
+## Stage 8 — integration
+
+Every Stage 8 statement has an automated proof (INTEGRATION_VERIFICATION.md). Two findings during the first run were test assumptions, not defects: an arrival confirmed 20 minutes after the start is recorded as LATE (correct), and events replayed within ten minutes are SYNCED rather than SYNCED_LATE (correct); the script now asserts the right thing.
+
+## Stage 9 — hardening
+
+HTTPS-only in release builds, Keystore-fallback and build-type reporting with device-page warnings, release log stripping, migration status tooling, regression scripts, rollback and release documents, device test plan, readiness assessment (PRODUCTION_READINESS.md). The release APK remains debug-key signed in this environment.
+
+## Still unverified
+
+Everything that needs a phone (DEVICE_TEST_PLAN.md, 19 rows) and the Google Maps engine with a real key. Production readiness is stated as "supervised pilot" in PRODUCTION_READINESS.md, not as fleet-ready.

@@ -23,6 +23,8 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
       { href: "/dashboard", label: "Overview", icon: HouseIcon },
       { href: "/operations", label: "Active operations", icon: BroadcastIcon, count: counts.attention, urgent: counts.attention > 0 },
       { href: "/alerts", label: "Guard alerts", icon: SirenIcon, count: counts.alerts ?? 0, urgent: (counts.alerts ?? 0) > 0 },
+      { href: "/operations/map", label: "Live map", icon: MapPinIcon },
+      { href: "/operations/exceptions", label: "Location exceptions", icon: WarningOctagonIcon },
       { href: "/monitoring", label: "Monitoring", icon: EyeIcon, count: counts.watched },
       { href: "/shifts", label: "Shifts", icon: CalendarBlankIcon },
       { href: "/attendance", label: "Attendance", icon: ClipboardTextIcon },
@@ -46,7 +48,7 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
     ...(role === "SUPER_ADMIN" ? [{ href: "/users", label: "Users", icon: UserGearIcon }, { href: "/audit", label: "Audit log", icon: ListMagnifyingGlassIcon }] : []),
     { href: "/settings", label: "Settings", icon: GearSixIcon },
   ];
-  const isActive = (href: string) => (href === "/sms" ? path === "/sms" : path === href || path.startsWith(href + "/"));
+  const isActive = (href: string) => (href === "/sms" || href === "/operations" ? path === href : path === href || path.startsWith(href + "/"));
 
   return (
     <aside className={cn("sticky top-0 flex h-screen shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200", collapsed ? "w-[68px]" : "w-[264px] lg:w-[248px]")}>

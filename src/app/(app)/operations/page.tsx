@@ -55,7 +55,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
 
   return (
     <div>
-      <PageHeader title="Active operations" description="Every live shift, refreshed as guards reply. Click a row for the full timeline." actions={<LinkButton href="/shifts/new" variant="primary">New shift</LinkButton>} />
+      <PageHeader title="Active operations" description="Every live shift, refreshed as guards reply. Click a row for the full timeline." actions={<span className="flex flex-wrap gap-2"><LinkButton href="/operations/map">Live map</LinkButton><LinkButton href="/operations/exceptions">Location exceptions</LinkButton><LinkButton href="/alerts">Guard alerts</LinkButton><LinkButton href="/shifts/new" variant="primary">New shift</LinkButton></span>} />
       <Segments className="mb-4" items={[
         { href: "/operations", label: "All", count: groups.all.length, active: f === "all" },
         { href: "/operations?f=attention", label: "Needs attention", count: groups.attention.length, active: f === "attention", tone: "critical" },

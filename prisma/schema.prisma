@@ -736,6 +736,8 @@ model GatewayDevice {
   lastSyncAttemptAt DateTime?
   lastSyncError    String?
   lastSyncTrigger  String?
+  secureStorage    Boolean?          // false when the phone could not use Keystore-backed storage for its token
+  buildType        String?           // debug | release, as reported by the app
   status           GatewayStatus     @default(OFFLINE)
   activationStatus GatewayActivation @default(PENDING)
   activationCode   String?           @unique

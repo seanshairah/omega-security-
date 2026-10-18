@@ -47,6 +47,7 @@ export function DevicePanel({ device, offlineMinutes, now = new Date() }: { devi
       <Meta label="Sync">{syncLabel(device)}<span className="block text-[12px] text-ink-3">{device.lastEventSyncAt ? `last event sync ${ago(device.lastEventSyncAt)}` : "no events synced yet"}{device.lastSyncError ? ` · ${device.lastSyncError}` : ""}</span></Meta>
       <Meta label="Last known location">{state ? <><Status tone={f.label === "STALE" ? "muted" : state.tone}>{state.label}</Status><span className="block text-[12px] text-ink-3">{f.label} · {fmtDateTime(device.lastLocationAt)}{device.lastAccuracyM != null ? ` · ±${Math.round(device.lastAccuracyM)} m` : ""}</span></> : <span className="text-ink-3">None yet</span>}</Meta>
       {device.mockLocationSeen && <Meta label="Integrity" className="col-span-2"><Status tone="warn">Mock location provider seen on this phone</Status></Meta>}
+      {(device.secureStorage === false || device.buildType === "debug") && <Meta label="Build" className="col-span-2">{device.buildType === "debug" && <Status tone="warn">Debug build on this phone · install the release APK before production use</Status>}{device.secureStorage === false && <Status tone="critical" className="block">Token not in Keystore-backed storage (damaged keystore) · re-activate after a factory reset or replace the phone</Status>}</Meta>}
     </div>
   );
 }
