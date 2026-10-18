@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+.git
+.env
+.env.*
+!.env.example
+*.log
+android/.gradle
+android/build
+android/app/build
+android/local.properties
+android/keystore.properties
+android/*.jks
+artifacts
+docs
+scripts/dev/*.png

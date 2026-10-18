@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { Map as LeafletMap } from "leaflet";
+import { tileLayerConfig } from "./tiles";
 
 export type LiveSite = { id: string; name: string; lat: number; lng: number; radiusM: number; href: string; guards: number };
 export type LiveGuard = { id: string; name: string; lat: number; lng: number; state: "INSIDE" | "OUTSIDE" | "UNKNOWN"; at: string; freshness: string; accuracyM?: number | null; href: string; alert?: string | null };
@@ -23,7 +24,7 @@ export function LiveMap({ sites, guards, height = 520 }: { sites: LiveSite[]; gu
       if (cancelled || !ref.current || mapRef.current) return;
       const map = L.map(ref.current, { scrollWheelZoom: true }).setView([-17.8292, 31.0522], 12);
       mapRef.current = map;
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
+      const tiles = tileLayerConfig(); L.tileLayer(tiles.url, { maxZoom: tiles.maxZoom, attribution: tiles.attribution }).addTo(map);
       const bounds: [number, number][] = [];
       for (const s of sites) {
         L.circle([s.lat, s.lng], { radius: s.radiusM, color: "#2E7D32", weight: 2, fillColor: "#2E7D32", fillOpacity: 0.07 }).addTo(map).bindTooltip(`${s.name} · ${s.radiusM} m · ${s.guards} guard${s.guards === 1 ? "" : "s"} on shift`);

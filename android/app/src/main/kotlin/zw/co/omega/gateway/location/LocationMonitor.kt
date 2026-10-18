@@ -12,6 +12,8 @@ import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import zw.co.omega.gateway.data.EventQueue
@@ -44,6 +46,8 @@ class LocationMonitor(private val context: Context) {
     @Volatile var state = MonitorState()
         private set
     private var configShiftId: String? = null
+    /** One acquisition at a time, shared by shift monitoring and operations requests: never two listeners competing. */
+    private val acquisitionLock = Mutex()
 
     data class Result(val phase: Phase, val nextCheckSeconds: Int, val fix: Location?, val classification: Classification?, val producedEvents: Boolean, val hasConfig: Boolean)
 
@@ -130,7 +134,24 @@ class LocationMonitor(private val context: Context) {
      * reading and stops early when it is good enough (see AcquisitionPolicy). Falls back to a
      * last-known fix under two minutes old. Marks `gpsChecking` while running.
      */
-    suspend fun obtainFix(policy: Policy, acquisition: AcquisitionPolicy = AcquisitionPolicy(acceptableM = policy.accuracyMaxM.toFloat())): Location? {
+    suspend fun obtainFix(policy: Policy, acquisition: AcquisitionPolicy = AcquisitionPolicy(acceptableM = policy.accuracyMaxM.toFloat())): Location? = acquisitionLock.withLock { acquire(acquisition) }
+
+    /**
+     * A fresh fix for an operations request. Waits for any running shift check to finish (the
+     * lock), then listens with the request's own budget. Never serves a cached last-known fix: a
+     * request answered with old data would be a lie, so a miss is a miss.
+     */
+    suspend fun acquireForRequest(acquisition: AcquisitionPolicy): Location? = acquisitionLock.withLock {
+        if (!hasLocationPermission()) return@withLock null
+        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
+        if (providers.isEmpty()) return@withLock null
+        prefs.gpsChecking = true
+        try { listen(providers, acquisition) } finally { prefs.gpsChecking = false }
+    }
+
+    fun isMockFix(l: Location): Boolean = isMock(l)
+
+    private suspend fun acquire(acquisition: AcquisitionPolicy): Location? {
         if (!hasLocationPermission()) return null
         val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
         if (providers.isEmpty()) return null

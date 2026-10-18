@@ -103,3 +103,15 @@ Release signing: create `android/keystore.properties` (ignored by git) with `AND
 | `scripts/dev/e2e.mjs`, `shot.mjs`, `shot-mobile.mjs`, `sweep.mjs` | browser QA (set `QA_EMAIL` / `QA_PASSWORD`) |
 | `scripts/dev/db-counts.ts` | row counts per table |
 | `scripts/purge-data.ts --yes` | remove all operational data and non-super-admin users |
+
+## Testing from a phone on the LAN (http://<laptop-IP>:3000)
+
+Browser geolocation ("Use my current location" in the site picker) only works in a **secure context**: `https://…` or `http://localhost` on the same machine. A phone opening `http://172.20.10.3:3000` gets the explicit "blocked, not a secure page" message by design. Use the HTTPS deployment or an HTTPS tunnel for phone tests; do not weaken HTTPS.
+
+The **Android debug app** may call a laptop over plain `http://` only if the host is allowlisted: add `omega.devHttpHosts=172.20.10.3` to `android/local.properties` (ignored by git; `npm run android:sync` keeps the line) or set `GATEWAY_DEV_HTTP_HOSTS` when building. The release build has an empty allowlist and keeps HTTPS mandatory. The debug manifest overlay (`android/app/src/debug/AndroidManifest.xml`) is what permits cleartext in debug builds; the main manifest still says `usesCleartextTraffic="false"`.
+
+## Docker
+
+`next.config.ts` sets `output: "standalone"`, so `npm run build` produces `.next/standalone` with a self-contained `server.js`. The repository `Dockerfile` builds that image (`npm ci`, `prisma generate`, `next build`) and runs `node server.js` on port 3000; pass `DATABASE_URL`, `AUTH_SECRET` and the SMS variables at run time, never bake them into the image. Apply migrations from outside the container (`npx prisma migrate deploy` or `scripts/neon-migrate.ts`); the image does not reset or migrate the database on start. Keep `package.json` and `package-lock.json` committed together: `npm ci` refuses a lockfile that is out of date.
+
+Files that must never be committed: `.env*` (except `.env.example`), `android/local.properties`, `android/keystore.properties`, keystores, device activation data. `.gitignore` covers them.

@@ -50,7 +50,7 @@ export async function createLocation(_: ActionState, fd: FormData): Promise<Acti
     if (!r.success) return { error: firstIssue(r.error) };
     const d = r.data;
     const hasCoords = d.latitude != null && d.longitude != null;
-    const l = await db.location.create({ data: { ...d, coordinatesSource: hasCoords ? d.coordinatesSource ?? "MANUAL" : null, placeId: hasCoords ? d.placeId : null, coordinatesUpdatedAt: hasCoords ? new Date() : null, coordinatesVerifiedAt: hasCoords && d.coordinatesSource === "MAP" ? new Date() : null } });
+    const l = await db.location.create({ data: { ...d, coordinatesSource: hasCoords ? d.coordinatesSource ?? "MANUAL" : null, placeId: hasCoords ? d.placeId : null, coordinatesUpdatedAt: hasCoords ? new Date() : null, coordinatesVerifiedAt: hasCoords && (d.coordinatesSource === "MAP" || d.coordinatesSource === "GUARD_DEVICE") ? new Date() : null } });
     await auditAs(user, "LOCATION_CREATED", "Location", l.id, { name: l.name, geofence: hasCoords ? { latitude: l.latitude, longitude: l.longitude, radiusM: l.geofenceRadiusM, source: l.coordinatesSource } : null });
     id = l.id;
   } catch (e) {
@@ -73,7 +73,7 @@ export async function updateLocation(id: string, _: ActionState, fd: FormData): 
       ...d,
       coordinatesSource: hasCoords ? d.coordinatesSource ?? before.coordinatesSource ?? "MANUAL" : null,
       placeId: hasCoords ? d.placeId ?? (moved ? null : before.placeId) : null,
-      ...(moved ? { configVersion: { increment: 1 }, coordinatesUpdatedAt: new Date(), coordinatesVerifiedAt: hasCoords && d.coordinatesSource === "MAP" ? new Date() : null } : {}),
+      ...(moved ? { configVersion: { increment: 1 }, coordinatesUpdatedAt: new Date(), coordinatesVerifiedAt: hasCoords && (d.coordinatesSource === "MAP" || d.coordinatesSource === "GUARD_DEVICE") ? new Date() : null } : {}),
     } });
     await auditAs(user, moved ? "LOCATION_GEOFENCE_CHANGED" : "LOCATION_UPDATED", "Location", l.id, {
       name: l.name,

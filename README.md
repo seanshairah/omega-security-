@@ -48,6 +48,7 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 | [docs/GOOGLE_MAPS_CONFIGURATION.md](docs/GOOGLE_MAPS_CONFIGURATION.md) | the duty-site map picker, the Google Maps key, provenance and config versioning |
 | [docs/OFFLINE_MONITORING.md](docs/OFFLINE_MONITORING.md) | what keeps working without internet and how the record catches up |
 | [docs/DATABASE_CHANGES.md](docs/DATABASE_CHANGES.md) | every Phase 1 and 2 column, all additive |
+| [docs/DEVICE_LOCATION_AND_SITE_SETUP.md](docs/DEVICE_LOCATION_AND_SITE_SETUP.md) | root cause of the wrong site centre, the confirmed-position picker, remote guard-phone location requests, using a guard phone's fix as site coordinates |
 | [docs/EMERGENCY_ALERTS.md](docs/EMERGENCY_ALERTS.md) | the emergency button end to end: phone, outbox, server, portal, acknowledgement, offline fallback |
 | [docs/GUARD_COMMUNICATION.md](docs/GUARD_COMMUNICATION.md) | status messages (assistance, incident, security, late, update, going well, handover) and how operations sees them |
 | [docs/ANDROID_UI.md](docs/ANDROID_UI.md) | the redesigned guard and operations dashboards, card by card |

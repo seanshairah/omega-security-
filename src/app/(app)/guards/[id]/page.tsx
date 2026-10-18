@@ -23,6 +23,7 @@ import { CallList } from "@/components/calls/call-list";
 import { CommunicationHistory } from "@/components/calls/communication-history";
 import { DevicePanel } from "@/components/location/location-panel";
 import { LocationEventList } from "@/components/location/location-events";
+import { GuardLocationPanel } from "@/components/location/guard-location-panel";
 import { getSettingNumber } from "@/lib/settings";
 import { audit } from "@/lib/audit";
 
@@ -140,7 +141,16 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
             )}
             {tab === "calls" && <CallList calls={calls} showGuard={false} emptyTitle="No calls from this guard yet" />}
             {tab === "communication" && <CardBody><CommunicationHistory messages={messages} calls={calls} alerts={alerts} /></CardBody>}
-            {tab === "location" && <LocationEventList events={locEvents} showShift emptyTitle="No location events yet" />}
+            {tab === "location" && (
+              <>
+                <CardBody>
+                  <div className="mb-2 text-[15px] font-semibold text-ink">Current location</div>
+                  <p className="mb-3 text-[12.5px] text-ink-3">Positions here come from the guard&apos;s registered phone only, with their accuracy and age. &quot;Request current location&quot; asks the phone for a fresh GPS fix; the guard sees the request in the app.</p>
+                  <GuardLocationPanel guardId={g.id} canRequest={can.manageGuards(user)} canEditSites={can.manageLocations(user)} />
+                </CardBody>
+                <LocationEventList events={locEvents} showShift emptyTitle="No location events yet" />
+              </>
+            )}
             {tab === "history" && (
               <Table>
                 <THead><tr><th>When</th><th>Action</th><th>By</th><th>Details</th></tr></THead>

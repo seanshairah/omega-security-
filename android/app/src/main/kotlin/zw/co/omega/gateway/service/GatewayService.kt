@@ -54,6 +54,7 @@ class GatewayService : Service() {
     private lateinit var sync: SyncCoordinator
     private lateinit var prefs: Prefs
     private lateinit var engine: SyncEngine
+    private lateinit var locationRequests: LocationRequestHandler
     private var phoneReceiver: BroadcastReceiver? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
@@ -63,6 +64,9 @@ class GatewayService : Service() {
         super.onCreate()
         prefs = Prefs(this)
         engine = SyncEngine(this)
+        locationRequests = LocationRequestHandler(this, scope, monitor)
+        engine.commandSink = { cmds -> locationRequests.handle(cmds) }
+        CommandWakeSource.attach { scope.launch { engine.pollCommands() } }
         coordinator = MonitoringCoordinator(
             scope = scope,
             stepper = {
@@ -110,6 +114,12 @@ class GatewayService : Service() {
         configWatcher = scope.launch { ConfigBus.changes.drop(1).collect { sync.request(Trigger.CONFIG_CHANGED) } }
     }
 
+    /**
+     * Heartbeat on the configured interval. Between heartbeats, a guard phone polls the lightweight
+     * command endpoint every `commandPollSeconds` (server-configured, default 30 s) so an operations
+     * location request reaches it in well under a minute without shortening the heartbeat itself.
+     * Not a second sync loop: it only fetches commands; events still travel through SyncCoordinator.
+     */
     private fun heartbeatLoop(): Job = scope.launch {
         var failures = 0
         while (true) {
@@ -118,7 +128,16 @@ class GatewayService : Service() {
             updateNotification()
             val base = prefs.heartbeatSeconds * 1000L
             val wait = if (r is SyncEngine.Outcome.Rejected) 30 * 60_000L else if (failures > 0) (base * (1 shl failures.coerceAtMost(4))).coerceAtMost(15 * 60_000L) else base
-            delay(wait)
+            val until = System.currentTimeMillis() + wait
+            var pollFailures = 0
+            while (true) {
+                val left = until - System.currentTimeMillis()
+                if (left <= 0) break
+                val poll = if (prefs.isGuardMode && r is SyncEngine.Outcome.Done && pollFailures < 3) prefs.commandPollSeconds * 1000L else left
+                delay(minOf(poll, left))
+                if (until - System.currentTimeMillis() <= 0) break
+                if (prefs.isGuardMode && r is SyncEngine.Outcome.Done) { if (engine.pollCommands()) pollFailures = 0 else pollFailures++ }
+            }
         }
     }
 
@@ -195,6 +214,7 @@ class GatewayService : Service() {
     override fun onDestroy() {
         phoneReceiver?.let { runCatching { unregisterReceiver(it) } }
         networkCallback?.let { runCatching { (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) } }
+        CommandWakeSource.detach()
         coordinator.stop(); sync.stop()
         heartbeatJob?.cancel(); configWatcher?.cancel()
         scope.cancel()

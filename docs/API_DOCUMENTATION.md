@@ -57,3 +57,17 @@ The server re-classifies every fix against the site it knows (`locationState` ma
 | POST/PATCH | `/api/gateways`, `/api/gateways/[id]` | ADMIN | now accept `mode` (`OPERATIONS_GATEWAY` | `GUARD`) and `guardId` |
 | POST | `/api/gateways/simulate` | ADMIN | also accepts location fields (`latitude`, `longitude`, `accuracyM`, `locationState`, `distanceM`, `reason`, `durationOutsideSeconds`, `mock`, `at`) |
 | PUT | `/api/locations/[id]` (existing) | ADMIN | `latitude`, `longitude`, `geofenceRadiusM` |
+
+## Guard-phone location requests
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/api/guards/{id}/location-requests` | session, SUPERVISOR+ | panel summary: device, site, shift, last 10 requests (audited `LOCATION_VIEWED`) |
+| POST | `/api/guards/{id}/location-requests` | session, ADMIN+ | create `{ purpose?: CHECK\|SITE_SETUP\|WELFARE, locationId?, maxAccuracyM?, ttlSeconds? }` → 201 `{ request, reused:false }`; 200 with `reused:true` while one is open; 404 no eligible device; 429 over 12/hour |
+| GET | `/api/guards/{id}/location-requests/{requestId}` | session, SUPERVISOR+ | one request with distance/classification against the site |
+| DELETE | `/api/guards/{id}/location-requests/{requestId}` | session, ADMIN+ | cancel an open request |
+| GET | `/api/gateways/commands` | device Bearer | `{ commands: [{ id, type: "REQUEST_LOCATION", requestedAt, expiresAt, maxAccuracyM, requireFreshFix }], commandPollSeconds }` — only this device's open, unexpired requests; marks `DELIVERED` |
+| POST | `/api/gateways/commands/{id}/ack` | device Bearer | `{ status: "PROCESSING" }` — the phone has started the GPS |
+| POST | `/api/gateways/events` | device Bearer | event type `LOCATION_REQUEST_RESULT { requestId, status: COMPLETED\|FAILED, latitude?, longitude?, accuracyM?, provider?, capturedAt?, mock?, failureReason?, failureDetail? }` — same dedupe and retry rules as every other event |
+
+The heartbeat response also carries `commands` and `commandPollSeconds` for guard devices.

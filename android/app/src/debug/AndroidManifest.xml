@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-build overlay only. Lets the development APK talk to a laptop over plain http:// (together with the
+  DEV_HTTP_HOSTS allowlist enforced in ApiClient). The main manifest keeps usesCleartextTraffic="false", so release
+  builds stay HTTPS-only; this file is never merged into them.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <application
+        android:usesCleartextTraffic="true"
+        tools:replace="android:usesCleartextTraffic" />
+</manifest>

@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/auth/rbac";
+import { requireUser, can } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { createShift } from "@/actions/shifts";
 import { PageHeader } from "@/components/ui/page";
@@ -8,11 +8,12 @@ import { Field, Input, Select, Textarea, FormSection } from "@/components/ui/for
 import { ShiftTimePicker } from "@/components/shift-time-picker";
 import { dateInputValue } from "@/lib/time";
 import { GeofenceOverrideSection } from "@/components/map/site-picker";
+import { ShiftSiteSelect } from "@/components/shift-site-select";
 
 export const metadata = { title: "New shift" };
 
 export default async function NewShiftPage({ searchParams }: { searchParams: Promise<{ guardId?: string; locationId?: string; date?: string }> }) {
-  await requireUser("ADMIN");
+  const user = await requireUser("ADMIN");
   const sp = await searchParams;
   const [guards, locations, supervisors] = await Promise.all([
     db.guard.findMany({ where: { active: true, employmentStatus: "ACTIVE" }, orderBy: { lastName: "asc" } }),
@@ -26,7 +27,7 @@ export default async function NewShiftPage({ searchParams }: { searchParams: Pro
         <ActionForm action={createShift} submitLabel="Create shift">
           <FormSection title="Who and where" description="The guard receives all automated checks on their registered phone.">
             <Field label="Guard" required><Select name="guardId" defaultValue={sp.guardId ?? ""} required><option value="" disabled>Select a guard</option>{guards.map((g) => <option key={g.id} value={g.id}>{g.firstName} {g.lastName} · {g.guardNo}</option>)}</Select></Field>
-            <Field label="Location" required><Select name="locationId" defaultValue={sp.locationId ?? ""} required><option value="" disabled>Select a site</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name} · {l.client.name}</option>)}</Select></Field>
+            <ShiftSiteSelect sites={locations.map((l) => ({ id: l.id, name: l.name, clientName: l.client.name, latitude: l.latitude, longitude: l.longitude, radiusM: l.geofenceRadiusM, source: l.coordinatesSource, configVersion: l.configVersion }))} defaultValue={sp.locationId} canEditSites={can.manageLocations(user)} />
             <Field label="Supervisor" hint="Defaults to the site's supervisor."><Select name="supervisorId" defaultValue=""><option value="">Site supervisor</option>{supervisors.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}</Select></Field>
           </FormSection>
           <FormSection title="When" description="Pick a preset or set custom times. The duration and welfare-check midpoint are calculated.">

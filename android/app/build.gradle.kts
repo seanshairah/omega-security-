@@ -15,6 +15,15 @@ val keystoreProps = Properties().apply {
 fun signing(key: String): String? = System.getenv(key) ?: keystoreProps.getProperty(key)
 val releaseKeystore = signing("ANDROID_KEYSTORE_PATH")
 
+// Development-only cleartext allowlist for debug builds: a comma-separated list of hosts (e.g. a laptop's LAN IP
+// 192.168.1.20) the debug app may call over plain http://. Read from `omega.devHttpHosts` in android/local.properties
+// (not committed) or GATEWAY_DEV_HTTP_HOSTS in the environment. Release builds never get it: HTTPS stays mandatory.
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+val devHttpHosts: String = (System.getenv("GATEWAY_DEV_HTTP_HOSTS") ?: localProps.getProperty("omega.devHttpHosts") ?: "").trim()
+
 android {
     namespace = "zw.co.omega.gateway"
     compileSdk = 35
@@ -23,8 +32,8 @@ android {
         applicationId = "zw.co.omega.gateway"
         minSdk = 24          // Android 7.0: old phones are the point of this app
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4.0"
+        versionCode = 6
+        versionName = "1.5.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Default server pre-filled on the activation screen; the user can change it.
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"${System.getenv("GATEWAY_DEFAULT_SERVER_URL") ?: "https://omega-security-gamma.vercel.app"}\"")
@@ -45,8 +54,11 @@ android {
         debug {
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
+            buildConfigField("String", "DEV_HTTP_HOSTS", "\"${devHttpHosts.replace("\"", "")}\"")
+            if (devHttpHosts.isNotEmpty()) logger.lifecycle("Debug build: plain http allowed for development hosts [$devHttpHosts]")
         }
         release {
+            buildConfigField("String", "DEV_HTTP_HOSTS", "\"\"") // never any cleartext host in release
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

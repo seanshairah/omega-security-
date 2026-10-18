@@ -11,6 +11,8 @@ export const COORDINATES_SOURCE_META: Record<CoordinatesSource, { label: string;
   MAP: { label: "Placed on map", tone: "ok", description: "Pinned with the map picker." },
   MANUAL: { label: "Typed", tone: "neutral", description: "Latitude and longitude typed or pasted by hand." },
   TEST: { label: "TEST coordinates", tone: "warn", description: "Temporary values for testing. Not verified; replace before relying on GPS verification at this site." },
+  BROWSER: { label: "Portal browser location", tone: "warn", description: "Measured by the browser of whoever set the site up (their laptop or phone), with the accuracy they confirmed. Not the guard phone's position." },
+  GUARD_DEVICE: { label: "Guard phone GPS", tone: "ok", description: "A fresh GPS fix requested from a registered guard phone standing at the site and confirmed by operations." },
 };
 
 /** Both coordinates or neither; a stray single value is a data-entry error, not a fence. */

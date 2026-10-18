@@ -20,6 +20,7 @@ import { fmtCallDuration } from "@/lib/gateway/call-state";
 import { COMPANY } from "@/components/layout/brand";
 import { DevicePanel } from "@/components/location/location-panel";
 import { LocationEventList } from "@/components/location/location-events";
+import { GuardLocationPanel } from "@/components/location/guard-location-panel";
 import { SiteMap } from "@/components/map/site-map";
 import { freshness } from "@/lib/geofence";
 
@@ -72,6 +73,7 @@ export default async function GatewayPage({ params }: { params: Promise<{ id: st
             <Card>
               <CardHeader title="Location" description="Latest fix and recent location events from this phone. GPS is approximate: every fix carries its accuracy, and a stale fix is never shown as current." action={g.lastLocationAt ? <Status tone={freshness(g.lastLocationAt).tone}>{freshness(g.lastLocationAt).label}</Status> : undefined} />
               <CardBody>
+                {g.guardId && <div className="mb-4 border-b border-dashed border-line pb-4"><GuardLocationPanel guardId={g.guardId} canRequest={can.manageGuards(user)} canEditSites={can.manageLocations(user)} compact /></div>}
                 {(g.lastLatitude != null && g.lastLongitude != null) || lastSite ? <SiteMap site={lastSite?.latitude != null && lastSite?.longitude != null ? { lat: lastSite.latitude, lng: lastSite.longitude, radiusM: lastSite.geofenceRadiusM, name: lastSite.name } : null} points={[...(g.lastLatitude != null && g.lastLongitude != null ? [{ lat: g.lastLatitude, lng: g.lastLongitude, label: `Latest fix · ${g.lastLocationState ?? "unknown"}`, kind: "latest" as const, at: fmtDateTime(g.lastLocationAt), freshness: freshness(g.lastLocationAt).label }] : []), ...locEvents.filter((e) => e.latitude != null && (e.eventType === "LOCATION_EXIT" || e.eventType === "LOCATION_RETURNED")).slice(0, 10).map((e) => ({ lat: e.latitude!, lng: e.longitude!, label: e.eventType === "LOCATION_EXIT" ? "Exit" : "Return", kind: (e.eventType === "LOCATION_EXIT" ? "exit" : "return") as "exit" | "return", at: fmtDateTime(e.occurredAt), freshness: e.syncStatus === "SYNCED_LATE" ? "SYNCED LATE" : undefined }))]} height={260} /> : <p className="text-[13px] text-ink-3">No location reported yet.</p>}
               </CardBody>
               <LocationEventList events={locEvents} showShift emptyTitle="No location events from this phone yet" />

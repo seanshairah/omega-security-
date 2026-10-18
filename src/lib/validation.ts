@@ -51,7 +51,7 @@ export const locationSchema = z.object({
   latitude: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().min(-90).max(90).optional()).transform((v) => v ?? null),
   longitude: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().min(-180).max(180).optional()).transform((v) => v ?? null),
   geofenceRadiusM: z.preprocess((v) => (v === "" || v == null ? 150 : Number(v)), z.number().int().min(20, "Radius must be at least 20 m").max(5000, "Radius must be at most 5000 m")),
-  coordinatesSource: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.enum(["MAP", "MANUAL", "TEST"]).optional()).transform((v) => v ?? null),
+  coordinatesSource: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.enum(["MAP", "MANUAL", "TEST", "BROWSER", "GUARD_DEVICE"]).optional()).transform((v) => v ?? null),
   placeId: opt(z.string()),
   clientUpdates: flag,
   clientUpdatePhone: opt(z.string()),

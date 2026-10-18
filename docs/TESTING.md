@@ -41,3 +41,10 @@ The APK built and passed its JVM tests but has not been run on a physical device
 ## Browser regression suite
 
 `scripts/dev/e2e.mjs` drives the whole portal (login, clients, sites, guards, shifts, simulator, incidents, compose, reports, templates, settings, users, notifications, audit). Run it against a local database only.
+
+## Device location and location requests (added)
+
+- `npm test` includes `tests/geo-position.test.ts` (lng/lat order, validity, accuracy verdicts, freshness, secure-context guidance, error states, watch budget) and `tests/location-request-state.test.ts` (request state machine, command payload, expiry and capture-time plausibility).
+- `npx tsx scripts/dev/location-request-e2e.ts` (part of `npm run test:e2e`): the whole request path over HTTP with an admin session and device tokens.
+- `npm run test:geolocation`: Playwright with a mocked Geolocation API against the running dev server; granted/good, granted/±400 m, denied, insecure context. Mocked positions prove the flow, not GPS accuracy.
+- Android: `LocationRequestPolicyTest` (expiry, reuse, budget, judging). On-device cases L1–L9 in `docs/DEVICE_TEST_PLAN.md` remain manual.

@@ -39,6 +39,7 @@ model User {
   pushSubscriptions   PushSubscription[]
   acknowledgedAlerts  GuardAlert[] @relation("AlertAcknowledgedBy")
   resolvedAlerts      GuardAlert[] @relation("AlertResolvedBy")
+  locationRequests    DeviceLocationRequest[] @relation("LocationRequestedBy")
 }
 
 // ───────────────────────── Clients & locations ─────────────────────────
@@ -173,6 +174,7 @@ model Guard {
   recurrences ShiftRecurrence[]
   notifications Notification[]
   callLogs    CallLog[]
+  locationRequests      DeviceLocationRequest[]
   devices     GatewayDevice[]
   locationEvents LocationEvent[]
   alerts      GuardAlert[]
@@ -738,6 +740,7 @@ model GatewayDevice {
   lastSyncTrigger  String?
   secureStorage    Boolean?          // false when the phone could not use Keystore-backed storage for its token
   buildType        String?           // debug | release, as reported by the app
+  locationRequests DeviceLocationRequest[]
   status           GatewayStatus     @default(OFFLINE)
   activationStatus GatewayActivation @default(PENDING)
   activationCode   String?           @unique
@@ -773,10 +776,70 @@ enum DeviceMode {
   OPERATIONS_GATEWAY
   GUARD
 }
+/** One "where is this phone right now?" request from operations to a registered guard phone. */
+model DeviceLocationRequest {
+  id              String                  @id @default(cuid())
+  gatewayDeviceId String
+  gatewayDevice   GatewayDevice           @relation(fields: [gatewayDeviceId], references: [id], onDelete: Cascade)
+  guardId         String
+  guard           Guard                   @relation(fields: [guardId], references: [id], onDelete: Cascade)
+  requestedById   String?
+  requestedBy     User?                   @relation("LocationRequestedBy", fields: [requestedById], references: [id])
+  locationId      String?                 // the site being set up or checked, when the request came from a site form
+  purpose         String                  @default("CHECK") // CHECK | SITE_SETUP | WELFARE
+  status          LocationRequestStatus   @default(PENDING)
+  requestedAt     DateTime                @default(now())
+  deliveredAt     DateTime?
+  processingAt    DateTime?
+  completedAt     DateTime?
+  expiresAt       DateTime
+  maxAccuracyM    Int                     @default(100)
+  requireFreshFix Boolean                 @default(true)
+  latitude        Float?
+  longitude       Float?
+  accuracyM       Float?
+  provider        String?
+  capturedAt      DateTime?
+  failureReason   LocationRequestFailure?
+  failureDetail   String?
+  mock            Boolean                 @default(false)
+  resultEventId   String?                 @unique // GatewayEvent.eventId that completed it: a replayed result is a no-op
+  metadata        Json?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  @@index([gatewayDeviceId, status])
+  @@index([guardId, requestedAt])
+  @@index([status, expiresAt])
+}
+
+enum LocationRequestStatus {
+  PENDING     // created, not yet fetched by the phone
+  DELIVERED   // the phone has received the command
+  PROCESSING  // the phone is acquiring a fix
+  COMPLETED   // a fix within the accuracy limit arrived
+  FAILED      // the phone reported a structured failure (see failureReason)
+  EXPIRED     // no answer before expiresAt
+  CANCELLED   // withdrawn by operations
+}
+
+enum LocationRequestFailure {
+  PERMISSION_DENIED
+  LOCATION_DISABLED
+  GPS_TIMEOUT
+  POOR_ACCURACY
+  DEVICE_UNAVAILABLE
+  REQUEST_EXPIRED
+  SERVICE_RESTRICTED
+  INTERNAL_ERROR
+}
+
 enum CoordinatesSource {
   MAP
   MANUAL
   TEST
+  BROWSER      // the portal user's own browser (laptop / phone running the portal)
+  GUARD_DEVICE // a fresh GPS fix requested from a registered guard phone
 }
 
 enum LocationState {
