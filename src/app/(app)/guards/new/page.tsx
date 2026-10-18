@@ -12,7 +12,7 @@ export default async function NewGuardPage({ searchParams }: { searchParams: Pro
   await requireUser("ADMIN");
   const [locations, supervisors] = await Promise.all([db.location.findMany({ where: { active: true }, orderBy: { name: "asc" } }), db.user.findMany({ where: { active: true }, orderBy: { name: "asc" } })]);
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <PageHeader title="Add guard" description="A guard number is assigned automatically." />
       <Card><CardBody><GuardForm action={createGuard} locations={locations} supervisors={supervisors} submitLabel="Add guard" guard={phone ? ({ phone } as never) : undefined} /></CardBody></Card>
     </div>

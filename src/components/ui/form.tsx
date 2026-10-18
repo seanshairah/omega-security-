@@ -45,7 +45,7 @@ export function FormError({ message }: { message?: string | null }) {
 }
 export function FormSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <div className="grid gap-4 border-t border-dashed border-line py-6 first:border-t-0 first:pt-0 md:grid-cols-[220px_1fr]">
+    <div className="grid gap-4 border-t border-dashed border-line py-6 first:border-t-0 first:pt-0 md:grid-cols-[220px_1fr] xl:grid-cols-[300px_1fr] 2xl:grid-cols-[340px_1fr]">
       <div>
         <h3 className="text-[14px] font-semibold text-ink">{title}</h3>
         {description && <p className="mt-1 text-[13px] text-ink-2">{description}</p>}

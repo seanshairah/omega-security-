@@ -20,7 +20,7 @@ export default async function NewIncidentPage({ searchParams }: { searchParams: 
   ]);
   const local = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <PageHeader title="Log incident" description="For incidents reported by phone, radio or in person. SMS incidents are created automatically." />
       <Card><CardBody>
         <ActionForm action={createIncident} submitLabel="Log incident">

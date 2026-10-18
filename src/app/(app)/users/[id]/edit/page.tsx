@@ -11,5 +11,5 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const user = await db.user.findUnique({ where: { id } });
   if (!user) notFound();
-  return <div className="max-w-3xl"><PageHeader title={`Edit ${user.name}`} /><Card><CardBody><UserForm action={updateUser.bind(null, id)} user={user} submitLabel="Save changes" /></CardBody></Card></div>;
+  return <div className="w-full"><PageHeader title={`Edit ${user.name}`} /><Card><CardBody><UserForm action={updateUser.bind(null, id)} user={user} submitLabel="Save changes" /></CardBody></Card></div>;
 }

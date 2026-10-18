@@ -20,7 +20,7 @@ export default async function NewRecurrencePage() {
     db.user.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <PageHeader title="Recurring pattern" description="For guards who work the same schedule every week. Shifts are created two weeks ahead and kept topped up." />
       <Card><CardBody>
         <ActionForm action={createRecurrence} submitLabel="Create pattern">

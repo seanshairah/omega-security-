@@ -12,5 +12,5 @@ export default async function EditClientPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const client = await db.client.findUnique({ where: { id } });
   if (!client) notFound();
-  return <div className="max-w-4xl"><PageHeader title={`Edit ${client.name}`} /><Card><CardBody><ClientForm action={updateClient.bind(null, id)} client={client} submitLabel="Save changes" /></CardBody></Card></div>;
+  return <div className="w-full"><PageHeader title={`Edit ${client.name}`} /><Card><CardBody><ClientForm action={updateClient.bind(null, id)} client={client} submitLabel="Save changes" /></CardBody></Card></div>;
 }

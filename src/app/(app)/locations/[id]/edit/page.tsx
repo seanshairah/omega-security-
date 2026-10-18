@@ -12,5 +12,5 @@ export default async function EditLocationPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const [location, clients, supervisors] = await Promise.all([db.location.findUnique({ where: { id } }), db.client.findMany({ orderBy: { name: "asc" } }), db.user.findMany({ where: { active: true }, orderBy: { name: "asc" } })]);
   if (!location) notFound();
-  return <div className="max-w-4xl"><PageHeader title={`Edit ${location.name}`} /><Card><CardBody><LocationForm action={updateLocation.bind(null, id)} location={location} clients={clients} supervisors={supervisors} submitLabel="Save changes" /></CardBody></Card></div>;
+  return <div className="w-full"><PageHeader title={`Edit ${location.name}`} /><Card><CardBody><LocationForm action={updateLocation.bind(null, id)} location={location} clients={clients} supervisors={supervisors} submitLabel="Save changes" /></CardBody></Card></div>;
 }
