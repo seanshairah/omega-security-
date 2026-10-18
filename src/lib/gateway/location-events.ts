@@ -7,6 +7,7 @@
 import { db } from "@/lib/db";
 import type { GatewayDevice, LocationEventType, LocationState, Prisma } from "@prisma/client";
 import { classifyFix, haversineM, syncStatusFor } from "@/lib/geofence";
+import { effectiveGeofence } from "@/lib/site-config";
 import { getSettingNumber } from "@/lib/settings";
 import { notify } from "@/lib/notifications";
 import { findLiveShiftForGuard, recordEvent } from "@/lib/services/shifts";
@@ -68,14 +69,16 @@ export async function applyLocationEvent(device: GatewayDevice, ev: IncomingLoca
   // Shift: the phone names it if it cached one; otherwise the live shift at that time.
   const shift = (ev.shiftId ? await db.shift.findFirst({ where: { id: ev.shiftId, guardId: guard.id }, include: { location: true } }) : null) ?? (await findLiveShiftForGuard(guard.id, at));
   const site = shift?.location ?? null;
+  // The fence in force for this shift: its override when set, else the site's.
+  const fence = shift ? effectiveGeofence(shift, shift.location)?.fence ?? null : null;
   const accuracyMax = await getSettingNumber("geofence.accuracyMaxM");
 
-  // Server-side classification when the site has coordinates; the phone's verdict is kept in metadata.
+  // Server-side classification when the fence has coordinates; the phone's verdict is kept in metadata.
   let state: LocationState = ev.locationState ?? "UNKNOWN";
   let distanceM = ev.distanceM;
   let reason = ev.reason;
-  if (ev.latitude != null && ev.longitude != null && site?.latitude != null && site?.longitude != null) {
-    const c = classifyFix({ latitude: ev.latitude, longitude: ev.longitude, accuracyM: ev.accuracyM }, { latitude: site.latitude, longitude: site.longitude, radiusM: site.geofenceRadiusM }, accuracyMax);
+  if (ev.latitude != null && ev.longitude != null && fence) {
+    const c = classifyFix({ latitude: ev.latitude, longitude: ev.longitude, accuracyM: ev.accuracyM }, fence, accuracyMax);
     distanceM = Math.round(c.distanceM);
     if (ev.eventType !== "LOCATION_UNAVAILABLE") { state = c.state; reason = c.reason ?? reason; }
   } else if (ev.latitude != null && ev.longitude != null && device.locationId && !site) {
@@ -88,7 +91,7 @@ export async function applyLocationEvent(device: GatewayDevice, ev: IncomingLoca
   const row = await db.locationEvent.create({ data: {
     eventId: ev.eventId, gatewayDeviceId: device.id, guardId: guard.id, shiftId: shift?.id ?? null, locationId: site?.id ?? device.locationId ?? null,
     eventType: ev.eventType, locationState: state, latitude: ev.latitude ?? null, longitude: ev.longitude ?? null, accuracyM: ev.accuracyM ?? null,
-    distanceM: distanceM ?? null, geofenceRadiusM: site?.geofenceRadiusM ?? ev.geofenceRadiusM ?? null, provider: ev.provider ?? null, speed: ev.speed ?? null, bearing: ev.bearing ?? null,
+    distanceM: distanceM ?? null, geofenceRadiusM: fence?.radiusM ?? ev.geofenceRadiusM ?? null, provider: ev.provider ?? null, speed: ev.speed ?? null, bearing: ev.bearing ?? null,
     mock: Boolean(ev.mock), reason: reason ?? null, durationOutsideSeconds: ev.durationOutsideSeconds ?? null, occurredAt: at, syncStatus, simulated: Boolean(opts.simulated),
     metadata: { phoneState: ev.locationState ?? null, phoneDistanceM: ev.distanceM ?? null, callId: ev.callId ?? null, ...(ev.meta ?? {}) } as Prisma.InputJsonObject,
   } });
@@ -99,6 +102,8 @@ export async function applyLocationEvent(device: GatewayDevice, ev: IncomingLoca
   } else if (ev.eventType === "LOCATION_UNAVAILABLE" && (!device.lastLocationAt || device.lastLocationAt < at)) {
     await db.gatewayDevice.update({ where: { id: device.id }, data: { lastLocationState: "UNKNOWN" } });
   }
+  // A mock provider is remembered whatever the event's age: an old replayed fake fix is still a fake fix.
+  if (ev.mock && !device.mockLocationSeen) await db.gatewayDevice.update({ where: { id: device.id }, data: { mockLocationSeen: true } });
 
   const who = `${guard.firstName} ${guard.lastName}`;
   const late = syncStatus === "SYNCED_LATE" ? " (synced late)" : "";
@@ -109,7 +114,7 @@ export async function applyLocationEvent(device: GatewayDevice, ev: IncomingLoca
     const map: Partial<Record<LocationEventType, { type: Parameters<typeof recordEvent>[2]; note: string }>> = {
       SHIFT_STARTED: { type: "LOCATION_INSIDE", note: `Monitoring started on the phone${late}. ${state === "INSIDE" ? `Inside the site, ${dist}${acc}.` : state === "OUTSIDE" ? `Outside the site, ${dist}${acc}.` : "No fix yet."}` },
       LOCATION_CHECK: { type: state === "OUTSIDE" ? "LOCATION_OUTSIDE" : state === "INSIDE" ? "LOCATION_INSIDE" : "LOCATION_UNAVAILABLE", note: `Location check${late}: ${state.toLowerCase()}, ${dist}${acc}.` },
-      LOCATION_EXIT: { type: "LOCATION_EXIT", note: `Left the site${late}: ${dist}${acc}, fence ${site?.geofenceRadiusM ?? "?"} m.` },
+      LOCATION_EXIT: { type: "LOCATION_EXIT", note: `Left the site${late}: ${dist}${acc}, fence ${fence?.radiusM ?? "?"} m.` },
       LOCATION_OUTSIDE: { type: "LOCATION_OUTSIDE", note: `Still outside${late}: ${dist}${acc}.` },
       LOCATION_RETURNED: { type: "LOCATION_RETURNED", note: `Back inside the site${late}: ${dist}${acc}${ev.durationOutsideSeconds != null ? `, ${Math.round(ev.durationOutsideSeconds / 60)} min outside` : ""}.` },
       LOCATION_UNAVAILABLE: { type: "LOCATION_UNAVAILABLE", note: `Location unavailable${late}: ${(reason ?? "no fix").replace(/_/g, " ")}.` },

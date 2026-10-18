@@ -54,6 +54,8 @@ async function main() {
   const lSchool = await mkLoc("HIS-01", "Harare International School", cSchool.id, "School", "66 Pendennis Rd, Mount Pleasant", 1, "NIGHT_12", supN.id, "Boarding house wing is occupied. Keep noise down after 21:00.");
   const lOffice = await mkLoc("EOP-01", "Eastgate Office Park — Reception", cOffice.id, "Office building", "Eastgate, Robert Mugabe Rd", 1, "DAY_12", supN.id, "Sign in all visitors. Lift maintenance on Tuesdays.");
   const lOfficeNight = await mkLoc("EOP-02", "Eastgate Office Park — Night Patrol", cOffice.id, "Office building", "Eastgate, Robert Mugabe Rd", 1, "NIGHT_12", supN.id, "Patrol floors 1–8 every hour.");
+  // Temporary TEST coordinates used during device testing: flagged so nobody treats them as verified.
+  await db.location.update({ where: { id: lOfficeNight.id }, data: { latitude: -17.8318, longitude: 31.0525, geofenceRadiusM: 150, coordinatesSource: "TEST", coordinatesUpdatedAt: new Date() } });
 
   // ── guards
   const guardSeed: [string, string, string, "MALE" | "FEMALE", string, string, string][] = [

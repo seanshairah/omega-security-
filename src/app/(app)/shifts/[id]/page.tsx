@@ -11,7 +11,10 @@ import { Avatar } from "@/components/ui/avatar";
 import { Status } from "@/components/ui/status";
 import { ConfirmButton } from "@/components/ui/confirm-button";
 import { ButtonGroup, LinkButton } from "@/components/ui/button";
-import { cancelShift, manualArrival, manualComplete, addShiftNote } from "@/actions/shifts";
+import { cancelShift, manualArrival, manualComplete, addShiftNote, updateShiftGeofence } from "@/actions/shifts";
+import { effectiveGeofence, COORDINATES_SOURCE_META } from "@/lib/site-config";
+import { GeofenceOverrideSection } from "@/components/map/site-picker";
+import { ActionForm } from "@/components/ui/action-form";
 import { fmtTime, fmtDate, fmtDuration, fmtDateTime } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 import { ATTENDANCE_LABEL } from "@/lib/services/attendance";
@@ -43,6 +46,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   const exits = locEvents.filter((e) => e.eventType === "LOCATION_EXIT").length;
   const outsideSeconds = locEvents.filter((e) => e.eventType === "LOCATION_RETURNED").reduce((n, e) => n + (e.durationOutsideSeconds ?? 0), 0);
   const verification = s.attendance?.locationVerification ?? "NOT_APPLICABLE";
+  const fence = effectiveGeofence(s, s.location);
   const VERIFY: Record<string, { label: string; tone: "ok" | "warn" | "muted" | "neutral" }> = { NOT_APPLICABLE: { label: androidGuard ? "Awaiting SMS confirmation and a GPS fix" : "Not applicable (feature phone)", tone: "neutral" }, VERIFIED: { label: "ARRIVAL VERIFIED · SMS + GPS inside", tone: "ok" }, EXCEPTION: { label: "LOCATION EXCEPTION · SMS yes, GPS outside", tone: "warn" }, UNAVAILABLE: { label: "Location unavailable at arrival", tone: "muted" } };
 
   return (
@@ -63,12 +67,23 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
             <Card>
               <CardHeader title="Location" description={`Shift-aware monitoring from the guard's phone. ${exits} exit${exits === 1 ? "" : "s"}${outsideSeconds ? `, ${Math.round(outsideSeconds / 60)} min outside in total` : ""}. GPS is approximate; every point carries its accuracy.`} action={latestFix ? <span className="flex items-center gap-2"><Status tone={freshness(latestFix.occurredAt, new Date(), latestFix.syncStatus).tone}>{freshness(latestFix.occurredAt, new Date(), latestFix.syncStatus).label}</Status><Status tone={LOCATION_STATE_META[latestFix.locationState].tone}>{LOCATION_STATE_META[latestFix.locationState].label}</Status></span> : <Status tone="muted">No fix yet</Status>} />
               <CardBody>
-                {s.location.latitude != null && s.location.longitude != null ? (
-                  <SiteMap site={{ lat: s.location.latitude, lng: s.location.longitude, radiusM: s.location.geofenceRadiusM, name: s.location.name }} points={locEvents.filter((e) => e.latitude != null).map((e) => ({ lat: e.latitude!, lng: e.longitude!, label: `${e.eventType.replace(/_/g, " ").toLowerCase()} · ${e.locationState.toLowerCase()}`, kind: e === latestFix ? ("latest" as const) : e.eventType === "LOCATION_EXIT" ? ("exit" as const) : e.eventType === "LOCATION_RETURNED" ? ("return" as const) : e.eventType === "LOCATION_CALL" ? ("call" as const) : ("check" as const), at: fmtDateTime(e.occurredAt), freshness: e.syncStatus === "SYNCED_LATE" ? "SYNCED LATE" : e === latestFix ? freshness(e.occurredAt).label : undefined }))} height={280} />
+                {fence ? (
+                  <SiteMap site={{ lat: fence.fence.latitude, lng: fence.fence.longitude, radiusM: fence.fence.radiusM, name: fence.source === "SHIFT_OVERRIDE" ? `${s.location.name} (shift override)` : s.location.name }} points={locEvents.filter((e) => e.latitude != null).map((e) => ({ lat: e.latitude!, lng: e.longitude!, label: `${e.eventType.replace(/_/g, " ").toLowerCase()} · ${e.locationState.toLowerCase()}`, kind: e === latestFix ? ("latest" as const) : e.eventType === "LOCATION_EXIT" ? ("exit" as const) : e.eventType === "LOCATION_RETURNED" ? ("return" as const) : e.eventType === "LOCATION_CALL" ? ("call" as const) : ("check" as const), at: fmtDateTime(e.occurredAt), freshness: e.syncStatus === "SYNCED_LATE" ? "SYNCED LATE" : e === latestFix ? freshness(e.occurredAt).label : undefined }))} height={280} />
                 ) : <p className="text-[13px] text-warn">{s.location.name} has no coordinates, so the phone cannot judge inside or outside. <Link href={`/locations/${s.locationId}/edit`} className="underline">Add them on the site</Link>.</p>}
+                <p className="mt-3 text-[12.5px] text-ink-3 tnum">Fence in force: {fence ? <>{fence.source === "SHIFT_OVERRIDE" ? "shift override" : "site default"} · {fence.fence.latitude.toFixed(5)}, {fence.fence.longitude.toFixed(5)} · {fence.fence.radiusM} m · config v{s.location.configVersion}.{s.configVersion}{s.location.coordinatesSource === "TEST" && fence.source === "SITE" ? <> · <Status tone="warn">TEST coordinates</Status></> : null}{s.geofenceNote ? ` · ${s.geofenceNote}` : ""}</> : "none"}.</p>
                 {latestFix && <p className="mt-3 text-[12.5px] text-ink-3">Latest fix {fmtDateTime(latestFix.occurredAt)} <SyncBadge s={latestFix.syncStatus} /> · {latestFix.distanceM != null ? `${Math.round(latestFix.distanceM)} m from the centre` : "distance unknown"}{latestFix.accuracyM != null ? ` · ±${Math.round(latestFix.accuracyM)} m` : ""}.</p>}
               </CardBody>
               <LocationEventList events={[...locEvents].reverse()} emptyTitle="No location events on this shift yet" />
+            </Card>
+          )}
+          {live && can.manageShifts(user) && (
+            <Card>
+              <CardHeader title="Geofence for this shift" description={`Site default: ${s.location.latitude != null ? `${s.location.latitude.toFixed(5)}, ${s.location.longitude!.toFixed(5)} · ${s.location.geofenceRadiusM} m${s.location.coordinatesSource ? ` · ${COORDINATES_SOURCE_META[s.location.coordinatesSource].label.toLowerCase()}` : ""}` : "no coordinates"}. Changing this raises the shift's config version; the guard's phone applies it within one heartbeat.`} />
+              <CardBody>
+                <ActionForm action={updateShiftGeofence.bind(null, s.id)} submitLabel="Save geofence" successMessage="Geofence saved. The phone picks it up on its next heartbeat.">
+                  <GeofenceOverrideSection initial={{ enabled: s.geofenceLatitude != null, lat: s.geofenceLatitude, lng: s.geofenceLongitude, radiusM: s.geofenceRadiusM, note: s.geofenceNote }} mapsKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} siteRadius={s.location.geofenceRadiusM} siteName={s.location.name} />
+                </ActionForm>
+              </CardBody>
             </Card>
           )}
           <Card>

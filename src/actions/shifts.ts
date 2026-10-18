@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { addDays } from "date-fns";
 import { db } from "@/lib/db";
-import { shiftSchema, recurrenceSchema, formToObject, firstIssue } from "@/lib/validation";
+import { shiftSchema, shiftGeofenceSchema, recurrenceSchema, formToObject, firstIssue } from "@/lib/validation";
 import { combineDateTime } from "@/lib/time";
 import { createShift as createShiftRecord, cancelShift as cancelShiftRecord, materialiseRecurrences, recordEvent } from "@/lib/services/shifts";
 import { getSettingNumber } from "@/lib/settings";
@@ -20,13 +20,35 @@ export async function createShift(_: ActionState, fd: FormData): Promise<ActionS
     const startAt = combineDateTime(d.date, d.startTime);
     let endAt = combineDateTime(d.date, d.endTime);
     if (endAt <= startAt) endAt = addDays(endAt, 1); // overnight
-    const s = await createShiftRecord({ guardId: d.guardId, locationId: d.locationId, supervisorId: d.supervisorId, startAt, endAt, instructions: d.instructions, notes: d.notes, actorUserId: user.id, actorName: user.name });
+    const s = await createShiftRecord({ guardId: d.guardId, locationId: d.locationId, supervisorId: d.supervisorId, startAt, endAt, instructions: d.instructions, notes: d.notes, actorUserId: user.id, actorName: user.name, geofenceLatitude: d.geofenceLatitude, geofenceLongitude: d.geofenceLongitude, geofenceRadiusM: d.geofenceRadiusM, geofenceNote: d.geofenceNote });
     id = s.id;
   } catch (e) {
     return fail(e);
   }
   revalidatePath("/shifts");
   redirect(`/shifts/${id}`);
+}
+
+/** Set, change or remove the geofence override of one shift. Bumps the shift's config version so phones re-download it. */
+export async function updateShiftGeofence(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const user = await actor("ADMIN");
+    const r = shiftGeofenceSchema.safeParse(formToObject(fd));
+    if (!r.success) return { error: firstIssue(r.error) };
+    const d = r.data;
+    const before = await db.shift.findUniqueOrThrow({ where: { id }, include: { location: true } });
+    if (["COMPLETED", "MISSED", "CANCELLED"].includes(before.status)) return { error: "The geofence of a closed shift cannot be changed." };
+    const changed = before.geofenceLatitude !== d.geofenceLatitude || before.geofenceLongitude !== d.geofenceLongitude || before.geofenceRadiusM !== d.geofenceRadiusM;
+    const s = await db.shift.update({ where: { id }, data: { geofenceLatitude: d.geofenceLatitude, geofenceLongitude: d.geofenceLongitude, geofenceRadiusM: d.geofenceRadiusM, geofenceNote: d.geofenceNote, ...(changed ? { configVersion: { increment: 1 } } : {}) } });
+    if (changed) {
+      await recordEvent(id, s.guardId, "ADMIN_NOTE", { source: "ADMIN", note: d.overrideGeofence ? `Shift geofence set to ${d.geofenceLatitude!.toFixed(5)}, ${d.geofenceLongitude!.toFixed(5)} · ${d.geofenceRadiusM ?? before.location.geofenceRadiusM} m by ${user.name}${d.geofenceNote ? ` (${d.geofenceNote})` : ""}.` : `Shift geofence override removed by ${user.name}; the site's fence applies.` });
+      await auditAs(user, "SHIFT_GEOFENCE_CHANGED", "Shift", id, { configVersion: s.configVersion, before: { latitude: before.geofenceLatitude, longitude: before.geofenceLongitude, radiusM: before.geofenceRadiusM }, after: { latitude: s.geofenceLatitude, longitude: s.geofenceLongitude, radiusM: s.geofenceRadiusM } });
+    }
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath(`/shifts/${id}`);
+  return { ok: true };
 }
 
 export async function createRecurrence(_: ActionState, fd: FormData): Promise<ActionState> {

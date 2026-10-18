@@ -43,6 +43,11 @@ export type CreateShiftInput = {
   recurrenceId?: string | null;
   actorUserId?: string | null;
   actorName?: string;
+  /** Optional geofence override for this shift (both coordinates or neither). */
+  geofenceLatitude?: number | null;
+  geofenceLongitude?: number | null;
+  geofenceRadiusM?: number | null;
+  geofenceNote?: string | null;
 };
 
 export async function createShift(input: CreateShiftInput) {
@@ -72,6 +77,10 @@ export async function createShift(input: CreateShiftInput) {
       instructions: input.instructions ?? null,
       notes: input.notes ?? null,
       recurrenceId: input.recurrenceId ?? null,
+      geofenceLatitude: input.geofenceLatitude ?? null,
+      geofenceLongitude: input.geofenceLongitude ?? null,
+      geofenceRadiusM: input.geofenceLatitude != null ? input.geofenceRadiusM ?? null : null,
+      geofenceNote: input.geofenceLatitude != null ? input.geofenceNote ?? null : null,
       attendance: { create: {} },
     },
     include: shiftInclude,
@@ -82,7 +91,7 @@ export async function createShift(input: CreateShiftInput) {
     action: "SHIFT_CREATED",
     entity: "Shift",
     entityId: shift.id,
-    details: { guard: `${shift.guard.firstName} ${shift.guard.lastName}`, location: shift.location.name, startAt: shift.startAt.toISOString(), endAt: shift.endAt.toISOString() },
+    details: { guard: `${shift.guard.firstName} ${shift.guard.lastName}`, location: shift.location.name, startAt: shift.startAt.toISOString(), endAt: shift.endAt.toISOString(), ...(shift.geofenceLatitude != null ? { geofenceOverride: { latitude: shift.geofenceLatitude, longitude: shift.geofenceLongitude, radiusM: shift.geofenceRadiusM ?? shift.location.geofenceRadiusM, note: shift.geofenceNote } } : {}) },
   });
   return shift;
 }

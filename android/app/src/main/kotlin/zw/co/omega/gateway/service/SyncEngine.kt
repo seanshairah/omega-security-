@@ -57,7 +57,7 @@ class SyncEngine(private val context: Context) {
             val api = ApiClient(prefs.serverUrl, prefs.deviceToken)
             val info = DeviceInfo.json(context).put("monitoringState", prefs.monitoringState).put("mockLocation", prefs.mockSeen)
                 .put("shiftState", prefs.shiftState).put("gpsState", prefs.gpsState).put("gpsReason", prefs.gpsReason ?: JSONObject.NULL)
-                .put("queuedEvents", queue.size()).put("lastEventSyncAt", if (prefs.lastSyncAt > 0) zw.co.omega.gateway.model.GatewayEvent.iso(prefs.lastSyncAt) else JSONObject.NULL)
+                .put("queuedEvents", queue.size()).put("configVersion", ShiftConfig.load(context)?.configVersion ?: JSONObject.NULL).put("lastEventSyncAt", if (prefs.lastSyncAt > 0) zw.co.omega.gateway.model.GatewayEvent.iso(prefs.lastSyncAt) else JSONObject.NULL)
             if (prefs.isGuardMode) LocationMonitor(context).lastFixJson()?.let { info.put("lastLocation", it) }
             val r = api.heartbeat(info)
             prefs.mode = r.mode

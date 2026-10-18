@@ -122,6 +122,9 @@
     <!-- Duty site and GPS (guard mode, Stage 1) -->
     <string name="duty_site_label">Duty site:</string>
     <string name="duty_site">%1$s · radius %2$d m</string>
+    <string name="duty_site_override"> · shift-specific fence</string>
+    <string name="duty_site_test"> · TEST coordinates</string>
+    <string name="duty_site_version"> · config v%1$s</string>
     <string name="duty_site_no_coordinates">Site has no coordinates yet · ask the administrator to place it on the map</string>
     <string name="gps_label">GPS:</string>
     <string name="gps_off">OFF · no shift being monitored</string>

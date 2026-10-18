@@ -1,7 +1,7 @@
 import type { Client, Location, User } from "@prisma/client";
 import { ActionForm } from "@/components/ui/action-form";
 import { Field, Input, Select, Textarea, FormSection, Checkbox } from "@/components/ui/form";
-import { RADIUS_CHOICES } from "@/lib/geofence";
+import { SitePicker } from "@/components/map/site-picker";
 import type { ActionState } from "@/actions/_helpers";
 
 type A = (s: ActionState, fd: FormData) => Promise<ActionState>;
@@ -39,10 +39,9 @@ export function LocationForm({ action, location, clients, supervisors, submitLab
         <Field label="Site type"><Select name="siteType" defaultValue={l?.siteType ?? ""}><option value="">—</option>{SITE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</Select></Field>
         <Field label="Physical address" required className="sm:col-span-2"><Input name="address" defaultValue={l?.address} required /></Field>
       </FormSection>
-      <FormSection title="Position and geofence" description="Needed for GPS verification from guard phones. Paste coordinates from Google Maps (right-click the spot → copy). The radius is how far from the centre still counts as on site.">
-        <Field label="Latitude" hint="e.g. -17.8292"><Input name="latitude" type="number" step="any" min={-90} max={90} defaultValue={l?.latitude ?? ""} placeholder="-17.8292" /></Field>
-        <Field label="Longitude" hint="e.g. 31.0522"><Input name="longitude" type="number" step="any" min={-180} max={180} defaultValue={l?.longitude ?? ""} placeholder="31.0522" /></Field>
-        <Field label="Geofence radius (metres)" hint="50 for a small shop, 150 for a warehouse, 500 for a mine or farm. Custom values from 20 to 5000."><Input name="geofenceRadiusM" type="number" min={20} max={5000} step={10} defaultValue={l?.geofenceRadiusM ?? 150} list="radius-choices" /><datalist id="radius-choices">{RADIUS_CHOICES.map((r) => <option key={r} value={r} />)}</datalist></Field>
+      <FormSection title="Position and geofence" description="Needed for GPS verification from guard phones. Search for the site, click the map or drag the pin to its centre, and set how far from the centre still counts as on site. Coordinates can also be typed. Saving a changed fence raises the site's config version so guard phones pick it up.">
+        <SitePicker names={{ lat: "latitude", lng: "longitude", radius: "geofenceRadiusM", source: "coordinatesSource", placeId: "placeId" }} initial={{ lat: l?.latitude ?? null, lng: l?.longitude ?? null, radiusM: l?.geofenceRadiusM ?? 150, source: l?.coordinatesSource ?? null, placeId: l?.placeId ?? null }} mapsKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} />
+        {l && <p className="sm:col-span-2 text-[12px] text-ink-3 tnum">Config version {l.configVersion}{l.coordinatesUpdatedAt ? ` · fence last changed ${l.coordinatesUpdatedAt.toLocaleString("en-GB", { timeZone: "Africa/Harare" })}` : ""}.</p>}
       </FormSection>
       <FormSection title="Cover" description="How many guards each shift needs and the usual pattern.">
         <Field label="Required guards" required><Input type="number" name="requiredGuards" min={1} max={50} defaultValue={l?.requiredGuards ?? 1} required /></Field>

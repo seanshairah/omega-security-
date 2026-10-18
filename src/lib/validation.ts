@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalisePhone, isValidPhone } from "@/lib/phone";
+import { coordinatePairError } from "@/lib/site-config";
 
 export const phoneSchema = z.string().trim().min(6, "Phone number is required").transform((v) => normalisePhone(v)).refine(isValidPhone, "Enter a valid phone number, e.g. 0772 123 456");
 /** Checkbox: present ("on") when ticked, absent when not. */
@@ -49,13 +50,39 @@ export const locationSchema = z.object({
   specialInstructions: opt(z.string()),
   latitude: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().min(-90).max(90).optional()).transform((v) => v ?? null),
   longitude: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().min(-180).max(180).optional()).transform((v) => v ?? null),
-  geofenceRadiusM: z.preprocess((v) => (v === "" || v == null ? 150 : Number(v)), z.number().int().min(20).max(5000)),
+  geofenceRadiusM: z.preprocess((v) => (v === "" || v == null ? 150 : Number(v)), z.number().int().min(20, "Radius must be at least 20 m").max(5000, "Radius must be at most 5000 m")),
+  coordinatesSource: z.preprocess((v) => (v === "" || v == null ? undefined : v), z.enum(["MAP", "MANUAL", "TEST"]).optional()).transform((v) => v ?? null),
+  placeId: opt(z.string()),
   clientUpdates: flag,
   clientUpdatePhone: opt(z.string()),
   notifyClientArrival: flag,
   notifyClientWelfare: flag,
   notifyClientCompletion: flag,
+}).superRefine((d, ctx) => {
+  const e = coordinatePairError(d.latitude, d.longitude);
+  if (e) ctx.addIssue({ code: "custom", message: e, path: ["latitude"] });
 });
+
+const optNum = (min: number, max: number) => z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().min(min).max(max).optional()).transform((v) => v ?? null);
+
+/** Shift-level geofence override: a gate post or patrol area that differs from the site centre. */
+const shiftGeofenceFields = {
+  overrideGeofence: flag,
+  geofenceLatitude: optNum(-90, 90),
+  geofenceLongitude: optNum(-180, 180),
+  geofenceRadiusM: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().int().min(20, "Radius must be at least 20 m").max(5000, "Radius must be at most 5000 m").optional()).transform((v) => v ?? null),
+  geofenceNote: opt(z.string()),
+};
+function refineShiftGeofence<T extends { overrideGeofence: boolean; geofenceLatitude: number | null; geofenceLongitude: number | null; geofenceRadiusM: number | null; geofenceNote: string | null }>(d: T, ctx: z.RefinementCtx) {
+  if (!d.overrideGeofence) return;
+  const e = coordinatePairError(d.geofenceLatitude, d.geofenceLongitude) ?? (d.geofenceLatitude == null ? "Place the shift geofence on the map or untick the override." : null);
+  if (e) ctx.addIssue({ code: "custom", message: e, path: ["geofenceLatitude"] });
+}
+function clearUnusedOverride<T extends { overrideGeofence: boolean; geofenceLatitude: number | null; geofenceLongitude: number | null; geofenceRadiusM: number | null; geofenceNote: string | null }>(d: T): T {
+  return d.overrideGeofence ? d : { ...d, geofenceLatitude: null, geofenceLongitude: null, geofenceRadiusM: null, geofenceNote: null };
+}
+
+export const shiftGeofenceSchema = z.object(shiftGeofenceFields).superRefine(refineShiftGeofence).transform(clearUnusedOverride);
 
 export const shiftSchema = z.object({
   guardId: z.string().min(1, "Guard is required"),
@@ -66,7 +93,8 @@ export const shiftSchema = z.object({
   endTime: z.string().min(5, "End time is required"),
   instructions: opt(z.string()),
   notes: opt(z.string()),
-});
+  ...shiftGeofenceFields,
+}).superRefine(refineShiftGeofence).transform(clearUnusedOverride);
 
 export const recurrenceSchema = z.object({
   guardId: z.string().min(1, "Guard is required"),

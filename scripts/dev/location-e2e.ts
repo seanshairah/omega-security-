@@ -19,7 +19,8 @@ import { locationMaintenance } from "../../src/lib/gateway/location-events";
 
 const BASE = process.env.APP_URL ?? "http://localhost:3000";
 const SITE = { latitude: -17.8292, longitude: 31.0522, radius: 150 };
-const GUARD_PHONE = "+263771234567";
+const GUARD_PHONE = "+263779900771"; // numbers no seed uses
+const PETER_PHONE = "+263779900772";
 const OPS_PHONE = "+263772100100";
 let passed = 0, failed = 0;
 const check = (name: string, ok: boolean, detail = "") => { if (ok) { passed++; console.log(`  ✓ ${name}`); } else { failed++; console.log(`  ✗ ${name} ${detail}`); } };
@@ -59,7 +60,7 @@ async function main() {
   const client = await db.client.create({ data: { code: "ABC-E2E", name: "ABC Security Client (E2E)", contactPhone: "+263242000111" } });
   const site = await db.location.create({ data: { code: "ABC-E2E-01", name: "Silverpeak Mine (E2E)", clientId: client.id, address: "Silverpeak", supervisorId: admin.id, latitude: SITE.latitude, longitude: SITE.longitude, geofenceRadiusM: SITE.radius } });
   const john = await db.guard.create({ data: { guardNo: "G-E2E01", firstName: "John", lastName: "Moyo", phone: GUARD_PHONE, nationalId: "E2E-63-1", dateEmployed: new Date(), homeLocationId: site.id } });
-  const peter = await db.guard.create({ data: { guardNo: "G-E2E02", firstName: "Peter", lastName: "Ncube", phone: "+263772345002", nationalId: "E2E-63-2", dateEmployed: new Date(), homeLocationId: site.id } });
+  const peter = await db.guard.create({ data: { guardNo: "G-E2E02", firstName: "Peter", lastName: "Ncube", phone: PETER_PHONE, nationalId: "E2E-63-2", dateEmployed: new Date(), homeLocationId: site.id } });
   const guardDev = await createGateway({ deviceName: "E2E John's phone", phoneNumber: GUARD_PHONE, mode: "GUARD", guardId: john.id, actor });
   const opsDev = await createGateway({ deviceName: "E2E Control Room 01", phoneNumber: OPS_PHONE, locationId: site.id, actor });
   try {
@@ -173,13 +174,15 @@ async function main() {
 
     // ── Test 12: feature-phone guard unaffected
     console.log("Feature-phone guard");
-    await processIncomingMessage({ from: "+263772345002", body: "YES", provider: "simulated" });
+    await processIncomingMessage({ from: PETER_PHONE, body: "YES", provider: "simulated" });
     const pAtt = await db.attendance.findUniqueOrThrow({ where: { shiftId: peterShift.id } });
     check("Peter (feature phone): attendance PRESENT, location NOT_APPLICABLE, no location alerts (Test 12)", pAtt.status === "PRESENT" && pAtt.locationVerification === "NOT_APPLICABLE" && (await db.notification.count({ where: { guardId: peter.id, type: { startsWith: "LOCATION" } } })) === 0);
 
     // ── mock location → integrity warning, not fraud
     await post("/api/gateways/events", { events: [{ ...ev("LOCATION_CHECK", fix(10), new Date()), shiftId: shift2.id, mock: true }] }, gt);
-    check("mock provider → LOCATION INTEGRITY WARNING on the device, no accusation", Boolean(await db.notification.findFirst({ where: { type: "LOCATION_INTEGRITY", guardId: john.id } })) && (await db.gatewayDevice.findUniqueOrThrow({ where: { id: guardDev.id } })).mockLocationSeen);
+    const mockNotif = Boolean(await db.notification.findFirst({ where: { type: "LOCATION_INTEGRITY", guardId: john.id } }));
+    const mockSeen = (await db.gatewayDevice.findUniqueOrThrow({ where: { id: guardDev.id } })).mockLocationSeen;
+    check("mock provider → LOCATION INTEGRITY WARNING on the device, no accusation", mockNotif && mockSeen, `notification=${mockNotif} mockLocationSeen=${mockSeen}`);
 
     // ── revocation
     await revokeGateway(guardDev.id, actor, "e2e");

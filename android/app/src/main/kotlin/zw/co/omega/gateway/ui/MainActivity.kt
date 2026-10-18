@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
             b.dutySiteLine.text = when {
                 cfg == null -> "—"
                 cfg.site == null -> getString(R.string.duty_site_no_coordinates)
-                else -> getString(R.string.duty_site, cfg.site.name, cfg.site.radiusM)
+                else -> getString(R.string.duty_site, cfg.site.name, cfg.site.radiusM) + (if (cfg.geofenceSource == "SHIFT_OVERRIDE") getString(R.string.duty_site_override) else "") + (if (cfg.coordinatesSource == "TEST" && cfg.geofenceSource != "SHIFT_OVERRIDE") getString(R.string.duty_site_test) else "") + (cfg.configVersion?.let { getString(R.string.duty_site_version, it) } ?: "")
             }
             b.gpsLine.text = when (gpsView(facts)) {
                 GpsView.OFF -> getString(R.string.gps_off)
