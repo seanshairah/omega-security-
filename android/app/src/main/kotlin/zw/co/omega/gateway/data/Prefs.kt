@@ -145,12 +145,27 @@ class Prefs(context: Context) {
         get() = plain.getString("dutySiteName", "") ?: ""
         set(v) = plain.edit().putString("dutySiteName", v).apply()
 
+    // ---- Sync engine (Stage 3) ----
+    /** SYNCED | SENDING | QUEUED | QUEUED_OFFLINE | RETRY_PENDING | SYNCED_WITH_FAILURES | REVOKED (see SyncPlanner.syncState). */
+    var syncState: String
+        get() = plain.getString("syncState", "SYNCED") ?: "SYNCED"
+        set(v) = plain.edit().putString("syncState", v).apply()
+    var lastSyncError: String?
+        get() = plain.getString("lastSyncError", null)
+        set(v) = plain.edit().putString("lastSyncError", v).apply()
+    var lastSyncAttemptAt: Long
+        get() = plain.getLong("lastSyncAttemptAt", 0L)
+        set(v) = plain.edit().putLong("lastSyncAttemptAt", v).apply()
+    var lastSyncTrigger: String?
+        get() = plain.getString("lastSyncTrigger", null)
+        set(v) = plain.edit().putString("lastSyncTrigger", v).apply()
+
     val isActivated: Boolean get() = !deviceToken.isNullOrBlank() && !deviceId.isNullOrBlank() && serverUrl.isNotBlank()
 
     /** Forget credentials. The server-side device is not touched; an admin revokes it there. */
     fun deactivate() {
         secure.edit().remove("deviceToken").apply()
         plain.edit().remove("deviceId").remove("lastSyncAt").remove("lastHeartbeatOk").remove("lastError").remove("authRejected").remove("shiftConfig").remove("monitoringState").remove("mode").remove("guardName")
-            .remove("shiftState").remove("gpsState").remove("gpsReason").remove("gpsChecking").remove("lastAttemptAt").remove("lastHeartbeatAt").remove("dutySiteName").remove("onboardingDone").apply()
+            .remove("shiftState").remove("gpsState").remove("gpsReason").remove("gpsChecking").remove("lastAttemptAt").remove("lastHeartbeatAt").remove("dutySiteName").remove("onboardingDone").remove("syncState").remove("lastSyncError").remove("lastSyncAttemptAt").remove("lastSyncTrigger").apply()
     }
 }

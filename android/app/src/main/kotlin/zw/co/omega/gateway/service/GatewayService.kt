@@ -21,14 +21,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import zw.co.omega.gateway.GatewayApp
 import zw.co.omega.gateway.R
 import zw.co.omega.gateway.call.CallMonitor
 import zw.co.omega.gateway.data.ConfigBus
+import zw.co.omega.gateway.data.EventQueue
 import zw.co.omega.gateway.data.Prefs
 import zw.co.omega.gateway.location.LocationMonitor
 import zw.co.omega.gateway.ui.MainActivity
@@ -38,19 +38,20 @@ import zw.co.omega.gateway.ui.MainActivity
  *
  *  1. GPS monitoring — `MonitoringCoordinator` (guard mode only). One check at a time, woken by
  *     the schedule, by "Check location now" and by shift-config changes. Never cancelled by sync.
- *  2. Event sync — drains the outbox on demand (new events, network back, "Sync now", schedule)
- *     with exponential backoff. Independent of GPS.
+ *  2. Event sync — `SyncCoordinator` drains the outbox on its triggers (activation, app start,
+ *     network back, config change, new events, emergency, schedule, "Sync now", WorkManager)
+ *     with per-row retry/backoff. Independent of GPS.
  *  3. Heartbeat — device status + shift-config refresh on the configured interval.
  *
  * A persistent notification is required by Android for this.
  */
 class GatewayService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val syncRequests = Channel<Unit>(Channel.CONFLATED)
     private var heartbeatJob: Job? = null
-    private var syncJob: Job? = null
+    private var configWatcher: Job? = null
     private val monitor by lazy { LocationMonitor(this) }
     private lateinit var coordinator: MonitoringCoordinator
+    private lateinit var sync: SyncCoordinator
     private lateinit var prefs: Prefs
     private lateinit var engine: SyncEngine
     private var phoneReceiver: BroadcastReceiver? = null
@@ -70,9 +71,17 @@ class GatewayService : Service() {
             },
             isGuardMode = { prefs.isGuardMode },
             configChanges = ConfigBus.changes,
-            onAfterStep = { r -> if (r?.producedEvents == true) syncRequests.trySend(Unit); updateNotification() },
+            onAfterStep = { r -> if (r?.producedEvents == true) sync.request(Trigger.NEW_EVENT); updateNotification() },
             log = { Log.e(TAG, it) },
         )
+        sync = SyncCoordinator(
+            scope = scope,
+            runner = { t -> engine.refreshSyncState(syncing = true); val r = engine.syncOnceReport(t); updateNotification(); SyncCoordinator.Result(r.sent, r.acked, r.rejected, r.retried, (r.outcome as? SyncEngine.Outcome.Retry)?.error ?: (r.outcome as? SyncEngine.Outcome.Rejected)?.error) },
+            nextRetryAtMs = { engine.nextRetryAt() },
+            periodMs = (prefs.heartbeatSeconds * 1000L).coerceIn(60_000L, 15 * 60_000L),
+            log = { Log.e(TAG, it) },
+        )
+        EventQueue(this).resetSending() // a run that died mid-send must not leave rows stuck in SENDING
         prefs.gpsChecking = false
         startInForeground(getString(R.string.notif_starting))
         registerPhoneReceiver()
@@ -84,7 +93,7 @@ class GatewayService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (!prefs.isActivated) { stopSelf(); return START_NOT_STICKY }
         when (intent?.action) {
-            ACTION_SYNC -> syncRequests.trySend(Unit)
+            ACTION_SYNC -> { val t = runCatching { Trigger.valueOf(intent.getStringExtra(EXTRA_TRIGGER) ?: "MANUAL") }.getOrDefault(Trigger.MANUAL); sync.start(); sync.request(t) }
             ACTION_HEARTBEAT -> { heartbeatJob?.cancel(); heartbeatJob = heartbeatLoop() }
             ACTION_CHECK_LOCATION -> { if (prefs.isGuardMode) { coordinator.start(); val fresh = coordinator.requestCheck(); Log.i(TAG, if (fresh) "manual location check started" else "manual location check joined the running one") } }
             ACTION_CONFIG_CHANGED -> coordinator.onConfigChanged()
@@ -96,18 +105,9 @@ class GatewayService : Service() {
     private fun startLoops() {
         heartbeatJob = heartbeatLoop()
         if (prefs.isGuardMode) coordinator.start()
-        syncJob = scope.launch {
-            var backoff = 5_000L
-            while (true) {
-                withTimeoutOrNull(backoff) { syncRequests.receive() }
-                when (val r = engine.syncOnce()) {
-                    is SyncEngine.Outcome.Done -> backoff = 60_000L
-                    is SyncEngine.Outcome.Retry -> { backoff = (backoff * 3).coerceAtMost(15 * 60_000L); Log.w(TAG, "sync retry in ${backoff / 1000}s: ${r.error}") }
-                    is SyncEngine.Outcome.Rejected -> { backoff = 60 * 60_000L; Log.e(TAG, "sync rejected: ${r.error}") }
-                }
-                updateNotification()
-            }
-        }
+        sync.start() // its first run is the APP_START trigger
+        // A changed shift config is a sync trigger too (and the monitoring coordinator watches the same bus).
+        configWatcher = scope.launch { ConfigBus.changes.drop(1).collect { sync.request(Trigger.CONFIG_CHANGED) } }
     }
 
     private fun heartbeatLoop(): Job = scope.launch {
@@ -139,7 +139,7 @@ class GatewayService : Service() {
     private fun registerNetworkCallback() {
         val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val cb = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) { syncRequests.trySend(Unit); heartbeatJob?.cancel(); heartbeatJob = heartbeatLoop() }
+            override fun onAvailable(network: Network) { sync.request(Trigger.NETWORK_RESTORED); heartbeatJob?.cancel(); heartbeatJob = heartbeatLoop() }
         }
         try { cm.registerDefaultNetworkCallback(cb); networkCallback = cb } catch (e: Exception) { Log.w(TAG, "network callback: ${e.message}") }
     }
@@ -195,8 +195,8 @@ class GatewayService : Service() {
     override fun onDestroy() {
         phoneReceiver?.let { runCatching { unregisterReceiver(it) } }
         networkCallback?.let { runCatching { (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) } }
-        coordinator.stop()
-        heartbeatJob?.cancel(); syncJob?.cancel()
+        coordinator.stop(); sync.stop()
+        heartbeatJob?.cancel(); configWatcher?.cancel()
         scope.cancel()
         prefs.gpsChecking = false
         super.onDestroy()
@@ -209,20 +209,21 @@ class GatewayService : Service() {
         const val ACTION_HEARTBEAT = "zw.co.omega.gateway.HEARTBEAT"
         const val ACTION_CHECK_LOCATION = "zw.co.omega.gateway.CHECK_LOCATION"
         const val ACTION_CONFIG_CHANGED = "zw.co.omega.gateway.CONFIG_CHANGED"
+        const val EXTRA_TRIGGER = "trigger"
 
         fun start(context: Context) = send(context, null, "start")
 
-        /** Sync the outbox now. Does not touch GPS monitoring. */
-        fun requestSync(context: Context) = send(context, ACTION_SYNC, "sync request")
+        /** Sync the outbox now, for the given reason. Does not touch GPS monitoring. */
+        fun requestSync(context: Context, trigger: Trigger = Trigger.MANUAL) = send(context, ACTION_SYNC, "sync request", trigger)
 
         fun requestHeartbeat(context: Context) = send(context, ACTION_HEARTBEAT, "heartbeat request")
 
         /** Run (or join) a location check now. Does not touch the sync engine. */
         fun requestLocationCheck(context: Context) = send(context, ACTION_CHECK_LOCATION, "location check request")
 
-        private fun send(context: Context, action: String?, what: String) {
+        private fun send(context: Context, action: String?, what: String, trigger: Trigger? = null) {
             if (!Prefs(context).isActivated) return
-            val i = Intent(context, GatewayService::class.java).apply { action?.let { setAction(it) } }
+            val i = Intent(context, GatewayService::class.java).apply { action?.let { setAction(it) }; trigger?.let { putExtra(EXTRA_TRIGGER, it.name) } }
             try { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ContextCompat.startForegroundService(context, i) else context.startService(i) }
             catch (e: Exception) { Log.w(TAG, "$what: ${e.message}") } // background-start restriction; WorkManager retries
         }

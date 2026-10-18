@@ -652,6 +652,18 @@ model GatewayDevice {
   // Shift config the phone reports it applied ("<siteVersion>.<shiftVersion>" of the shift it monitors)
   configVersionApplied String?
   configAppliedAt  DateTime?
+  // Separate facts reported by the phone (Stage 1/3): shift, GPS with reason, and the sync engine
+  shiftState       String?           // NONE | UPCOMING | ACTIVE
+  gpsState         String?           // OFF | MONITORING | VERIFYING_OUTSIDE | OUTSIDE | LOCATION_UNAVAILABLE
+  gpsReason        String?           // no_fix | poor_accuracy | location_disabled | permission_revoked | site_has_no_coordinates | on_boundary
+  syncState        String?           // SYNCED | SENDING | QUEUED | QUEUED_OFFLINE | RETRY_PENDING | SYNCED_WITH_FAILURES | REVOKED
+  queuedEvents     Int?
+  failedEvents     Int?
+  oldestPendingSeconds Int?
+  lastEventSyncAt  DateTime?
+  lastSyncAttemptAt DateTime?
+  lastSyncError    String?
+  lastSyncTrigger  String?
   status           GatewayStatus     @default(OFFLINE)
   activationStatus GatewayActivation @default(PENDING)
   activationCode   String?           @unique

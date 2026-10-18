@@ -144,7 +144,14 @@
     <!-- Sync (independent of GPS) -->
     <string name="sync_revoked">DEVICE REVOKED · nothing is sent</string>
     <string name="sync_no_internet">NO INTERNET · %1$d event(s) saved on the phone, sent automatically later</string>
-    <string name="sync_queued">SENDING · %1$d event(s) waiting</string>
+    <string name="sync_queued">QUEUED · %1$d event(s) waiting · sent automatically</string>
+    <string name="sync_sending">SENDING · %1$d event(s)</string>
+    <string name="sync_retry">RETRYING · %1$d event(s) · %2$s</string>
+    <string name="sync_failures">UP TO DATE · some events were rejected by the server (see Settings)</string>
+    <string name="sync_diag_label">Sync engine</string>
+    <string name="sync_summary">State %1$s · queued %2$d · sending %3$d · retry %4$d · failed %5$d\nLast successful sync %6$s\nLast attempt %7$s\nNext retry %8$s\nLast error: %9$s</string>
+    <string name="sync_history_label">Recent sync runs</string>
+    <string name="sync_history_none">No sync runs yet</string>
     <string name="sync_synced">UP TO DATE · last event sent %1$s</string>
     <string name="sync_nothing_yet">UP TO DATE · no events to send yet</string>
     <string name="sync_waiting">RECONNECTING · %1$s</string>

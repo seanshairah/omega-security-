@@ -19,6 +19,8 @@ import zw.co.omega.gateway.data.Prefs
 import zw.co.omega.gateway.data.ShiftConfig
 import zw.co.omega.gateway.geofence.*
 import zw.co.omega.gateway.model.GatewayEvent
+import zw.co.omega.gateway.service.GatewayService
+import zw.co.omega.gateway.service.Trigger
 import zw.co.omega.gateway.util.DeviceInfo
 import java.util.UUID
 
@@ -107,6 +109,8 @@ class LocationMonitor(private val context: Context) {
             put("meta", JSONObject().put("phase", state.phase.name).put("online", DeviceInfo.isOnline(context)).put("accuracyMaxM", cfg.policy.accuracyMaxM))
         }
         queue.enqueue(GatewayEvent(eventId = UUID.randomUUID().toString(), eventType = type, timestampMs = o.at, extra = extra))
+        // The coordinator also asks for a sync after the step; this covers callers outside the service.
+        GatewayService.requestSync(context, Trigger.NEW_EVENT)
         Log.i(TAG, "queued $type ${o.state} ${o.distanceM?.let { "${it.toInt()} m" } ?: ""} ${fix?.let { "±${it.accuracy} m ${it.provider}" } ?: ""} ${o.reason ?: ""}")
     }
 

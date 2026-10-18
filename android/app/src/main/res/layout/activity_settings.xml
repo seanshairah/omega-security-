@@ -23,6 +23,11 @@
             <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/android_label" />
             <TextView android:id="@+id/android" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
         </LinearLayout>
+        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/sync_diag_label" />
+        <TextView android:id="@+id/syncSummary" style="@style/Value" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" />
+        <Button android:id="@+id/syncNow" style="?attr/borderlessButtonStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/sync_now" />
+        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sync_history_label" />
+        <TextView android:id="@+id/syncHistory" style="@style/Value" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="11sp" android:fontFamily="monospace" />
         <Button android:id="@+id/test" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/test_connection" />
         <TextView android:id="@+id/testResult" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/ink2" android:textSize="13sp" />
         <Button android:id="@+id/deactivate" style="?attr/borderlessButtonStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="@string/deactivate" android:textColor="@color/critical" />

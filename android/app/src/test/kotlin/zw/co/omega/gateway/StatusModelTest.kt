@@ -42,7 +42,11 @@ class StatusModelTest {
     @Test fun `sync view ordering`() {
         assertEquals(SyncView.REVOKED, syncView(facts(rejected = true, online = false)))
         assertEquals(SyncView.QUEUED, syncView(facts(queued = 2)))
+        assertEquals(SyncView.SENDING, syncView(facts(queued = 2).copy(syncState = "SENDING")))
+        assertEquals(SyncView.RETRY_PENDING, syncView(facts(queued = 2).copy(syncState = "RETRY_PENDING")))
+        assertEquals(SyncView.SYNCED_WITH_FAILURES, syncView(facts().copy(syncState = "SYNCED_WITH_FAILURES")))
         assertEquals(SyncView.SYNCED, syncView(facts()))
+        assertEquals("offline with nothing to send is not an error", SyncView.NO_INTERNET, syncView(facts(online = false, lastSync = 0L, hbOk = false)))
         assertEquals(SyncView.WAITING, syncView(facts(lastSync = 0L, hbOk = false)))
     }
 

@@ -15,7 +15,7 @@ enum class GpsView { OFF, CHECKING, INSIDE, OUTSIDE_VERIFYING, OUTSIDE, UNKNOWN 
 /** What to tell the guard about an UNKNOWN reading. Mapped 1:1 from the reason the classifier stored. */
 enum class GpsReasonKind { NONE, NO_FIX, POOR_ACCURACY, LOCATION_OFF, PERMISSION, SITE_NO_COORDINATES, ON_BOUNDARY, NOT_CHECKED_YET }
 
-enum class SyncView { REVOKED, NO_INTERNET, QUEUED, SYNCED, WAITING }
+enum class SyncView { REVOKED, NO_INTERNET, SENDING, RETRY_PENDING, QUEUED, SYNCED_WITH_FAILURES, SYNCED, WAITING }
 
 data class StatusFacts(
     val shift: ShiftView,
@@ -30,6 +30,8 @@ data class StatusFacts(
     val queued: Int,
     val lastEventSyncAt: Long,
     val lastHeartbeatOk: Boolean,
+    /** From SyncPlanner.syncState (the engine's own view); "" when unknown. */
+    val syncState: String = "",
 )
 
 fun gpsView(f: StatusFacts): GpsView = when {
@@ -54,8 +56,12 @@ fun gpsReasonKind(reason: String?, lastCheckAt: Long): GpsReasonKind = when (rea
 
 fun syncView(f: StatusFacts): SyncView = when {
     f.authRejected -> SyncView.REVOKED
-    !f.online -> SyncView.NO_INTERNET
+    !f.online && f.queued > 0 -> SyncView.NO_INTERNET
+    f.syncState == "SENDING" -> SyncView.SENDING
+    f.syncState == "RETRY_PENDING" && f.queued > 0 -> SyncView.RETRY_PENDING
     f.queued > 0 -> SyncView.QUEUED
+    !f.online -> SyncView.NO_INTERNET
+    f.syncState == "SYNCED_WITH_FAILURES" -> SyncView.SYNCED_WITH_FAILURES
     f.lastEventSyncAt > 0L || f.lastHeartbeatOk -> SyncView.SYNCED
     else -> SyncView.WAITING
 }

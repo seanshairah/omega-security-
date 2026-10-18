@@ -143,7 +143,9 @@ async function main() {
     const m = await gatewayMaintenance(new Date());
     const off = await db.gatewayDevice.findUniqueOrThrow({ where: { id: gw.id } });
     check("engine marks a silent gateway OFFLINE and alerts", m.offline >= 1 && off.status === "OFFLINE" && Boolean(await db.notification.findFirst({ where: { type: "GATEWAY_OFFLINE", title: { contains: "E2E" } } })));
-    const hb2 = await post("/api/gateways/heartbeat", { batteryLevel: 60, networkType: "wifi" }, token);
+    const hb2 = await post("/api/gateways/heartbeat", { batteryLevel: 60, networkType: "wifi", syncState: "QUEUED_OFFLINE", queuedEvents: 3, failedEvents: 0, oldestPendingSeconds: 540, lastEventSyncAt: new Date(Date.now() - 600_000).toISOString(), lastSyncError: "offline", lastSyncTrigger: "NETWORK_RESTORED", shiftState: "NONE", gpsState: "OFF", gpsReason: null }, token);
+    const hbDev = await db.gatewayDevice.findUniqueOrThrow({ where: { id: gw.id } });
+    check("heartbeat stores sync diagnostics separately from monitoring state", hbDev.syncState === "QUEUED_OFFLINE" && hbDev.queuedEvents === 3 && hbDev.oldestPendingSeconds === 540 && hbDev.lastSyncError === "offline" && hbDev.lastSyncTrigger === "NETWORK_RESTORED" && hbDev.shiftState === "NONE" && hbDev.gpsState === "OFF" && hbDev.lastEventSyncAt != null, JSON.stringify({ s: hbDev.syncState, q: hbDev.queuedEvents }));
     const back = await db.gatewayDevice.findUniqueOrThrow({ where: { id: gw.id } });
     check("28. heartbeat after restart brings it back ONLINE", hb2.status === 200 && back.status === "ONLINE");
 

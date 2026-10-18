@@ -54,7 +54,7 @@ class MainActivity : AppCompatActivity() {
         b.permissions.setOnClickListener { openPermissions() }
         b.battery.setOnClickListener { requestIgnoreBatteryOptimisations() }
         b.syncNow.setOnClickListener {
-            GatewayService.requestHeartbeat(this); GatewayService.requestSync(this)
+            GatewayService.requestHeartbeat(this); GatewayService.requestSync(this, zw.co.omega.gateway.service.Trigger.MANUAL)
             b.syncNow.isEnabled = false; handler.postDelayed({ b.syncNow.isEnabled = true; render() }, 2500)
         }
         b.checkNow.setOnClickListener {
@@ -109,11 +109,14 @@ class MainActivity : AppCompatActivity() {
 
         // ---- Sync (independent of GPS) ----
         val queued = EventQueue(this).size()
-        val facts = StatusFacts(shiftView(), prefs.gpsChecking, prefs.gpsState, prefs.gpsReason, prefs.lastCheckAt, isOnline, prefs.authRejected, queued, prefs.lastSyncAt, prefs.lastHeartbeatOk)
+        val facts = StatusFacts(shiftView(), prefs.gpsChecking, prefs.gpsState, prefs.gpsReason, prefs.lastCheckAt, isOnline, prefs.authRejected, queued, prefs.lastSyncAt, prefs.lastHeartbeatOk, prefs.syncState)
         b.syncLine.text = when (syncView(facts)) {
             SyncView.REVOKED -> getString(R.string.sync_revoked)
             SyncView.NO_INTERNET -> getString(R.string.sync_no_internet, queued)
+            SyncView.SENDING -> getString(R.string.sync_sending, queued)
+            SyncView.RETRY_PENDING -> getString(R.string.sync_retry, queued, prefs.lastSyncError ?: "")
             SyncView.QUEUED -> getString(R.string.sync_queued, queued)
+            SyncView.SYNCED_WITH_FAILURES -> getString(R.string.sync_failures)
             SyncView.SYNCED -> if (prefs.lastSyncAt > 0) getString(R.string.sync_synced, fmt(prefs.lastSyncAt)) else getString(R.string.sync_nothing_yet)
             SyncView.WAITING -> getString(R.string.sync_waiting, prefs.lastError ?: "")
         }

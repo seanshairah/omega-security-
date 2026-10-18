@@ -41,7 +41,9 @@ Errors `400`: `Activation code not recognised`, `Activation code has expired…`
 ### POST /api/gateways/heartbeat — Bearer device token, 30/min per device
 
 Request: `{ "appVersion", "androidVersion", "deviceModel", "batteryLevel": 77, "networkType": "mobile", "timestamp" }` (all optional).
-Response: `{ "ok": true, "deviceId", "deviceName", "phoneNumber", "status": "ONLINE", "location": {…}|null, "config": { "heartbeatSeconds", "offlineMinutes", "serverTime" } }`.
+Response: `{ "ok": true, "deviceId", "deviceName", "phoneNumber", "status": "ONLINE", "location": {…}|null, "configVersion": "3.1"|null, "config": { "heartbeatSeconds", "offlineMinutes", "serverTime" } }`.
+
+Optional request fields reported by the app (all stored on the device record, shown on the device page): `configVersion` (the shift config the phone applied), `shiftState` (`NONE|UPCOMING|ACTIVE`), `gpsState`, `gpsReason`, `syncState` (`SYNCED|SENDING|QUEUED|QUEUED_OFFLINE|RETRY_PENDING|SYNCED_WITH_FAILURES|REVOKED`), `queuedEvents`, `failedEvents`, `oldestPendingSeconds`, `lastEventSyncAt`, `lastSyncAttemptAt`, `lastSyncError`, `lastSyncTrigger`, plus the earlier `monitoringState`, `mockLocation` and `lastLocation`. See AUTO_SYNC.md.
 `401` unknown/inactive token · `403` revoked or disabled device.
 
 ### POST /api/gateways/events — Bearer device token, 120/min per device

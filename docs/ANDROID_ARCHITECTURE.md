@@ -16,10 +16,10 @@ GatewayService (foreground, specialUse|location)
 | System | Owns | Woken by | Never does |
 |---|---|---|---|
 | **GPS monitoring** (`MonitoringCoordinator`) | the single location check in flight, the geofence state machine, `shiftState` / `gpsState` / `gpsReason` | schedule from the state machine, **Check location now**, shift-config change (`ConfigBus`) | send anything to the network; get cancelled by a sync |
-| **Event sync** (sync loop + `SyncEngine`) | the outbox, `lastSyncAt`, per-event acks | new events from a check, network back, **Sync now**, WorkManager every 15 min, backoff timer | touch GPS, change monitoring state |
+| **Event sync** (`SyncCoordinator` + `SyncEngine`) | the outbox (statuses, priorities, retries), `sync_log`, `lastSyncAt`, per-event acks | activation, app start, network back, config change, new events, emergency, schedule, retry timer, **Sync now**, WorkManager every 15 min | touch GPS, change monitoring state |
 | **Heartbeat** | device status, `lastHeartbeatAt`, shift-config download | its interval, network back, **Sync now** | count as an event sync |
 
-Stage 3 replaces the sync loop with a full `SyncCoordinator` (statuses, priorities, history); the boundary above stays.
+Details of the sync engine (outbox v2, triggers, backoff, diagnostics) are in [AUTO_SYNC.md](AUTO_SYNC.md).
 
 ## 2. MonitoringCoordinator rules
 
@@ -89,13 +89,15 @@ Required permissions: guard mode = location *Allow all the time* + phone + call 
 |---|---|
 | `service/MonitoringCoordinator.kt` | GPS loop ownership (pure) |
 | `service/GatewayService.kt` | foreground service, wires the three systems |
-| `service/SyncEngine.kt` | outbox drain + heartbeat (+ config refresh) |
+| `service/SyncCoordinator.kt` | sync loop ownership: triggers, coalescing, retry timer (pure) |
+| `service/SyncPlanner.kt` | priorities, backoff, ack meaning, due rules, state wording (pure) |
+| `service/SyncEngine.kt` | one sync run (batches, acks, log) + heartbeat (+ config refresh) |
 | `location/LocationMonitor.kt` | one check: acquire → classify → state machine → enqueue |
 | `location/AcquisitionPolicy.kt` | when to stop listening (pure) |
 | `geofence/GeofenceEngine.kt` | classification + state machine (pure, mirrors `src/lib/geofence.ts`) |
 | `data/ShiftConfig.kt`, `data/ConfigBus.kt` | cached shift config and its change signal |
-| `data/EventQueue.kt` | durable outbox |
+| `data/EventQueue.kt` | durable outbox v2 + `sync_log` |
 | `ui/AppState.kt`, `ui/StatusModel.kt` | screen routing and status text (pure) |
 | `ui/MainActivity.kt`, `ui/PermissionsActivity.kt`, `ui/ActivationActivity.kt`, `ui/SettingsActivity.kt` | screens |
 
-Unit tests (JVM, `./gradlew testDebugUnitTest`): `GeofenceEngineTest`, `CallTrackerTest`, `AppStateTest`, `StatusModelTest`, `AcquisitionPolicyTest`, `MonitoringCoordinatorTest`.
+Unit tests (JVM, `./gradlew testDebugUnitTest`): `GeofenceEngineTest`, `CallTrackerTest`, `AppStateTest`, `StatusModelTest`, `AcquisitionPolicyTest`, `MonitoringCoordinatorTest`, `SyncPlannerTest`, `SyncCoordinatorTest`.
