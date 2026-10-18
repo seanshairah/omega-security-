@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { HouseIcon, ShieldCheckIcon, BroadcastIcon, EyeIcon, PaperPlaneTiltIcon, CalendarBlankIcon, ClipboardTextIcon, WarningOctagonIcon, UsersThreeIcon, BuildingsIcon, MapPinIcon, ChatTextIcon, ArticleIcon, ChartBarIcon, UserGearIcon, GearSixIcon, ListMagnifyingGlassIcon, CaretUpIcon, CaretDownIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, DeviceMobileIcon, XIcon, PhoneCallIcon, CellSignalFullIcon } from "@phosphor-icons/react";
+import { SirenIcon, HouseIcon, ShieldCheckIcon, BroadcastIcon, EyeIcon, PaperPlaneTiltIcon, CalendarBlankIcon, ClipboardTextIcon, WarningOctagonIcon, UsersThreeIcon, BuildingsIcon, MapPinIcon, ChatTextIcon, ArticleIcon, ChartBarIcon, UserGearIcon, GearSixIcon, ListMagnifyingGlassIcon, CaretUpIcon, CaretDownIcon, CaretDoubleLeftIcon, CaretDoubleRightIcon, DeviceMobileIcon, XIcon, PhoneCallIcon, CellSignalFullIcon } from "@phosphor-icons/react";
 import { BrandMark, COMPANY } from "./brand";
 import { cn } from "@/lib/cn";
 import { Count } from "@/components/ui/status";
@@ -11,7 +11,7 @@ import { Count } from "@/components/ui/status";
 type Item = { href: string; label: string; icon: React.ElementType; count?: number; urgent?: boolean };
 type Group = { label: string; icon: React.ElementType; items: Item[] };
 
-export type SidebarCounts = { attention: number; incidents: number; watched: number };
+export type SidebarCounts = { attention: number; incidents: number; watched: number; alerts?: number };
 
 export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role: string; onClose?: () => void }) {
   const path = usePathname();
@@ -22,6 +22,7 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
     { label: "Operations", icon: ShieldCheckIcon, items: [
       { href: "/dashboard", label: "Overview", icon: HouseIcon },
       { href: "/operations", label: "Active operations", icon: BroadcastIcon, count: counts.attention, urgent: counts.attention > 0 },
+      { href: "/alerts", label: "Guard alerts", icon: SirenIcon, count: counts.alerts ?? 0, urgent: (counts.alerts ?? 0) > 0 },
       { href: "/monitoring", label: "Monitoring", icon: EyeIcon, count: counts.watched },
       { href: "/shifts", label: "Shifts", icon: CalendarBlankIcon },
       { href: "/attendance", label: "Attendance", icon: ClipboardTextIcon },

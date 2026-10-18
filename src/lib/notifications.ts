@@ -31,6 +31,11 @@ export type NotifyInput = {
     | "LOCATION_INTEGRITY"
     | "DEVICE_OFFLINE"
     | "DEVICE_LOW_BATTERY"
+    | "SECURITY_ALERT"
+    | "RUNNING_LATE"
+    | "STATUS_UPDATE"
+    | "SHIFT_OK"
+    | "SHIFT_HANDOVER"
     | "GENERAL";
   severity?: NotificationSeverity;
   title: string;

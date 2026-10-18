@@ -160,6 +160,16 @@ class Prefs(context: Context) {
         get() = plain.getString("lastSyncTrigger", null)
         set(v) = plain.edit().putString("lastSyncTrigger", v).apply()
 
+    /** True while routine checks are stretched because the battery is low (dashboard says so). */
+    var batterySaver: Boolean
+        get() = plain.getBoolean("batterySaver", false)
+        set(v) = plain.edit().putBoolean("batterySaver", v).apply()
+
+    /** Control-room number from the server config: the fallback when an alert cannot reach operations. */
+    var opsPhone: String
+        get() = plain.getString("opsPhone", "") ?: ""
+        set(v) = plain.edit().putString("opsPhone", v).apply()
+
     val isActivated: Boolean get() = !deviceToken.isNullOrBlank() && !deviceId.isNullOrBlank() && serverUrl.isNotBlank()
 
     /** Forget credentials. The server-side device is not touched; an admin revokes it there. */

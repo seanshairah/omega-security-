@@ -44,6 +44,7 @@
         <activity android:name=".ui.MainActivity" android:exported="false" android:launchMode="singleTop" />
         <activity android:name=".ui.PermissionsActivity" android:exported="false" />
         <activity android:name=".ui.SettingsActivity" android:exported="false" android:parentActivityName=".ui.MainActivity" />
+        <activity android:name=".ui.AlertsActivity" android:exported="false" android:parentActivityName=".ui.MainActivity" />
 
         <service
             android:name=".service.GatewayService"

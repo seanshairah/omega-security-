@@ -52,6 +52,7 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
   const name = `${g.firstName} ${g.lastName}`;
   const live = guardLiveStatus(g, Boolean(deployed));
   const tone = { DEPLOYED: "ok", AVAILABLE: "neutral", ON_LEAVE: "warn", SUSPENDED: "critical", INACTIVE: "muted" } as const;
+  const alerts = tab === "communication" ? await db.guardAlert.findMany({ where: { guardId: id }, include: { acknowledgedBy: { select: { name: true } } }, orderBy: { occurredAt: "desc" }, take: 60 }) : [];
   const tabs = [["shifts", "Shifts & attendance"], ["incidents", `Incidents (${incidents.length})`], ["messages", "Messages"], ["calls", `Calls (${calls.length})`], ["communication", "Communication"], ...(g.deviceKind === "ANDROID_GUARD" ? [["location", "Location"]] : []), ["history", "History"]];
 
   return (
@@ -138,7 +139,7 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
               </CardBody>
             )}
             {tab === "calls" && <CallList calls={calls} showGuard={false} emptyTitle="No calls from this guard yet" />}
-            {tab === "communication" && <CardBody><CommunicationHistory messages={messages} calls={calls} /></CardBody>}
+            {tab === "communication" && <CardBody><CommunicationHistory messages={messages} calls={calls} alerts={alerts} /></CardBody>}
             {tab === "location" && <LocationEventList events={locEvents} showShift emptyTitle="No location events yet" />}
             {tab === "history" && (
               <Table>

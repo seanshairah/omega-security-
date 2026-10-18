@@ -8,7 +8,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
 
 const NAMES: Record<string, string> = {
-  dashboard: "Overview", operations: "Active operations", shifts: "Shifts", attendance: "Attendance", incidents: "Incidents",
+  dashboard: "Overview", operations: "Active operations", alerts: "Guard alerts", shifts: "Shifts", attendance: "Attendance", incidents: "Incidents",
   guards: "Guards", clients: "Clients", locations: "Locations", sms: "SMS logs", templates: "Templates", reports: "Reports",
   users: "Users", settings: "Settings", audit: "Audit log", simulator: "Simulator", notifications: "Notifications", new: "New", edit: "Edit", recurring: "Recurring", monitoring: "Monitoring", messages: "Messages",
 };

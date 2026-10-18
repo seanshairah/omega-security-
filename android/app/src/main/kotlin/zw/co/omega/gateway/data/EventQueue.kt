@@ -18,15 +18,23 @@ import zw.co.omega.gateway.service.SyncPlanner
  * Schema v2 adds per-row status, priority, retry time and timestamps, and a `sync_log` table the
  * diagnostics screen and the server read. v1 rows become QUEUED / NORMAL on upgrade.
  */
-class EventQueue(context: Context) : SQLiteOpenHelper(context.applicationContext, "gateway_queue.db", null, 2) {
+class EventQueue(context: Context) : SQLiteOpenHelper(context.applicationContext, "gateway_queue.db", null, 3) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, eventId TEXT UNIQUE NOT NULL, json TEXT NOT NULL, createdAt INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, lastError TEXT)")
         db.execSQL("CREATE INDEX outbox_created ON outbox(createdAt)")
         upgradeTo2(db)
+        upgradeTo3(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) upgradeTo2(db)
+        if (oldVersion < 3) upgradeTo3(db)
+    }
+
+    /** v3: the communication log the guard sees (alerts, status messages, calls) with delivery and acknowledgement state. */
+    private fun upgradeTo3(db: SQLiteDatabase) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS comm_log (id INTEGER PRIMARY KEY AUTOINCREMENT, eventId TEXT UNIQUE NOT NULL, kind TEXT NOT NULL, type TEXT NOT NULL, summary TEXT, at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'QUEUED', hasLocation INTEGER NOT NULL DEFAULT 0, sentAt INTEGER, ackBy TEXT, ackAt INTEGER, ackNote TEXT, resolvedAt INTEGER)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS comm_log_at ON comm_log(at)")
     }
 
     private fun upgradeTo2(db: SQLiteDatabase) {
@@ -176,4 +184,47 @@ class EventQueue(context: Context) : SQLiteOpenHelper(context.applicationContext
         }
         return out
     }
+
+    // ---------------- communication log ----------------
+
+    /** QUEUED → SENT (server acknowledged receipt) → ACKNOWLEDGED (operations saw it) → RESOLVED; FAILED when rejected. */
+    data class CommRow(val eventId: String, val kind: String, val type: String, val summary: String?, val at: Long, val status: String, val hasLocation: Boolean, val sentAt: Long?, val ackBy: String?, val ackAt: Long?, val ackNote: String?, val resolvedAt: Long?)
+
+    @Synchronized
+    fun logComm(eventId: String, kind: String, type: String, summary: String?, at: Long, hasLocation: Boolean) {
+        writableDatabase.insertWithOnConflict("comm_log", null, ContentValues().apply { put("eventId", eventId); put("kind", kind); put("type", type); put("summary", summary); put("at", at); put("status", "QUEUED"); put("hasLocation", if (hasLocation) 1 else 0) }, SQLiteDatabase.CONFLICT_IGNORE)
+        writableDatabase.execSQL("DELETE FROM comm_log WHERE id NOT IN (SELECT id FROM comm_log ORDER BY at DESC LIMIT 300)")
+    }
+
+    /** The server acknowledged receipt of these events. Rows already further along (acknowledged) are left alone. */
+    @Synchronized
+    fun markCommSent(eventIds: Collection<String>, now: Long = System.currentTimeMillis()) {
+        if (eventIds.isEmpty()) return
+        val db = writableDatabase
+        db.beginTransaction()
+        try { for (id in eventIds) db.execSQL("UPDATE comm_log SET status = 'SENT', sentAt = ? WHERE eventId = ? AND status = 'QUEUED'", arrayOf(now, id)); db.setTransactionSuccessful() } finally { db.endTransaction() }
+    }
+
+    @Synchronized
+    fun markCommFailed(eventId: String, error: String?) { writableDatabase.execSQL("UPDATE comm_log SET status = 'FAILED', ackNote = ? WHERE eventId = ?", arrayOf(error ?: "rejected", eventId)) }
+
+    /** Operations' acknowledgement / resolution as reported by the server on a heartbeat. */
+    @Synchronized
+    fun applyServerAlertState(eventId: String, status: String, ackBy: String?, ackAt: Long?, ackNote: String?, resolvedAt: Long?) {
+        val st = when (status) { "ACKNOWLEDGED" -> "ACKNOWLEDGED"; "RESOLVED" -> "RESOLVED"; else -> "SENT" }
+        writableDatabase.execSQL("UPDATE comm_log SET status = CASE WHEN status IN ('QUEUED','SENT','ACKNOWLEDGED') THEN ? ELSE status END, ackBy = COALESCE(?, ackBy), ackAt = COALESCE(?, ackAt), ackNote = COALESCE(?, ackNote), resolvedAt = COALESCE(?, resolvedAt), sentAt = COALESCE(sentAt, ?) WHERE eventId = ?", arrayOf(st, ackBy, ackAt, ackNote, resolvedAt, System.currentTimeMillis(), eventId))
+    }
+
+    @Synchronized
+    fun recentComm(limit: Int = 20, kind: String? = null): List<CommRow> {
+        val out = mutableListOf<CommRow>()
+        readableDatabase.query("comm_log", arrayOf("eventId", "kind", "type", "summary", "at", "status", "hasLocation", "sentAt", "ackBy", "ackAt", "ackNote", "resolvedAt"), kind?.let { "kind = ?" }, kind?.let { arrayOf(it) }, null, null, "at DESC", limit.toString()).use { c ->
+            while (c.moveToNext()) out += CommRow(c.getString(0), c.getString(1), c.getString(2), c.getString(3), c.getLong(4), c.getString(5), c.getInt(6) == 1, if (c.isNull(7)) null else c.getLong(7), c.getString(8), if (c.isNull(9)) null else c.getLong(9), c.getString(10), if (c.isNull(11)) null else c.getLong(11))
+        }
+        return out
+    }
+
+    /** Alerts the guard sent that operations has not acknowledged yet (for the dashboard badge). */
+    @Synchronized
+    fun unacknowledgedAlerts(): Int = readableDatabase.rawQuery("SELECT COUNT(*) FROM comm_log WHERE kind = 'ALERT' AND status IN ('QUEUED','SENT') AND type IN ('EMERGENCY','NEED_ASSISTANCE','INCIDENT_REPORT','SECURITY_ALERT','RUNNING_LATE')", null).use { it.moveToFirst(); it.getInt(0) }
 }

@@ -84,7 +84,10 @@ class LocationMonitor(private val context: Context) {
         prefs.gpsReason = if (obs.state == LocState.UNKNOWN) obs.reason else null
         if (fix != null) { prefs.lastFixLat = fix.latitude; prefs.lastFixLng = fix.longitude; prefs.lastFixAccuracy = fix.accuracy; prefs.lastFixAt = obs.at; prefs.lastFixState = obs.state.name; prefs.lastFixDistanceM = (obs.distanceM ?: -1.0).toFloat() }
         prefs.monitoringState = if (!DeviceInfo.isOnline(context) && state.phase == Phase.MONITORING) "OFFLINE_MONITORING" else state.phase.name
-        return Result(state.phase, r.nextCheckSeconds, fix, c, produced, hasConfig = true)
+        val battery = DeviceInfo.batteryLevel(context)
+        val wait = adjustForBattery(r.nextCheckSeconds, battery, state.phase)
+        prefs.batterySaver = wait != r.nextCheckSeconds
+        return Result(state.phase, wait, fix, c, produced, hasConfig = true)
     }
 
     private fun observe(fix: Location?, cfg: ShiftConfig, now: Long): Observation {

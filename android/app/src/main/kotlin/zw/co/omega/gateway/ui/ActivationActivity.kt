@@ -52,6 +52,7 @@ class ActivationActivity : AppCompatActivity() {
                 prefs.locationName = r.locationName ?: ""
                 prefs.mode = r.mode
                 prefs.guardName = r.guardName ?: ""
+                prefs.opsPhone = r.opsPhone ?: ""
                 prefs.heartbeatSeconds = r.heartbeatSeconds
                 prefs.lastHeartbeatOk = true
                 prefs.lastSyncAt = System.currentTimeMillis()

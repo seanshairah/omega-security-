@@ -89,3 +89,11 @@ fun stepMonitor(s: MonitorState, o: Observation, p: Policy): Step {
         }
     }
 }
+
+/**
+ * Battery-efficient monitoring: when the battery is low and the guard is inside the site, stretch
+ * the routine check interval (never past 30 min). Exit verification and outside updates keep
+ * their normal cadence; those are the readings operations is waiting for.
+ */
+fun adjustForBattery(nextCheckSeconds: Int, batteryPct: Int, phase: Phase, lowBatteryPct: Int = 20): Int =
+    if (batteryPct in 0..lowBatteryPct && phase == Phase.MONITORING) (nextCheckSeconds * 2).coerceAtMost(30 * 60) else nextCheckSeconds

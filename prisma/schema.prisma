@@ -37,6 +37,8 @@ model User {
   recurrences         ShiftRecurrence[]
   auditLogs           AuditLog[]
   pushSubscriptions   PushSubscription[]
+  acknowledgedAlerts  GuardAlert[] @relation("AlertAcknowledgedBy")
+  resolvedAlerts      GuardAlert[] @relation("AlertResolvedBy")
 }
 
 // ───────────────────────── Clients & locations ─────────────────────────
@@ -108,6 +110,7 @@ model Location {
   recurrences ShiftRecurrence[]
   smsMessages SmsMessage[]
   gateways    GatewayDevice[]
+  alerts      GuardAlert[]
   callLogs    CallLog[]
   locationEvents LocationEvent[]
 
@@ -172,6 +175,7 @@ model Guard {
   callLogs    CallLog[]
   devices     GatewayDevice[]
   locationEvents LocationEvent[]
+  alerts      GuardAlert[]
 
   @@index([lastName, firstName])
   @@index([active])
@@ -271,6 +275,7 @@ model Shift {
   notifications Notification[]
   callLogs      CallLog[]
   locationEvents LocationEvent[]
+  alerts        GuardAlert[]
 
   @@index([startAt])
   @@index([endAt])
@@ -342,6 +347,11 @@ enum CheckInType {
   ADMIN_NOTE
   CLIENT_NOTIFIED
   UNRECOGNISED_REPLY
+  SECURITY_ALERT
+  RUNNING_LATE
+  STATUS_UPDATE
+  GUARD_OK
+  ALERT_ACKNOWLEDGED
   CALL_INCOMING
   CALL_ANSWERED
   CALL_ENDED
@@ -435,6 +445,25 @@ enum IncidentSource {
   SMS
   ADMIN
   EMERGENCY
+  APP
+}
+
+/// Guard-initiated alerts and status messages from the Android app (Phase 2, Stage 5)
+enum GuardAlertType {
+  EMERGENCY
+  NEED_ASSISTANCE
+  INCIDENT_REPORT
+  SECURITY_ALERT
+  RUNNING_LATE
+  STATUS_UPDATE
+  SHIFT_OK
+  HANDOVER
+}
+
+enum GuardAlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
 }
 
 model Incident {
@@ -461,6 +490,7 @@ model Incident {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   notifications   Notification[]
+  alerts          GuardAlert[]
 
   @@index([status])
   @@index([occurredAt])
@@ -597,6 +627,48 @@ model Notification {
   @@index([createdAt])
 }
 
+model GuardAlert {
+  id               String           @id @default(cuid())
+  eventId          String           @unique
+  guardId          String
+  guard            Guard            @relation(fields: [guardId], references: [id])
+  gatewayDeviceId  String
+  device           GatewayDevice    @relation(fields: [gatewayDeviceId], references: [id])
+  shiftId          String?
+  shift            Shift?           @relation(fields: [shiftId], references: [id])
+  locationId       String?
+  location         Location?        @relation(fields: [locationId], references: [id])
+  type             GuardAlertType
+  status           GuardAlertStatus @default(OPEN)
+  requiresAck      Boolean          @default(true)
+  message          String?
+  latitude         Float?
+  longitude        Float?
+  accuracyM        Float?
+  locationState    LocationState?
+  locationAgeSeconds Int?
+  occurredAt       DateTime
+  receivedAt       DateTime         @default(now())
+  syncStatus       SyncStatus       @default(LIVE)
+  simulated        Boolean          @default(false)
+  acknowledgedAt   DateTime?
+  acknowledgedById String?
+  acknowledgedBy   User?            @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  acknowledgementNote String?
+  resolvedAt       DateTime?
+  resolvedById     String?
+  resolvedBy       User?            @relation("AlertResolvedBy", fields: [resolvedById], references: [id])
+  resolutionNote   String?
+  incidentId       String?
+  incident         Incident?        @relation(fields: [incidentId], references: [id])
+  createdAt        DateTime         @default(now())
+
+  @@index([status])
+  @@index([guardId, occurredAt])
+  @@index([shiftId])
+  @@index([occurredAt])
+}
+
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String?
@@ -688,6 +760,7 @@ model GatewayDevice {
   events   GatewayEvent[]
   callLogs CallLog[]
   locationEvents LocationEvent[]
+  alerts   GuardAlert[]
 
   @@index([status])
   @@index([locationId])
