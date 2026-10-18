@@ -46,6 +46,15 @@ data class ShiftConfig(val shiftId: String, val startAtMs: Long, val endAtMs: Lo
         }
 
         fun load(context: Context): ShiftConfig? = context.getSharedPreferences("gateway", Context.MODE_PRIVATE).getString(KEY, null)?.let { runCatching { fromJson(JSONObject(it)) }.getOrNull() }
-        fun save(context: Context, c: ShiftConfig?) = context.getSharedPreferences("gateway", Context.MODE_PRIVATE).edit().apply { if (c == null) remove(KEY) else putString(KEY, c.toJson().toString()) }.apply()
+        /** Persist the config and, when anything other than the fetch time changed, wake the monitoring coordinator. */
+        fun save(context: Context, c: ShiftConfig?) {
+            val prefs = context.getSharedPreferences("gateway", Context.MODE_PRIVATE)
+            val before = load(context)
+            prefs.edit().apply { if (c == null) remove(KEY) else putString(KEY, c.toJson().toString()) }.apply()
+            if (fingerprint(before) != fingerprint(c)) ConfigBus.notifyChanged()
+        }
+
+        /** Everything that matters for monitoring; `fetchedAtMs` is deliberately left out. */
+        fun fingerprint(c: ShiftConfig?): String = c?.copy(fetchedAtMs = 0L)?.toJson()?.toString() ?: "none"
     }
 }

@@ -2,6 +2,7 @@ package zw.co.omega.gateway.service
 
 import android.content.Context
 import android.util.Log
+import org.json.JSONObject
 import zw.co.omega.gateway.data.EventQueue
 import zw.co.omega.gateway.data.Prefs
 import zw.co.omega.gateway.net.ApiClient
@@ -55,6 +56,8 @@ class SyncEngine(private val context: Context) {
         return try {
             val api = ApiClient(prefs.serverUrl, prefs.deviceToken)
             val info = DeviceInfo.json(context).put("monitoringState", prefs.monitoringState).put("mockLocation", prefs.mockSeen)
+                .put("shiftState", prefs.shiftState).put("gpsState", prefs.gpsState).put("gpsReason", prefs.gpsReason ?: JSONObject.NULL)
+                .put("queuedEvents", queue.size()).put("lastEventSyncAt", if (prefs.lastSyncAt > 0) zw.co.omega.gateway.model.GatewayEvent.iso(prefs.lastSyncAt) else JSONObject.NULL)
             if (prefs.isGuardMode) LocationMonitor(context).lastFixJson()?.let { info.put("lastLocation", it) }
             val r = api.heartbeat(info)
             prefs.mode = r.mode
@@ -64,7 +67,7 @@ class SyncEngine(private val context: Context) {
             prefs.phoneNumber = r.phoneNumber.ifBlank { prefs.phoneNumber }
             prefs.locationName = r.locationName ?: ""
             prefs.heartbeatSeconds = r.heartbeatSeconds
-            prefs.lastSyncAt = System.currentTimeMillis()
+            prefs.lastHeartbeatAt = System.currentTimeMillis() // a heartbeat is not an event sync; lastSyncAt is set by syncOnce()
             prefs.lastHeartbeatOk = true
             prefs.lastError = null
             prefs.authRejected = false

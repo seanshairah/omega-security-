@@ -115,11 +115,42 @@ class Prefs(context: Context) {
         get() = plain.getBoolean("onboardingDone", false)
         set(v) = plain.edit().putBoolean("onboardingDone", v).apply()
 
+    // ---- Separate states (Stage 1): shift, GPS and sync are three different facts ----
+    /** NONE | UPCOMING | ACTIVE — whether there is a shift to monitor right now. */
+    var shiftState: String
+        get() = plain.getString("shiftState", "NONE") ?: "NONE"
+        set(v) = plain.edit().putString("shiftState", v).apply()
+    /** Phase of the geofence state machine for the current shift (MONITORING, VERIFYING_OUTSIDE, OUTSIDE, LOCATION_UNAVAILABLE) or OFF. */
+    var gpsState: String
+        get() = plain.getString("gpsState", "OFF") ?: "OFF"
+        set(v) = plain.edit().putString("gpsState", v).apply()
+    /** Why the last reading was UNKNOWN: no_fix, poor_accuracy, location_disabled, permission_revoked, site_has_no_coordinates, on_boundary. */
+    var gpsReason: String?
+        get() = plain.getString("gpsReason", null)
+        set(v) = plain.edit().putString("gpsReason", v).apply()
+    /** True while a location acquisition is running (dashboard shows CHECKING…). */
+    var gpsChecking: Boolean
+        get() = plain.getBoolean("gpsChecking", false)
+        set(v) = plain.edit().putBoolean("gpsChecking", v).apply()
+    /** When the last check was *attempted*, fix or not. `lastCheckAt` is when an observation was recorded. */
+    var lastAttemptAt: Long
+        get() = plain.getLong("lastAttemptAt", 0L)
+        set(v) = plain.edit().putLong("lastAttemptAt", v).apply()
+    /** Heartbeats and event syncs are different things; each has its own timestamp. */
+    var lastHeartbeatAt: Long
+        get() = plain.getLong("lastHeartbeatAt", 0L)
+        set(v) = plain.edit().putLong("lastHeartbeatAt", v).apply()
+    /** Name of the duty site of the shift being monitored (not the device's registration location). */
+    var dutySiteName: String
+        get() = plain.getString("dutySiteName", "") ?: ""
+        set(v) = plain.edit().putString("dutySiteName", v).apply()
+
     val isActivated: Boolean get() = !deviceToken.isNullOrBlank() && !deviceId.isNullOrBlank() && serverUrl.isNotBlank()
 
     /** Forget credentials. The server-side device is not touched; an admin revokes it there. */
     fun deactivate() {
         secure.edit().remove("deviceToken").apply()
-        plain.edit().remove("deviceId").remove("lastSyncAt").remove("lastHeartbeatOk").remove("lastError").remove("authRejected").remove("shiftConfig").remove("monitoringState").remove("mode").remove("guardName").apply()
+        plain.edit().remove("deviceId").remove("lastSyncAt").remove("lastHeartbeatOk").remove("lastError").remove("authRejected").remove("shiftConfig").remove("monitoringState").remove("mode").remove("guardName")
+            .remove("shiftState").remove("gpsState").remove("gpsReason").remove("gpsChecking").remove("lastAttemptAt").remove("lastHeartbeatAt").remove("dutySiteName").remove("onboardingDone").apply()
     }
 }
