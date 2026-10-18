@@ -7,6 +7,7 @@ import zw.co.omega.gateway.data.EventQueue
 import zw.co.omega.gateway.data.Prefs
 import zw.co.omega.gateway.data.ShiftConfig
 import zw.co.omega.gateway.location.LocationMonitor
+import zw.co.omega.gateway.model.DeviceCommand
 import zw.co.omega.gateway.model.GatewayEvent
 import zw.co.omega.gateway.net.ApiClient
 import zw.co.omega.gateway.util.DeviceInfo
@@ -87,6 +88,27 @@ class SyncEngine(private val context: Context) {
         prefs.syncState = SyncPlanner.syncState(DeviceInfo.isOnline(context), prefs.authRejected, c.queued + c.sending, c.retryPending, c.failed, syncing)
     }
 
+    /** Receives operations commands (REQUEST_LOCATION) from heartbeats and polls. Set by the service. */
+    @Volatile var commandSink: ((List<DeviceCommand>) -> Unit)? = null
+
+    /**
+     * Lightweight command poll between heartbeats (guard mode only). Returns false when offline or
+     * rejected so the caller can back off. Never touches the outbox: event sync is independent.
+     */
+    fun pollCommands(): Boolean {
+        if (!prefs.isActivated || !prefs.isGuardMode || !DeviceInfo.isOnline(context) || prefs.authRejected) return false
+        return try {
+            val r = ApiClient(prefs.serverUrl, prefs.deviceToken).commands()
+            prefs.commandPollSeconds = r.optInt("commandPollSeconds", prefs.commandPollSeconds)
+            val cmds = DeviceCommand.listFromJson(r.optJSONArray("commands"))
+            if (cmds.isNotEmpty()) commandSink?.invoke(cmds)
+            true
+        } catch (e: ApiClient.ApiException) {
+            if (e.status == 401 || e.status == 403) prefs.authRejected = true
+            false
+        } catch (e: Exception) { false }
+    }
+
     fun heartbeat(): Outcome {
         if (!prefs.isActivated) return Outcome.Rejected("not activated")
         if (!DeviceInfo.isOnline(context)) { prefs.lastHeartbeatOk = false; return Outcome.Retry("offline") }
@@ -107,6 +129,8 @@ class SyncEngine(private val context: Context) {
             prefs.mode = r.mode
             r.guardName?.let { prefs.guardName = it }
             r.opsPhone?.let { prefs.opsPhone = it }
+            prefs.commandPollSeconds = r.commandPollSeconds
+            r.commands?.let { arr -> commandSink?.invoke(DeviceCommand.listFromJson(arr)) }
             r.alerts?.let { arr ->
                 // Operations' acknowledgements for the alerts this guard sent.
                 val iso = { v: String? -> v?.takeIf { it.isNotBlank() }?.let { runCatching { java.time.Instant.parse(it).toEpochMilli() }.getOrNull() } }

@@ -34,7 +34,10 @@ function run(args) {
 function sync() {
   const sdk = sdkHome();
   if (!sdk) { console.error("Android SDK not found. Install Android Studio or the command-line tools and set ANDROID_HOME. See docs/LOCAL_DEVELOPMENT.md."); process.exit(1); }
-  writeFileSync(join(android, "local.properties"), `sdk.dir=${sdk.replace(/\\/g, "/")}\n`);
+  // Keep any developer settings already in local.properties (e.g. omega.devHttpHosts); only sdk.dir is managed here.
+  const localPath = join(android, "local.properties");
+  const kept = existsSync(localPath) ? readFileSync(localPath, "utf8").split(/\r?\n/).filter((l) => l.trim() && !/^sdk\.dir=/.test(l)) : [];
+  writeFileSync(localPath, [`sdk.dir=${sdk.replace(/\\/g, "/")}`, ...kept].join("\n") + "\n");
   const java = spawnSync("java", ["-version"], { encoding: "utf8" });
   const ver = (java.stderr || java.stdout || "").split("\n").find((l) => /version/.test(l)) ?? "not found";
   console.log(`SDK: ${sdk}\nJava: ${ver.trim()}\nlocal.properties written.`);

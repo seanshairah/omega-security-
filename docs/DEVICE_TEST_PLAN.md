@@ -25,3 +25,17 @@ Everything the simulations could not prove. Each row maps to an acceptance test 
 | 19 | Device page after a release install | `buildType release`, no secure-storage warning | Stage 9 |
 
 When all rows pass, replace the UNVERIFIED entries in `docs/IMPLEMENTATION_AUDIT.md` with the results and the logcat excerpts.
+
+## Location requests (app v1.5.0)
+
+| # | Step | Expected |
+|---|---|---|
+| L1 | On the guard's Location tab press **Request current location** while the phone is online and outdoors | Queued → Delivered within `commandPollSeconds` (30 s default) → Locating → Position received with ±accuracy, time and provider; the phone's Communication history shows "Operations asked for your current position" and "Position sent to operations" |
+| L2 | Same, phone indoors | Position received only if accuracy is within the limit; otherwise **Failed · poor accuracy** with the coordinates shown for information |
+| L3 | Same, location permission revoked | Failed · permission denied, within one poll interval |
+| L4 | Same, location services off | Failed · location disabled |
+| L5 | Same, phone in flight mode | Request stays Queued with the "phone has not checked in" note, then Expired after the deadline; no GPS runs when the phone reconnects after the deadline (its history shows nothing for that request) |
+| L6 | Request during an active shift check | One acquisition only (Diagnostics shows no overlapping GPS run); answer uses the fresh monitoring fix if ≤ 30 s old |
+| L7 | Press the button twice | Second press reuses the first request (no second GPS run) |
+| L8 | Site form → **Request guard phone position** → confirm | Candidate drawn with accuracy circle; coordinates only change after confirmation; saved source "Guard phone GPS"; config version increments; the phone's next heartbeat reports the new version |
+| L9 | Mock-location app enabled on the phone | Result flagged "Mock location reported"; cannot be used as a site candidate; integrity warning on the device |

@@ -13,3 +13,14 @@ android/app/build
 android/local.properties
 android/keystore.properties
 android/*.jks
+
+# Machine-specific and secret files: never committed
+.env.*.local
+android/app/*.jks
+android/app/*.keystore
+android/*.keystore
+android/app/release/
+android/app/debug/
+android/.idea
+android/.kotlin
+activation-*.json

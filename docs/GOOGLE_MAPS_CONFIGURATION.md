@@ -73,3 +73,7 @@ All of it is additive (migration `20261018120000_site_config_versioning`). Exist
 - **`ApiNotActivatedMapError`**: enable Maps JavaScript API on the project.
 - **Suggestions box missing but Search works**: Places API (New) is not enabled; the geocoder search still functions.
 - **Pin saved but phone still shows the old fence**: check the device page: *config applied* should match the current version within one heartbeat (default 2 min). If not, the phone is offline or its token was revoked.
+
+## MapTiler tiles and measured positions (update)
+
+Without a Google Maps key the Leaflet maps use MapTiler Streets tiles when `NEXT_PUBLIC_MAPTILER_KEY` is set, otherwise OpenStreetMap (`src/components/map/tiles.ts`). Tiles are pictures only. "Use my current location" measures the **portal user's own device** through the browser Geolocation API, shows the fix with its accuracy circle and asks for confirmation; "Request guard phone position" asks a registered guard phone. Both record their provenance (`BROWSER`, `GUARD_DEVICE`). Details and the root cause of the earlier wrong site centre: `docs/DEVICE_LOCATION_AND_SITE_SETUP.md`.

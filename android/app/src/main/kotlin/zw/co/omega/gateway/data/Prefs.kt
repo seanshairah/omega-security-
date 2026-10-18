@@ -175,12 +175,25 @@ class Prefs(context: Context) {
         get() = plain.getString("opsPhone", "") ?: ""
         set(v) = plain.edit().putString("opsPhone", v).apply()
 
+    /** Seconds between command polls (server-configured, 15–300). */
+    var commandPollSeconds: Int
+        get() = plain.getInt("commandPollSeconds", 30).coerceIn(15, 300)
+        set(v) = plain.edit().putInt("commandPollSeconds", v.coerceIn(15, 300)).apply()
+
+    /** Ids of operations commands already answered (bounded), so a redelivered command never starts a second acquisition. */
+    fun isCommandHandled(id: String): Boolean = handledCommandIds().contains(id)
+    fun markCommandHandled(id: String) {
+        val ids = (handledCommandIds() + id).takeLast(100)
+        plain.edit().putString("handledCommands", ids.joinToString(",")).apply()
+    }
+    private fun handledCommandIds(): List<String> = (plain.getString("handledCommands", "") ?: "").split(',').filter { it.isNotBlank() }
+
     val isActivated: Boolean get() = !deviceToken.isNullOrBlank() && !deviceId.isNullOrBlank() && serverUrl.isNotBlank()
 
     /** Forget credentials. The server-side device is not touched; an admin revokes it there. */
     fun deactivate() {
         secure.edit().remove("deviceToken").apply()
         plain.edit().remove("deviceId").remove("lastSyncAt").remove("lastHeartbeatOk").remove("lastError").remove("authRejected").remove("shiftConfig").remove("monitoringState").remove("mode").remove("guardName")
-            .remove("shiftState").remove("gpsState").remove("gpsReason").remove("gpsChecking").remove("lastAttemptAt").remove("lastHeartbeatAt").remove("dutySiteName").remove("onboardingDone").remove("syncState").remove("lastSyncError").remove("lastSyncAttemptAt").remove("lastSyncTrigger").apply()
+            .remove("shiftState").remove("gpsState").remove("gpsReason").remove("gpsChecking").remove("lastAttemptAt").remove("lastHeartbeatAt").remove("dutySiteName").remove("onboardingDone").remove("syncState").remove("lastSyncError").remove("lastSyncAttemptAt").remove("lastSyncTrigger").remove("handledCommands").remove("commandPollSeconds").apply()
     }
 }

@@ -62,3 +62,12 @@ Verify any database with `npm run db:migration-status` (read-only; non-zero exit
 ## Rollback
 
 Nothing needs rolling back to run the previous code: older code ignores the new columns. To remove them anyway, drop the columns listed above and the `CoordinatesSource` type; no data outside these columns is affected.
+
+## `20261019150000_site_location_sources` (device location and guard-phone requests)
+
+| Table | Column | Type | Purpose |
+|---|---|---|---|
+| `Location` | `coordinatesSource` | enum, two new values `BROWSER`, `GUARD_DEVICE` | where the coordinates came from: the portal user's own browser, or a fresh GPS fix from a registered guard phone |
+| `DeviceLocationRequest` | whole table | see `prisma/schema.prisma` | one row per "request current location": device, guard, requester, optional site, purpose, status (`PENDING` → `DELIVERED` → `PROCESSING` → `COMPLETED`/`FAILED`, or `EXPIRED`/`CANCELLED`), timestamps per state, deadline, accuracy limit, the returned fix (lat/lng/accuracy/provider/capturedAt/mock), structured `failureReason`, unique `resultEventId` (replay protection), metadata |
+
+Indexes: `(gatewayDeviceId, status)`, `(guardId, requestedAt)`, `(status, expiresAt)`. Deleting a device or guard removes its requests; deleting a user leaves `requestedById` null. Existing rows are untouched; older code ignores the new enum values and table.

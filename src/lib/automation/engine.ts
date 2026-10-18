@@ -15,6 +15,7 @@ import { materialiseRecurrences, recordEvent, shiftInclude, LIVE_STATUSES, ON_SI
 import { fmtTime } from "@/lib/time";
 import { gatewayMaintenance } from "@/lib/gateway/service";
 import { locationMaintenance } from "@/lib/gateway/location-events";
+import { expireStaleRequests } from "@/lib/gateway/location-requests";
 
 export type TickReport = {
   at: string;
@@ -217,6 +218,8 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
     } catch (e) {
       report.errors.push(`location ${(e as Error).message}`);
     }
+    // 13. location requests to guard phones past their deadline become EXPIRED (never left pending for ever)
+    try { await expireStaleRequests(now); } catch (e) { report.errors.push(`location requests ${(e as Error).message}`); }
   } finally {
     running = false;
   }

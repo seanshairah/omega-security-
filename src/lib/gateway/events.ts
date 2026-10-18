@@ -14,14 +14,15 @@ import { formatPhone } from "@/lib/phone";
 import { CALL_EVENT_TYPES, DEVICE_EVENT_TYPES, fmtCallDuration, initialCallState, isTerminal, reduceCall, saneTimestamp, type IncomingGatewayEvent } from "./call-state";
 import { LOCATION_EVENT_TYPES, applyLocationEvent, validateLocationEvent, type IncomingLocationEvent } from "./location-events";
 import { ALERT_EVENT_TYPES, applyAlertEvent, validateAlertEvent, type IncomingAlertEvent } from "./alerts";
+import { LOCATION_REQUEST_EVENT_TYPES, applyLocationRequestResult, validateLocationRequestResult, type IncomingLocationRequestResult } from "./location-requests";
 import type { LocationState } from "@prisma/client";
 
 export type EventAck = { eventId: string; status: "ok" | "duplicate" | "rejected"; callLogId?: string; error?: string };
 
 const STATUS_EVENT_TYPES = ["DEVICE_STATUS", "HEARTBEAT"] as const;
-const ALL_TYPES: string[] = [...CALL_EVENT_TYPES, ...DEVICE_EVENT_TYPES, ...LOCATION_EVENT_TYPES, ...STATUS_EVENT_TYPES, ...ALERT_EVENT_TYPES];
+const ALL_TYPES: string[] = [...CALL_EVENT_TYPES, ...DEVICE_EVENT_TYPES, ...LOCATION_EVENT_TYPES, ...STATUS_EVENT_TYPES, ...ALERT_EVENT_TYPES, ...LOCATION_REQUEST_EVENT_TYPES];
 
-export type AnyIncomingEvent = ({ kind: "call" | "device" | "status" } & IncomingGatewayEvent) | ({ kind: "location" } & IncomingLocationEvent) | ({ kind: "alert" } & IncomingAlertEvent);
+export type AnyIncomingEvent = ({ kind: "call" | "device" | "status" } & IncomingGatewayEvent) | ({ kind: "location" } & IncomingLocationEvent) | ({ kind: "alert" } & IncomingAlertEvent) | ({ kind: "location_request" } & IncomingLocationRequestResult);
 
 export function validateEvent(raw: unknown): { ok: true; event: AnyIncomingEvent } | { ok: false; error: string; eventId?: string } {
   if (!raw || typeof raw !== "object") return { ok: false, error: "event must be an object" };
@@ -33,6 +34,10 @@ export function validateEvent(raw: unknown): { ok: true; event: AnyIncomingEvent
   if ((LOCATION_EVENT_TYPES as readonly string[]).includes(eventType)) {
     const v = validateLocationEvent(e, eventId, eventType);
     return v.ok ? { ok: true, event: { kind: "location", ...v.event } } : { ok: false, error: v.error, eventId };
+  }
+  if ((LOCATION_REQUEST_EVENT_TYPES as readonly string[]).includes(eventType)) {
+    const v = validateLocationRequestResult(e, eventId);
+    return v.ok ? { ok: true, event: { kind: "location_request", ...v.event } } : { ok: false, error: v.error, eventId };
   }
   if ((ALERT_EVENT_TYPES as readonly string[]).includes(eventType)) {
     const v = validateAlertEvent(e, eventId, eventType);
@@ -86,7 +91,7 @@ async function processOne(device: GatewayDevice, ev: AnyIncomingEvent, opts: { s
   const at = saneTimestamp(ev.timestamp, now);
   // 1. raw record; the unique eventId is the deduplication key
   try {
-    await db.gatewayEvent.create({ data: { eventId: ev.eventId, gatewayDeviceId: device.id, eventType: ev.eventType, callId: ev.kind === "alert" ? null : ev.callId ?? null, phoneNumber: ev.kind === "location" || ev.kind === "alert" ? null : ev.phoneNumber ?? null, occurredAt: at, payload: { ...ev, timestamp: String(ev.timestamp), simulated: Boolean(opts.simulated) } as Prisma.InputJsonObject } });
+    await db.gatewayEvent.create({ data: { eventId: ev.eventId, gatewayDeviceId: device.id, eventType: ev.eventType, callId: ev.kind === "alert" || ev.kind === "location_request" ? null : ev.callId ?? null, phoneNumber: ev.kind === "location" || ev.kind === "alert" || ev.kind === "location_request" ? null : ev.phoneNumber ?? null, occurredAt: at, payload: { ...ev, timestamp: String(ev.timestamp), simulated: Boolean(opts.simulated) } as Prisma.InputJsonObject } });
   } catch (e) {
     if (/Unique constraint/.test((e as Error).message)) {
       const existing = ev.kind === "call" && ev.callId ? await db.callLog.findUnique({ where: { gatewayDeviceId_callId: { gatewayDeviceId: device.id, callId: ev.callId } } }) : null;
@@ -101,6 +106,8 @@ async function processOne(device: GatewayDevice, ev: AnyIncomingEvent, opts: { s
       outcome = (await applyLocationEvent(device, ev, { simulated: opts.simulated })).outcome;
     } else if (ev.kind === "alert") {
       outcome = (await applyAlertEvent(device, ev, { simulated: opts.simulated })).outcome;
+    } else if (ev.kind === "location_request") {
+      outcome = (await applyLocationRequestResult(device, ev)).outcome;
     } else if (ev.kind === "status") {
       outcome = await applyStatusEvent(device, ev);
     } else if (ev.eventType === "DEVICE_ONLINE" || ev.eventType === "DEVICE_OFFLINE") {

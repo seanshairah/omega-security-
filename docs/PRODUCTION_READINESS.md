@@ -1,6 +1,6 @@
 # Production Readiness Assessment (after Phase 3)
 
-Date: 2026-10-19 · Portal on `main` · App v1.4.0 (versionCode 5)
+Date: 2026-10-19 · Portal on `main` · App v1.5.0 (versionCode 6)
 
 ## Verdict
 
@@ -11,25 +11,28 @@ Date: 2026-10-19 · Portal on `main` · App v1.4.0 (versionCode 5)
 | Area | Evidence | Status |
 |---|---|---|
 | Typecheck, lint, production build | clean | verified |
-| Web unit tests | 28/28 | verified |
-| Android JVM unit tests | 43/43 | verified |
+| Web unit tests | 40/40 | verified |
+| Android JVM unit tests | 48/48 | verified |
 | Gateway end-to-end (calls, activation, revocation, SMS regression) | 30/30 | verified |
 | Location end-to-end (section-50 scenario, 15 critical cases, feature phone, mock) | 38/38 | verified |
 | Alerts end-to-end (emergency with/without fix, all types, replay, acknowledgement, SMS EMERGENCY) | 20/20 | verified |
 | Integration end-to-end (Stage 8 matrix) | 18/18 | verified |
+| Location-request end-to-end (command delivery, binding, replay, expiry, accuracy, mock, site handoff) | 37/37 | verified |
+| Browser geolocation (Playwright, mocked Geolocation API: good fix, poor accuracy, denied, insecure context) | 14/14 | verified with mocked positions, **not real GPS** |
 | Migrations on Neon | all applied, `db:migration-status` clean | verified |
 | SMS system | no SMS file changed in Phases 1–3; regression steps in three suites | verified |
 | Debug and release APKs | build, R8, log stripping, HTTPS-only release | compiled, **unverified on device** |
 | Guard onboarding, GPS acquisition, Sync/Check independence, offline replay, emergency dialogs, acknowledgement on the phone, screen layouts | code + unit tests | **unverified on device** |
 | Release signing | debug key | **blocker for distribution** |
-| Google Maps picker (Google engine) | code, type-checked; OpenStreetMap engine exercised in the browser | **unverified with a key** |
+| Google Maps picker (Google engine) | code, type-checked; Leaflet engine (OpenStreetMap/MapTiler tiles) exercised in the browser | **unverified with a key** |
+| Remote location request on a phone (L1–L9 in DEVICE_TEST_PLAN) | code + unit tests + simulated device | **unverified on device** |
 
 ## Blockers before fleet production
 
 1. Run `DEVICE_TEST_PLAN.md` on at least one guard phone and one operations phone; record results in `IMPLEMENTATION_AUDIT.md`.
 2. Create the release keystore, set `ANDROID_KEYSTORE_*`, rebuild, confirm `buildType: release` and no secure-storage warning on the device page.
 3. Set `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (referrer-restricted) if Google Maps is wanted; otherwise OpenStreetMap stays in use.
-4. Place the four live sites on the map (they have no coordinates today) before enabling GPS verification for any guard.
+4. Place the four live sites on the map (they have no coordinates today) before enabling GPS verification for any guard. Use the site picker's confirmed-position flow or a guard phone standing at the site (`docs/DEVICE_LOCATION_AND_SITE_SETUP.md`); never type an estimate as `MAP`.
 
 ## Risks accepted for a pilot
 
