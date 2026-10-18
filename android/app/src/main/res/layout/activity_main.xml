@@ -1,64 +1,110 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+
+        <!-- Header -->
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/app_name" android:textAllCaps="true" android:textColor="@color/ink" android:textSize="20sp" android:textStyle="bold" android:letterSpacing="0.08" />
-            <Button android:id="@+id/settings" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/open_settings" />
+            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/app_name" android:textAllCaps="true" android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" android:letterSpacing="0.08" />
+            <Button android:id="@+id/settings" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diagnostics" />
         </LinearLayout>
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/card" android:orientation="horizontal" android:gravity="center_vertical" android:padding="18dp">
-            <TextView android:id="@+id/statusDot" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="26sp" android:text="🔴" />
-            <TextView android:id="@+id/statusWord" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:textColor="@color/ink" android:textSize="26sp" android:textStyle="bold" android:letterSpacing="0.06" />
+        <!-- Connection status -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="16dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView android:id="@+id/statusDot" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="24sp" android:text="🔴" />
+                <TextView android:id="@+id/statusWord" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:textColor="@color/ink" android:textSize="24sp" android:textStyle="bold" android:letterSpacing="0.06" />
+                <TextView android:id="@+id/network" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/ink2" android:textSize="13sp" />
+            </LinearLayout>
+            <TextView android:id="@+id/modeLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/ink2" android:textSize="13sp" />
+            <TextView android:id="@+id/connection" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/ink" android:textSize="13.5sp" android:textStyle="bold" />
         </LinearLayout>
 
-        <TextView android:id="@+id/modeLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/ink2" android:textSize="13sp" />
+        <Button android:id="@+id/permissions" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/grant_permissions" />
+        <Button android:id="@+id/battery" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/battery_button" />
 
-        <!-- Guard mode: shift, duty site and GPS are three separate facts -->
-        <LinearLayout android:id="@+id/guardRows" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/card" android:orientation="vertical" android:padding="18dp" android:visibility="gone">
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/shift_label" />
-            <TextView android:id="@+id/shiftLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/duty_site_label" />
-            <TextView android:id="@+id/dutySiteLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/gps_label" />
-            <TextView android:id="@+id/gpsLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" />
-            <TextView android:id="@+id/gpsReasonLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" android:visibility="gone" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_check_label" />
-            <TextView android:id="@+id/lastCheckLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/location_perm_label" />
-            <TextView android:id="@+id/locationPermLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+        <!-- ================= GUARD MODE ================= -->
+        <LinearLayout android:id="@+id/guardRows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+
+            <!-- Quick actions -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
+                <Button android:id="@+id/emergency" android:layout_width="match_parent" android:layout_height="64dp" android:backgroundTint="@color/critical" android:text="@string/emergency_button" android:textColor="@color/surface" android:textSize="19sp" android:textStyle="bold" android:letterSpacing="0.06" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
+                    <Button android:id="@+id/quickAssist" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="50dp" android:layout_marginEnd="4dp" android:text="@string/alert_assistance" android:textSize="12.5sp" />
+                    <Button android:id="@+id/quickOk" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="50dp" android:layout_marginStart="4dp" android:layout_marginEnd="4dp" android:text="@string/alert_ok" android:textSize="12.5sp" />
+                    <Button android:id="@+id/quickMore" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="50dp" android:layout_marginStart="4dp" android:text="@string/alerts_more" android:textSize="12.5sp" />
+                </LinearLayout>
+                <TextView android:id="@+id/unackedLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/warn" android:textSize="12.5sp" android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Shift and duty site -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/shift_label" />
+                <TextView android:id="@+id/shiftLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" android:textStyle="bold" />
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/duty_site_label" />
+                <TextView android:id="@+id/dutySiteLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+            </LinearLayout>
+
+            <!-- GPS verification -->
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/gps_card_label" />
+                <TextView android:id="@+id/gpsLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" />
+                <TextView android:id="@+id/gpsReasonLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" android:visibility="gone" />
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/monitoring_card_label" />
+                <TextView android:id="@+id/monitoringLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_check_label" />
+                <TextView android:id="@+id/lastCheckLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+                <TextView android:id="@+id/locationPermLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/ink2" android:textSize="12.5sp" />
+                <Button android:id="@+id/checkNow" style="?attr/materialButtonOutlinedStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/check_location_now" />
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Sync is independent of GPS -->
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/card" android:orientation="vertical" android:padding="18dp">
+        <!-- ================= OPERATIONS GATEWAY MODE ================= -->
+        <LinearLayout android:id="@+id/opsRows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/call_monitoring_label" />
+                <TextView android:id="@+id/callMonitorLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textSize="15sp" />
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_call_label" />
+                <TextView android:id="@+id/lastCall" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/recent_calls_label" />
+                <LinearLayout android:id="@+id/opsCalls" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Delivery (both modes): sync is independent of GPS -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
             <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/sync_label" />
             <TextView android:id="@+id/syncLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textSize="14sp" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_heartbeat_label" />
-            <TextView android:id="@+id/lastHeartbeat" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/status_label" />
-            <TextView android:id="@+id/connection" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" />
+            <TextView android:id="@+id/pendingLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="12.5sp" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_sync_label" />
+                    <TextView android:id="@+id/lastSync" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_heartbeat_label" />
+                    <TextView android:id="@+id/lastHeartbeat" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+                </LinearLayout>
+            </LinearLayout>
+            <Button android:id="@+id/syncNow" style="?attr/materialButtonOutlinedStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/sync_now" />
         </LinearLayout>
 
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/card" android:orientation="vertical" android:padding="18dp">
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/device_label" />
-            <TextView android:id="@+id/deviceName" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/location_label" />
-            <TextView android:id="@+id/location" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/phone_label" />
-            <TextView android:id="@+id/phone" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/battery_label" />
-            <TextView android:id="@+id/batteryLevel" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/network_label" />
-            <TextView android:id="@+id/network" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/version_label" />
-            <TextView android:id="@+id/appVersion" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_call_label" />
-            <TextView android:id="@+id/lastCall" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
+        <!-- Communication history (guard mode) -->
+        <LinearLayout android:id="@+id/commCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp" android:visibility="gone">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                <TextView style="@style/Label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/comm_label" />
+                <Button android:id="@+id/commAll" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/comm_see_all" android:textSize="12sp" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/commList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
         </LinearLayout>
 
-        <Button android:id="@+id/permissions" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/grant_permissions" />
-        <Button android:id="@+id/battery" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/battery_button" />
-        <Button android:id="@+id/checkNow" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/check_location_now" android:visibility="gone" />
-        <Button android:id="@+id/syncNow" style="?attr/borderlessButtonStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/sync_now" />
+        <!-- Device -->
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
+            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/device_health_label" />
+            <TextView android:id="@+id/deviceName" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" />
+            <TextView android:id="@+id/deviceLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" />
+            <TextView android:id="@+id/healthLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" />
+        </LinearLayout>
+
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/privacy_line" android:textColor="@color/ink3" android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>

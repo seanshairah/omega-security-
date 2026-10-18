@@ -1,4 +1,4 @@
-# Database Changes (Phase 1)
+# Database Changes (Phases 1 and 2)
 
 All changes are additive: new enum, new nullable columns or columns with defaults. No column is renamed, dropped or retyped, and no row is rewritten. Existing SMS, shift, attendance and call data are untouched. Apply with `npx prisma migrate deploy` (TCP) or `npx tsx scripts/neon-migrate.ts` (Neon over HTTPS); both record the migration in `_prisma_migrations`.
 
@@ -34,10 +34,21 @@ All changes are additive: new enum, new nullable columns or columns with default
 
 `monitoringState` (the earlier composite string) is still written for compatibility.
 
-## On-device SQLite (`gateway_queue.db`, version 2)
+## `20261019090000_guard_alerts` (Phase 2)
+
+| Table | Column | Type | Purpose |
+|---|---|---|---|
+| (enum) | `GuardAlertType` | `EMERGENCY` · `NEED_ASSISTANCE` · `INCIDENT_REPORT` · `SECURITY_ALERT` · `RUNNING_LATE` · `STATUS_UPDATE` · `SHIFT_OK` · `HANDOVER` | what the guard pressed |
+| (enum) | `GuardAlertStatus` | `OPEN` · `ACKNOWLEDGED` · `RESOLVED` | operations' handling |
+| (enum) | `IncidentSource` | + `APP` | incidents opened by app alerts |
+| (enum) | `CheckInType` | + `SECURITY_ALERT`, `RUNNING_LATE`, `STATUS_UPDATE`, `GUARD_OK`, `ALERT_ACKNOWLEDGED` | shift timeline lines |
+| `GuardAlert` | whole table | see `prisma/schema.prisma` | one row per alert: guard, device, shift, site, type, status, `requiresAck`, message, last-known position with accuracy, state and age, `occurredAt` (pressed) vs `receivedAt`, `syncStatus`, acknowledgement (who, when, note), resolution, linked incident |
+
+## On-device SQLite (`gateway_queue.db`, version 3)
 
 - `outbox`: adds `status`, `priority`, `eventType`, `nextAttemptAt`, `sendingSince`, `lastAttemptAt` (defaults keep v1 rows valid).
 - `sync_log`: new table, last 200 runs.
+- `comm_log` (v3): what the guard sent (alerts, status messages, calls) with delivery state (`QUEUED` → `SENT` → `ACKNOWLEDGED` → `RESOLVED`, or `FAILED`), acknowledger and note. Last 300 rows.
 
 ## Rollback
 

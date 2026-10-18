@@ -38,10 +38,16 @@ Response `200`:
 ```
 Errors `400`: `Activation code not recognised`, `Activation code has expired…`, `This gateway has been revoked`. `429` with `Retry-After` when rate-limited. The token is returned once; the server keeps only its hash.
 
+### Guard alert events (POST /api/gateways/events)
+
+Event types `EMERGENCY`, `NEED_ASSISTANCE`, `INCIDENT_REPORT`, `SECURITY_ALERT`, `RUNNING_LATE`, `STATUS_UPDATE`, `SHIFT_OK`, `HANDOVER` with optional `message` (≤ 500 chars), `shiftId`, and `location: { latitude, longitude, accuracyM, state, ageSeconds }` (the phone's last fix and how old it was; an emergency never waits for a fresh one). Same acks as other events. Only guard-mode devices create alerts; the serious types open incidents and raise the shift status, informational ones are stored resolved. See EMERGENCY_ALERTS.md.
+
 ### POST /api/gateways/heartbeat — Bearer device token, 30/min per device
 
 Request: `{ "appVersion", "androidVersion", "deviceModel", "batteryLevel": 77, "networkType": "mobile", "timestamp" }` (all optional).
 Response: `{ "ok": true, "deviceId", "deviceName", "phoneNumber", "status": "ONLINE", "location": {…}|null, "configVersion": "3.1"|null, "config": { "heartbeatSeconds", "offlineMinutes", "serverTime" } }`.
+
+Guard phones also receive `alerts`: the alerts they sent in the last 48 h with `status`, `acknowledgedBy`, `acknowledgedAt`, `acknowledgementNote`, `resolvedAt`; and `config.opsPhone`, the control-room number used as the offline fallback.
 
 Optional request fields reported by the app (all stored on the device record, shown on the device page): `configVersion` (the shift config the phone applied), `shiftState` (`NONE|UPCOMING|ACTIVE`), `gpsState`, `gpsReason`, `syncState` (`SYNCED|SENDING|QUEUED|QUEUED_OFFLINE|RETRY_PENDING|SYNCED_WITH_FAILURES|REVOKED`), `queuedEvents`, `failedEvents`, `oldestPendingSeconds`, `lastEventSyncAt`, `lastSyncAttemptAt`, `lastSyncError`, `lastSyncTrigger`, plus the earlier `monitoringState`, `mockLocation` and `lastLocation`. See AUTO_SYNC.md.
 `401` unknown/inactive token · `403` revoked or disabled device.

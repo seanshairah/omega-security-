@@ -204,4 +204,33 @@
     <string name="alert_state_failed">Rejected by the server %1$s · tell your supervisor</string>
     <string name="alert_privacy">Alerts carry your last known position and the message you type. Nothing else.</string>
     <string name="unacked_alerts">%1$d alert(s) waiting for operations</string>
+
+    <!-- Dashboard redesign (Stage 6) -->
+    <string name="diagnostics">Diagnostics</string>
+    <string name="alerts_more">More…</string>
+    <string name="gps_card_label">GPS verification</string>
+    <string name="monitoring_card_label">Monitoring</string>
+    <string name="mon_off_line">Off · no shift being monitored</string>
+    <string name="mon_fg_only_line">Will stop when the screen is off · allow location all the time</string>
+    <string name="mon_outside_line">Outside site · updating every %1$d min until you are back</string>
+    <string name="mon_saver_line">On · battery low, checking every %1$d min</string>
+    <string name="mon_on_line">On · checking every %1$d min, offline too</string>
+    <string name="pending_line">%1$d event(s) waiting to send · %2$d rejected</string>
+    <string name="device_health_label">Device</string>
+    <string name="device_line">%1$s · registered at %2$s · app %3$s</string>
+    <string name="health_line">Battery %1$s%2$s · %3$s · %4$s</string>
+    <string name="health_saver"> (saver on)</string>
+    <string name="health_bg_ok">background allowed</string>
+    <string name="health_bg_restricted">background restricted · tap Allow running in background</string>
+    <string name="comm_label">Sent to operations</string>
+    <string name="comm_see_all">See all</string>
+    <string name="comm_none">Nothing sent yet. Use the buttons above to reach operations.</string>
+    <string name="call_monitoring_label">Call monitoring</string>
+    <string name="call_mon_active">ACTIVE · calls on this phone are reported to the control room</string>
+    <string name="call_mon_no_permission">NOT MONITORING · phone permission needed</string>
+    <string name="call_mon_no_numbers">PARTIAL · call log permission needed to see numbers</string>
+    <string name="recent_calls_label">Recent call events</string>
+    <string name="delivery_queued">Saved on the phone · waiting for internet</string>
+    <string name="delivery_sent">Delivered %1$s</string>
+    <string name="delivery_failed">Rejected by the server</string>
 </resources>

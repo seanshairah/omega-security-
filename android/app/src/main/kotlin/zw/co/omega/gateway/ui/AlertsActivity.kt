@@ -48,6 +48,13 @@ class AlertsActivity : AppCompatActivity() {
         b.handover.setOnClickListener { askMessage(AlertSender.Type.HANDOVER, R.string.alert_handover, R.string.alert_msg_hint_optional) }
         b.callOps.setOnClickListener { callOps() }
         renderHistory()
+        // Opened from a dashboard quick action: go straight to that action.
+        when (intent.getStringExtra(EXTRA_ACTION)) {
+            ACTION_EMERGENCY -> confirmEmergency()
+            ACTION_ASSISTANCE -> askMessage(AlertSender.Type.NEED_ASSISTANCE, R.string.alert_assistance, R.string.alert_msg_hint_optional)
+            ACTION_OK -> send(AlertSender.Type.SHIFT_OK, null)
+        }
+        intent.removeExtra(EXTRA_ACTION)
     }
 
     override fun onResume() { super.onResume(); handler.post(refresh) }
@@ -139,6 +146,15 @@ class AlertsActivity : AppCompatActivity() {
     }
 
     companion object {
+        const val EXTRA_ACTION = "action"
+        const val ACTION_EMERGENCY = "EMERGENCY"
+        const val ACTION_ASSISTANCE = "ASSISTANCE"
+        const val ACTION_OK = "OK"
+
+        fun open(context: android.content.Context, action: String?) {
+            context.startActivity(Intent(context, AlertsActivity::class.java).apply { action?.let { putExtra(EXTRA_ACTION, it) } })
+        }
+
         fun labelFor(type: String): String = when (type) { "EMERGENCY" -> "EMERGENCY"; "NEED_ASSISTANCE" -> "Need assistance"; "INCIDENT_REPORT" -> "Incident report"; "SECURITY_ALERT" -> "Security alert"; "RUNNING_LATE" -> "Running late"; "STATUS_UPDATE" -> "Status update"; "SHIFT_OK" -> "Shift going well"; "HANDOVER" -> "Handover"; else -> type.lowercase().replace('_', ' ') }
     }
 }
