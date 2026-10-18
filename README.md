@@ -42,6 +42,12 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 | [docs/SECURITY_AND_PRIVACY.md](docs/SECURITY_AND_PRIVACY.md) | access control, audit, data collected, wording policy |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | notes for developers beyond local setup |
 | [docs/TESTING.md](docs/TESTING.md) | suites, the 15 critical cases, what is still manual |
+| [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) | Phase 1 audit: baseline, confirmed defects and root causes, risks, stage results |
+| [docs/ANDROID_ARCHITECTURE.md](docs/ANDROID_ARCHITECTURE.md) | the app after Phase 1: monitoring coordinator, sync coordinator, app state, status rows |
+| [docs/AUTO_SYNC.md](docs/AUTO_SYNC.md) | the automatic sync engine: outbox statuses, priorities, triggers, retries, diagnostics |
+| [docs/GOOGLE_MAPS_CONFIGURATION.md](docs/GOOGLE_MAPS_CONFIGURATION.md) | the duty-site map picker, the Google Maps key, provenance and config versioning |
+| [docs/OFFLINE_MONITORING.md](docs/OFFLINE_MONITORING.md) | what keeps working without internet and how the record catches up |
+| [docs/DATABASE_CHANGES.md](docs/DATABASE_CHANGES.md) | every Phase 1 column, all additive |
 
 ## Guard devices, GPS and geofencing
 

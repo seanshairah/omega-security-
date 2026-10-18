@@ -28,6 +28,7 @@ Import the repository (framework Next.js; `vercel.json` pins the install and bui
 | `TIMEZONE` | `Africa/Harare` |
 | `NEXT_PUBLIC_APP_URL` | `https://<your-domain>` (shown on the gateway activation card; must match what the phones use) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | browser push (optional) |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | browser key for the duty-site map picker, restricted to the portal's domain (optional; OpenStreetMap is used without it). See GOOGLE_MAPS_CONFIGURATION.md |
 
 No new secret is required for the call gateway: devices authenticate with tokens issued at activation and stored hashed in the database.
 
