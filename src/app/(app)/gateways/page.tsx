@@ -13,7 +13,7 @@ import { AutoRefresh } from "@/components/auto-refresh";
 import { fmtShort, ago } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 import { LOCATION_STATE_META, freshness } from "@/lib/geofence";
-import { PermissionBadge } from "@/components/location/location-panel";
+import { PermissionBadge, syncLabel } from "@/components/location/location-panel";
 
 export const metadata = { title: "Gateway devices" };
 
@@ -33,9 +33,9 @@ export default async function GatewaysPage() {
         <Rows
           table={
             <Table>
-              <THead><tr><th>Device</th><th>Mode</th><th>Phone</th><th>Location</th><th>Status</th><th>Last seen</th><th>Battery</th><th>Permissions</th><th>Location state</th><th>Last call</th><th></th></tr></THead>
+              <THead><tr><th>Device</th><th>Mode</th><th>Phone</th><th>Location</th><th>Status</th><th>Last seen</th><th>Battery</th><th>Permissions</th><th>Location state</th><th>Sync</th><th>Last call</th><th></th></tr></THead>
               <TBody>
-                {rows.length === 0 && <Empty colSpan={11} title="No devices yet" body="Register one, install the Security Gateway app on an Android phone and enter the activation code." action={can.manageLocations(user) ? <LinkButton href="/gateways/new" variant="primary" size="sm">Register gateway</LinkButton> : undefined} />}
+                {rows.length === 0 && <Empty colSpan={12} title="No devices yet" body="Register one, install the Security Gateway app on an Android phone and enter the activation code." action={can.manageLocations(user) ? <LinkButton href="/gateways/new" variant="primary" size="sm">Register gateway</LinkButton> : undefined} />}
                 {rows.map(({ g, status, last }) => (
                   <tr key={g.id}>
                     <td><Link href={`/gateways/${g.id}`} className="font-medium text-ink hover:underline">{g.deviceName}</Link><span className="block text-[12px] text-ink-3">{g.activationStatus === "PENDING" ? "Awaiting activation" : g.deviceModel ?? "—"}{g.appVersion ? ` · v${g.appVersion}` : ""}</span></td>
@@ -47,6 +47,7 @@ export default async function GatewaysPage() {
                     <td className="tnum">{g.batteryLevel != null ? <span className={g.batteryLevel < 20 ? "text-critical" : ""}>{g.batteryLevel}%</span> : "—"}</td>
                     <td>{g.mode === "GUARD" ? <span className="flex flex-col gap-0.5 text-[12px]"><span>Location: <PermissionBadge v={g.locationPermission} /></span><span>Phone: <PermissionBadge v={g.callPermission} /></span></span> : <span className="text-ink-2">{g.networkType ?? "—"}</span>}</td>
                     <td>{g.mode === "GUARD" && g.lastLocationState ? <span><Status tone={freshness(g.lastLocationAt).label === "STALE" ? "muted" : LOCATION_STATE_META[g.lastLocationState].tone}>{LOCATION_STATE_META[g.lastLocationState].label}</Status><span className="block text-[12px] text-ink-3">{freshness(g.lastLocationAt).label.toLowerCase()} · {ago(g.lastLocationAt)}</span></span> : <span className="text-ink-3">—</span>}</td>
+                    <td>{syncLabel(g)}{g.lastEventSyncAt && <span className="block text-[11px] text-ink-3">events {ago(g.lastEventSyncAt)}{g.configVersionApplied ? ` · cfg v${g.configVersionApplied}` : ""}</span>}</td>
                     <td className="text-ink-2">{last ? <Link href={`/calls/${last.id}`} className="hover:underline">{last.guard ? `${last.guard.firstName} ${last.guard.lastName}` : "Unknown"} · {fmtShort(last.startedAt)}</Link> : "—"}</td>
                     <td className="text-right"><LinkButton href={`/gateways/${g.id}`} size="sm">View</LinkButton></td>
                   </tr>

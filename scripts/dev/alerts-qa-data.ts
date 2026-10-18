@@ -46,6 +46,10 @@ async function main() {
   const shift = await db.shift.create({ data: { guardId: guard.id, locationId: site.id, supervisorId: admin.id, startAt: subMinutes(now, 90), endAt: addHours(now, 10), durationMinutes: 720, status: "ON_DUTY", attendance: { create: { status: "PRESENT", arrivalConfirmedAt: subMinutes(now, 85) } } } });
   const loc = site.latitude != null ? { latitude: site.latitude + 0.0002, longitude: site.longitude!, accuracyM: 11, state: "INSIDE", ageSeconds: 30 } : undefined;
   const ev = (eventType: string, message: string | undefined, minutesAgo: number) => ({ eventId: `qa-al-${randomUUID()}`, eventType, timestamp: subMinutes(now, minutesAgo).toISOString(), shiftId: shift.id, message, location: loc });
+  if (site.latitude != null) await processGatewayEvents(device, [
+    { eventId: `qa-al-loc-${randomUUID()}`, eventType: "SHIFT_STARTED", timestamp: subMinutes(now, 80).toISOString(), shiftId: shift.id, latitude: site.latitude + 0.0002, longitude: site.longitude!, accuracyM: 14, locationState: "INSIDE", provider: "gps" },
+    { eventId: `qa-al-loc-${randomUUID()}`, eventType: "LOCATION_CHECK", timestamp: subMinutes(now, 6).toISOString(), shiftId: shift.id, latitude: site.latitude + 0.0003, longitude: site.longitude! + 0.0001, accuracyM: 11, locationState: "INSIDE", provider: "gps" },
+  ], { ip: "127.0.0.1" });
   await processGatewayEvents(device, [ev("SHIFT_OK", undefined, 70), ev("STATUS_UPDATE", "Patrol round 2 complete, all gates locked", 40), ev("RUNNING_LATE", undefined, 35), ev("SECURITY_ALERT", "Unknown vehicle parked at the back fence for 20 minutes", 12), ev("EMERGENCY", "Two men forcing the side gate", 3)], { ip: "127.0.0.1" });
   const late = await db.guardAlert.findFirstOrThrow({ where: { guardId: guard.id, type: "RUNNING_LATE" } });
   await acknowledgeAlert(late.id, { userId: admin.id, name: admin.name }, "Noted, relief informed");
