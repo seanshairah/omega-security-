@@ -1,35 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-            <Button android:id="@+id/back" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/back" />
-            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/alerts_title" android:textColor="@color/ink" android:textSize="20sp" android:textStyle="bold" />
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/surface2" android:clipToPadding="false"
+    android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="8dp" android:paddingBottom="24dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp">
+            <ImageButton android:id="@+id/back" android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_back" app:tint="@color/ink" android:contentDescription="@string/back" />
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="4dp">
+                <TextView style="@style/Headline" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/alerts_title" />
+                <TextView style="@style/Body" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/alerts_intro" android:textSize="13sp" />
+            </LinearLayout>
         </LinearLayout>
 
-        <Button android:id="@+id/emergency" android:layout_width="match_parent" android:layout_height="72dp" android:layout_marginTop="12dp" android:backgroundTint="@color/critical" android:text="@string/emergency_button" android:textColor="@color/surface" android:textSize="20sp" android:textStyle="bold" android:letterSpacing="0.06" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="@string/emergency_hint" android:textColor="@color/ink2" android:textSize="12.5sp" />
+        <Button android:id="@+id/emergency" style="@style/Button.Emergency" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="@string/emergency_button" app:icon="@drawable/ic_warning" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:paddingStart="4dp" android:paddingEnd="4dp" android:text="@string/emergency_long_hint" android:textColor="@color/ink2" android:textSize="13sp" />
+        <TextView android:id="@+id/feedback" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_banner_green" android:padding="14dp" android:textColor="@color/ink" android:textSize="14sp" android:visibility="gone" />
 
-        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/alerts_quick_label" />
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="4dp">
-            <Button android:id="@+id/assistance" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp" android:layout_marginEnd="6dp" android:text="@string/alert_assistance" android:textSize="13sp" />
-            <Button android:id="@+id/incident" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp" android:layout_marginStart="6dp" android:text="@string/alert_incident" android:textSize="13sp" />
-        </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
-            <Button android:id="@+id/security" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp" android:layout_marginEnd="6dp" android:text="@string/alert_security" android:textSize="13sp" />
-            <Button android:id="@+id/late" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp" android:layout_marginStart="6dp" android:text="@string/alert_late" android:textSize="13sp" />
-        </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
-            <Button android:id="@+id/ok" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp" android:layout_marginEnd="6dp" android:text="@string/alert_ok" android:textSize="13sp" />
-            <Button android:id="@+id/status" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp" android:layout_marginStart="6dp" android:text="@string/alert_status" android:textSize="13sp" />
-        </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
-            <Button android:id="@+id/handover" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp" android:layout_marginEnd="6dp" android:text="@string/alert_handover" android:textSize="13sp" />
-            <Button android:id="@+id/callOps" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="56dp" android:layout_marginStart="6dp" android:text="@string/alert_call_ops" android:textSize="13sp" />
-        </LinearLayout>
-        <TextView android:id="@+id/feedback" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/card" android:padding="12dp" android:textColor="@color/ink" android:textSize="13.5sp" android:visibility="gone" />
+        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:paddingStart="4dp" android:text="@string/alerts_quick_label" />
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                <LinearLayout android:id="@+id/assistance" style="@style/ActionRow"><FrameLayout style="@style/ActionIconWrap" android:background="@drawable/circle_amber_soft"><ImageView style="@style/ActionIcon" android:src="@drawable/ic_people" app:tint="@color/warn_strong" /></FrameLayout><TextView style="@style/ActionText" android:text="@string/alert_assistance" /><ImageView style="@style/ActionChevron" /></LinearLayout>
+                <View style="@style/RowDivider" />
+                <LinearLayout android:id="@+id/incident" style="@style/ActionRow"><FrameLayout style="@style/ActionIconWrap" android:background="@drawable/circle_red_soft"><ImageView style="@style/ActionIcon" android:src="@drawable/ic_alert" app:tint="@color/critical" /></FrameLayout><TextView style="@style/ActionText" android:text="@string/alert_incident" /><ImageView style="@style/ActionChevron" /></LinearLayout>
+                <View style="@style/RowDivider" />
+                <LinearLayout android:id="@+id/security" style="@style/ActionRow"><FrameLayout style="@style/ActionIconWrap" android:background="@drawable/circle_red_soft"><ImageView style="@style/ActionIcon" android:src="@drawable/ic_shield" app:tint="@color/critical" /></FrameLayout><TextView style="@style/ActionText" android:text="@string/alert_security" /><ImageView style="@style/ActionChevron" /></LinearLayout>
+                <View style="@style/RowDivider" />
+                <LinearLayout android:id="@+id/late" style="@style/ActionRow"><FrameLayout style="@style/ActionIconWrap" android:background="@drawable/circle_amber_soft"><ImageView style="@style/ActionIcon" android:src="@drawable/ic_clock" app:tint="@color/warn_strong" /></FrameLayout><TextView style="@style/ActionText" android:text="@string/alert_late" /><ImageView style="@style/ActionChevron" /></LinearLayout>
+                <View style="@style/RowDivider" />
+                <LinearLayout android:id="@+id/ok" style="@style/ActionRow"><FrameLayout style="@style/ActionIconWrap" android:background="@drawable/circle_green_soft"><ImageView style="@style/ActionIcon" android:src="@drawable/ic_thumb_up" app:tint="@color/accent" /></FrameLayout><TextView style="@style/ActionText" android:text="@string/alert_ok" /><ImageView style="@style/ActionChevron" /></LinearLayout>
+                <View style="@style/RowDivider" />
+                <LinearLayout android:id="@+id/status" style="@style/ActionRow"><FrameLayout style="@style/ActionIconWrap" android:background="@drawable/circle_blue_soft"><ImageView style="@style/ActionIcon" android:src="@drawable/ic_doc" app:tint="@color/info" /></FrameLayout><TextView style="@style/ActionText" android:text="@string/alert_status" /><ImageView style="@style/ActionChevron" /></LinearLayout>
+                <View style="@style/RowDivider" />
+                <LinearLayout android:id="@+id/handover" style="@style/ActionRow"><FrameLayout style="@style/ActionIconWrap" android:background="@drawable/circle_blue_soft"><ImageView style="@style/ActionIcon" android:src="@drawable/ic_sync" app:tint="@color/info" /></FrameLayout><TextView style="@style/ActionText" android:text="@string/alert_handover" /><ImageView style="@style/ActionChevron" /></LinearLayout>
+                <View style="@style/RowDivider" />
+                <LinearLayout android:id="@+id/callOps" style="@style/ActionRow"><FrameLayout style="@style/ActionIconWrap" android:background="@drawable/circle_green"><ImageView style="@style/ActionIcon" android:src="@drawable/ic_phone" app:tint="@color/surface" /></FrameLayout><TextView style="@style/ActionText" android:text="@string/alert_call_ops" /><ImageView style="@style/ActionChevron" /></LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/alert_history_label" />
-        <LinearLayout android:id="@+id/history" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp" />
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/alert_privacy" android:textColor="@color/ink3" android:textSize="12sp" />
+        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="18dp" android:paddingStart="4dp" android:text="@string/alert_history_label" />
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
+            <LinearLayout android:id="@+id/history" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="18dp" android:paddingEnd="18dp" android:paddingTop="10dp" android:paddingBottom="14dp" />
+        </com.google.android.material.card.MaterialCardView>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:paddingStart="4dp" android:text="@string/alert_privacy" android:textColor="@color/ink3" android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>
