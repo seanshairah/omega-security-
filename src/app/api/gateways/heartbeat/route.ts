@@ -16,7 +16,8 @@ export async function POST(req: Request) {
     queuedEvents: typeof b.queuedEvents === "number" ? b.queuedEvents : undefined, failedEvents: typeof b.failedEvents === "number" ? b.failedEvents : undefined,
     oldestPendingSeconds: "oldestPendingSeconds" in b ? (typeof b.oldestPendingSeconds === "number" ? b.oldestPendingSeconds : null) : undefined,
     lastEventSyncAt: "lastEventSyncAt" in b ? s(b.lastEventSyncAt) ?? null : undefined, lastSyncAttemptAt: "lastSyncAttemptAt" in b ? s(b.lastSyncAttemptAt) ?? null : undefined,
-    lastSyncError: "lastSyncError" in b ? s(b.lastSyncError) ?? null : undefined, lastSyncTrigger: "lastSyncTrigger" in b ? s(b.lastSyncTrigger) ?? null : undefined }, clientIp(req));
+    lastSyncError: "lastSyncError" in b ? s(b.lastSyncError) ?? null : undefined, lastSyncTrigger: "lastSyncTrigger" in b ? s(b.lastSyncTrigger) ?? null : undefined,
+    secureStorage: typeof b.secureStorage === "boolean" ? b.secureStorage : undefined, buildType: s(b.buildType) }, clientIp(req));
   // Guard phones compare this with the version they applied and re-download the shift config when it differs.
   const configVersion = device.mode === "GUARD" ? (await guardDeviceConfig(device)).configVersion : null;
   // Acknowledgements for the alerts this guard sent recently travel back on the heartbeat.

@@ -44,6 +44,15 @@ All changes are additive: new enum, new nullable columns or columns with default
 | (enum) | `CheckInType` | + `SECURITY_ALERT`, `RUNNING_LATE`, `STATUS_UPDATE`, `GUARD_OK`, `ALERT_ACKNOWLEDGED` | shift timeline lines |
 | `GuardAlert` | whole table | see `prisma/schema.prisma` | one row per alert: guard, device, shift, site, type, status, `requiresAck`, message, last-known position with accuracy, state and age, `occurredAt` (pressed) vs `receivedAt`, `syncStatus`, acknowledgement (who, when, note), resolution, linked incident |
 
+## `20261019120000_device_build_and_storage` (Phase 3)
+
+| Table | Column | Type | Purpose |
+|---|---|---|---|
+| `GatewayDevice` | `secureStorage` | boolean, nullable | false when the phone could not keep its token in Keystore-backed storage |
+| `GatewayDevice` | `buildType` | text, nullable | `debug` or `release` as reported by the app; debug builds are flagged on the device page |
+
+Verify any database with `npm run db:migration-status` (read-only; non-zero exit when something is pending or unknown).
+
 ## On-device SQLite (`gateway_queue.db`, version 3)
 
 - `outbox`: adds `status`, `priority`, `eventType`, `nextAttemptAt`, `sendingSince`, `lastAttemptAt` (defaults keep v1 rows valid).

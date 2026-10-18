@@ -69,7 +69,7 @@ export async function regenerateActivationCode(id: string, actor: { userId: stri
 
 export type DeviceInfo = { appVersion?: string; androidVersion?: string; deviceModel?: string; batteryLevel?: number; networkType?: string; locationPermission?: string; callPermission?: string; monitoringState?: string; mockLocation?: boolean; lastLocation?: { latitude: number; longitude: number; accuracyM?: number; at?: string; state?: string }; configVersion?: string;
   // Stage 1/3 diagnostics (all optional; older app versions do not send them)
-  shiftState?: string; gpsState?: string; gpsReason?: string | null; syncState?: string; queuedEvents?: number; failedEvents?: number; oldestPendingSeconds?: number | null; lastEventSyncAt?: string | null; lastSyncAttemptAt?: string | null; lastSyncError?: string | null; lastSyncTrigger?: string | null };
+  shiftState?: string; gpsState?: string; gpsReason?: string | null; syncState?: string; queuedEvents?: number; failedEvents?: number; oldestPendingSeconds?: number | null; lastEventSyncAt?: string | null; lastSyncAttemptAt?: string | null; lastSyncError?: string | null; lastSyncTrigger?: string | null; secureStorage?: boolean; buildType?: string };
 
 /** Exchange an activation code for a device token. The token is returned exactly once. */
 export async function activateGateway(code: string, info: DeviceInfo, ip: string | null) {
@@ -127,6 +127,8 @@ function syncDiagnosticsData(info: DeviceInfo) {
   if (info.lastSyncAttemptAt !== undefined) out.lastSyncAttemptAt = date(info.lastSyncAttemptAt) ?? null;
   if (info.lastSyncError !== undefined) out.lastSyncError = str(info.lastSyncError, 200) ?? null;
   if (info.lastSyncTrigger !== undefined) out.lastSyncTrigger = str(info.lastSyncTrigger, 30) ?? null;
+  if (typeof info.secureStorage === "boolean") out.secureStorage = info.secureStorage;
+  if (info.buildType !== undefined) out.buildType = str(info.buildType, 10) ?? null;
   return out as Prisma.GatewayDeviceUncheckedUpdateInput;
 }
 

@@ -11,13 +11,18 @@ import androidx.security.crypto.MasterKey
  */
 class Prefs(context: Context) {
     private val app = context.applicationContext
+    private var secureStorageFailed = false
     private val secure: SharedPreferences = try {
         val key = MasterKey.Builder(app).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
         EncryptedSharedPreferences.create(app, "gateway_secure", key, EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV, EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM)
     } catch (e: Exception) {
         // Keystore unavailable (rare, damaged key). Fall back to plain prefs rather than crash; token is re-issued on re-activation.
+        // The fallback is reported to the server on every heartbeat (`secureStorage: false`) so the portal can flag the phone.
+        secureStorageFailed = true
         app.getSharedPreferences("gateway_secure_fallback", Context.MODE_PRIVATE)
     }
+    /** False when the token is NOT in the Android Keystore-backed store (damaged keystore). Shown on the device page. */
+    val secureStorage: Boolean get() = !secureStorageFailed
     private val plain: SharedPreferences = app.getSharedPreferences("gateway", Context.MODE_PRIVATE)
 
     var serverUrl: String

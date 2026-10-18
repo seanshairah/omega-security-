@@ -101,6 +101,7 @@ class SyncEngine(private val context: Context) {
                 .put("lastSyncError", prefs.lastSyncError ?: JSONObject.NULL).put("lastSyncTrigger", prefs.lastSyncTrigger ?: JSONObject.NULL)
                 .put("oldestPendingSeconds", queue.oldestPendingMs()?.let { it / 1000 } ?: JSONObject.NULL)
                 .put("configVersion", ShiftConfig.load(context)?.configVersion ?: JSONObject.NULL)
+                .put("secureStorage", prefs.secureStorage).put("buildType", if (zw.co.omega.gateway.BuildConfig.DEBUG) "debug" else "release")
             if (prefs.isGuardMode) LocationMonitor(context).lastFixJson()?.let { info.put("lastLocation", it) }
             val r = api.heartbeat(info)
             prefs.mode = r.mode

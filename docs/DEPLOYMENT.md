@@ -5,7 +5,7 @@ Production runs on Vercel (Next.js) with a Neon PostgreSQL database and Sendai f
 ## 1. Database
 
 1. Create a Neon project (or any PostgreSQL 16). Copy the pooled connection string with `sslmode=require`.
-2. Apply migrations from your machine: `DATABASE_URL='…' npx prisma migrate deploy` (if port 5432 is blocked on your network: `DATABASE_URL='…' npx tsx scripts/neon-migrate.ts`).
+2. Apply migrations from your machine: `DATABASE_URL='…' npx prisma migrate deploy` (if port 5432 is blocked on your network: `DATABASE_URL='…' npx tsx scripts/neon-migrate.ts`). Confirm with `DATABASE_URL='…' npm run db:migration-status`.
 3. Create the super admin and defaults: `DATABASE_URL='…' ADMIN_PASSWORD='…' npm run db:seed`. Re-running it after an upgrade adds any new settings and templates (for example the `gateway.*` settings) without touching data.
 
 Every upgrade that ships a new folder under `prisma/migrations` needs step 2 again. Migrations are additive; nothing drops production data.

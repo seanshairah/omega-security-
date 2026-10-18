@@ -52,6 +52,13 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 | [docs/GUARD_COMMUNICATION.md](docs/GUARD_COMMUNICATION.md) | status messages (assistance, incident, security, late, update, going well, handover) and how operations sees them |
 | [docs/ANDROID_UI.md](docs/ANDROID_UI.md) | the redesigned guard and operations dashboards, card by card |
 | [docs/ANDROID_PERMISSIONS.md](docs/ANDROID_PERMISSIONS.md) | permissions after Phase 2 (nothing new is requested for alerts) |
+| [docs/ADMIN_DASHBOARD.md](docs/ADMIN_DASHBOARD.md) | every operations surface and where it lives: live map, exceptions, alerts, devices, timelines |
+| [docs/INTEGRATION_VERIFICATION.md](docs/INTEGRATION_VERIFICATION.md) | the Stage 8 matrix: SMS independence, feature phones, APK/SMS compatibility, replay of every event type |
+| [docs/SECURITY_HARDENING.md](docs/SECURITY_HARDENING.md) | transport, credentials, authorisation, validation, build separation, logging policy |
+| [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) | what to run and check before and after a release |
+| [docs/ROLLBACK.md](docs/ROLLBACK.md) | rolling back the portal, the database and the app |
+| [docs/DEVICE_TEST_PLAN.md](docs/DEVICE_TEST_PLAN.md) | the hardware runs that close the unverified items |
+| [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) | the honest readiness assessment after Phase 3 |
 
 ## Guard devices, GPS and geofencing
 
@@ -63,6 +70,8 @@ An Android phone with a SIM runs the **Security Gateway** app (`android/`). Guar
 
 ```bash
 npm run android:build     # artifacts/android/security-gateway-{debug,release}.apk
+npm run test:e2e          # the four e2e suites against a local database (needs npm run dev)
+npm run db:migration-status  # compare prisma/migrations with the configured database
 ```
 
 ## Stack

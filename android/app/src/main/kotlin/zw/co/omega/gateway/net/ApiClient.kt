@@ -32,8 +32,16 @@ class ApiClient(private val baseUrl: String, private val token: String? = null) 
     /** GET /api/gateways/config — guard, shift, site, policy. */
     fun config(): JSONObject = get("/api/gateways/config")
 
+    /** HTTPS only. A plain-http localhost is allowed in debug builds for emulator testing; release builds refuse every cleartext URL. */
+    private fun requireHttps(url: URL) {
+        if (url.protocol == "https") return
+        if (zw.co.omega.gateway.BuildConfig.DEBUG && url.host in setOf("localhost", "127.0.0.1", "10.0.2.2")) return
+        throw ApiException(0, "Server URL must use https://")
+    }
+
     private fun get(path: String): JSONObject {
         val url = URL(baseUrl.trimEnd('/') + path)
+        requireHttps(url)
         val conn = url.openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "GET"; conn.connectTimeout = 15_000; conn.readTimeout = 20_000
@@ -57,7 +65,7 @@ class ApiClient(private val baseUrl: String, private val token: String? = null) 
 
     private fun post(path: String, body: JSONObject, auth: Boolean = true): JSONObject {
         val url = URL(baseUrl.trimEnd('/') + path)
-        if (url.protocol != "https" && url.host !in setOf("localhost", "127.0.0.1", "10.0.2.2")) throw ApiException(0, "Server URL must use https://")
+        requireHttps(url)
         val conn = url.openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "POST"
