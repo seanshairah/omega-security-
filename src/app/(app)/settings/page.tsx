@@ -33,7 +33,7 @@ export default async function SettingsPage() {
   const usable = sendai?.senderIds.find((s) => s.address === senderId && s.status === "active" && s.verification === "verified");
 
   return (
-    <div className="max-w-4xl space-y-4">
+    <div className="space-y-4">
       <PageHeader title="Settings" description="Automation timings and SMS gateway. Timings apply to every shift from the next tick." />
       <Card>
         <CardHeader title="SMS gateway" description="Set through environment variables so secrets never live in the database." action={<Status tone={provider === "simulated" ? "neutral" : sendai?.ok && usable ? "ok" : sendai?.ok ? "warn" : "critical"}>{provider === "simulated" ? "Simulated" : sendai?.ok ? (usable ? "Connected" : "Connected · not ready to send") : "Not connected"}</Status>} />

@@ -10,5 +10,5 @@ export default async function NewLocationPage({ searchParams }: { searchParams: 
   await requireUser("ADMIN");
   const { clientId } = await searchParams;
   const [clients, supervisors] = await Promise.all([db.client.findMany({ where: { active: true }, orderBy: { name: "asc" } }), db.user.findMany({ where: { active: true }, orderBy: { name: "asc" } })]);
-  return <div className="max-w-4xl"><PageHeader title="Add location" /><Card><CardBody><LocationForm action={createLocation} clients={clients} supervisors={supervisors} submitLabel="Add location" defaultClientId={clientId} /></CardBody></Card></div>;
+  return <div className="w-full"><PageHeader title="Add location" /><Card><CardBody><LocationForm action={createLocation} clients={clients} supervisors={supervisors} submitLabel="Add location" defaultClientId={clientId} /></CardBody></Card></div>;
 }

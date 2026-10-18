@@ -15,7 +15,7 @@ export default async function EditGuardPage({ params }: { params: Promise<{ id: 
   if (!guard) notFound();
   const action = updateGuard.bind(null, id);
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <PageHeader title={`Edit ${guard.firstName} ${guard.lastName}`} description={guard.guardNo} />
       <Card><CardBody><GuardForm action={action} guard={guard} locations={locations} supervisors={supervisors} submitLabel="Save changes" /></CardBody></Card>
     </div>

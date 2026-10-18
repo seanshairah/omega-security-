@@ -20,7 +20,7 @@ export default async function NewShiftPage({ searchParams }: { searchParams: Pro
     db.user.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
   ]);
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <PageHeader title="New shift" description="Assign a guard to a site for one shift. Overnight shifts end the next day automatically." />
       <Card><CardBody>
         <ActionForm action={createShift} submitLabel="Create shift">

@@ -17,7 +17,7 @@ export default async function NotificationsPage() {
   const rows = await db.notification.findMany({ orderBy: { createdAt: "desc" }, take: 100 });
   const unread = rows.filter((n) => !n.readAt).length;
   return (
-    <div className="max-w-3xl">
+    <div className="w-full">
       <PageHeader title="Notifications" description={`${unread} unread. Warnings and emergencies are also pushed to devices that have enabled push.`} actions={<><PushToggle publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? process.env.VAPID_PUBLIC_KEY ?? null} compact />{unread > 0 && <form action={async () => { "use server"; await markNotificationsRead("all"); }}><Button type="submit">Mark all read</Button></form>}</>} />
       <Card>
         <ul className="divide-y divide-line">

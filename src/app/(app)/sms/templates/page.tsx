@@ -17,7 +17,7 @@ export default async function TemplatesPage() {
   const map = new Map(rows.map((r) => [r.key, r]));
   const editable = can.configureSystem(user);
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <PageHeader title="Message templates" description="What guards receive at each step. Variables in double braces are filled in from the shift." />
       <div className="mb-4 rounded-[12px] border border-line bg-surface px-4 py-3 text-[13px] text-ink-2">Variables: {["guard_name", "location", "start_time", "end_time", "supervisor_name", "date", "company", "other_guard"].map((v) => <code key={v} className="mr-2 rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[12px] text-ink">{`{{${v}}}`}</code>)}</div>
       <div className="min-w-0 space-y-4">
