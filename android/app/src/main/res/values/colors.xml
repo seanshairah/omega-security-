@@ -3,11 +3,20 @@
     <color name="ink2">#5E665C</color>
     <color name="ink3">#8C948A</color>
     <color name="surface">#FFFFFF</color>
-    <color name="surface2">#F3F4F1</color>
+    <color name="surface2">#F4F5F2</color>
+    <color name="surface3">#F0F2EE</color>
     <color name="line">#E3E6DF</color>
     <color name="accent">#2E7D32</color>
     <color name="accent_strong">#1B5E20</color>
-    <color name="critical">#C62828</color>
-    <color name="warn">#B26A00</color>
+    <color name="accent_soft">#E6F2E8</color>
+    <color name="critical">#D32F2F</color>
+    <color name="critical_strong">#B71C1C</color>
+    <color name="critical_soft">#FDECEC</color>
+    <color name="warn">#F2A516</color>
+    <color name="warn_strong">#B26A00</color>
+    <color name="warn_soft">#FFF4DB</color>
+    <color name="info">#2F5BB7</color>
+    <color name="info_soft">#E8EEF9</color>
     <color name="ok">#2E7D32</color>
+    <color name="shadow">#1A000000</color>
 </resources>

@@ -39,3 +39,20 @@ When all rows pass, replace the UNVERIFIED entries in `docs/IMPLEMENTATION_AUDIT
 | L7 | Press the button twice | Second press reuses the first request (no second GPS run) |
 | L8 | Site form → **Request guard phone position** → confirm | Candidate drawn with accuracy circle; coordinates only change after confirmation; saved source "Guard phone GPS"; config version increments; the phone's next heartbeat reports the new version |
 | L9 | Mock-location app enabled on the phone | Result flagged "Mock location reported"; cannot be used as a site candidate; integrity warning on the device |
+
+## Dashboard redesign (app v1.6.0)
+
+| # | Step | Expected |
+|---|---|---|
+| U1 | Open the app as a guard | Header "SECURITY GATEWAY · Guard phone", DIAGNOSTICS pill; connection card with a green dot, ONLINE, "Guard phone · <name>", network icon and CONNECTED; no amber banner |
+| U2 | Switch off data and Wi‑Fi | Dot turns amber, OFFLINE, NO INTERNET, amber banner "NO INTERNET · n event(s) saved on the phone"; sync card icon turns amber with "NO INTERNET" |
+| U3 | Tap EMERGENCY, cancel | Nothing is sent (history unchanged) |
+| U4 | Tap EMERGENCY, confirm | Red feedback banner under the button ("EMERGENCY SENT with your last position…" or "SAVED ON THE PHONE…"), call-operations offer, row appears in "Sent to operations" with its delivery state, control room receives a CRITICAL alert; acknowledgement from the portal appears by name within one heartbeat |
+| U5 | Tap EMERGENCY twice quickly | Button is locked for 2.5 s; only one alert |
+| U6 | Need Assistance → type a message → Send | Green feedback banner; WARNING alert in the control room |
+| U7 | Shift Going Well | Sent without a dialog; INFO check-in in the portal |
+| U8 | More… | Alerts screen with the icon rows; every row works as before |
+| U9 | GPS card on shift, indoors | Amber "!" icon, "Location not verified", the poor-accuracy sentence, stat strip with LAST CHECK time + distance (±m), ACCURACY ±m with "Limit n m", STATUS "Not verified" + permission; CHECK LOCATION NOW shows "Checking location…" while a check runs |
+| U10 | GPS card on shift, outdoors inside the fence | Green tick icon, "Inside the site", STATUS "Verified" in green |
+| U11 | Operations-gateway phone | Call-monitoring card with phone icon (green/amber/red by permission), sync and device cards; no guard cards |
+| U12 | 320 dp-wide phone (or font size Largest) | No clipped text in the three quick-action tiles or the stat strip; everything scrolls |

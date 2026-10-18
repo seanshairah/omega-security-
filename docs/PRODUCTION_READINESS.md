@@ -1,6 +1,6 @@
 # Production Readiness Assessment (after Phase 3)
 
-Date: 2026-10-19 · Portal on `main` · App v1.5.0 (versionCode 6)
+Date: 2026-10-19 · Portal on `main` · App v1.6.0 (versionCode 7)
 
 ## Verdict
 
@@ -12,7 +12,8 @@ Date: 2026-10-19 · Portal on `main` · App v1.5.0 (versionCode 6)
 |---|---|---|
 | Typecheck, lint, production build | clean | verified |
 | Web unit tests | 40/40 | verified |
-| Android JVM unit tests | 48/48 | verified |
+| Android JVM unit tests | 51/51 | verified |
+| Redesigned guard dashboard (U1–U12 in DEVICE_TEST_PLAN) | compiles, every control mapped to its handler (`ANDROID_UI_AUDIT.md`) | **unverified on device** |
 | Gateway end-to-end (calls, activation, revocation, SMS regression) | 30/30 | verified |
 | Location end-to-end (section-50 scenario, 15 critical cases, feature phone, mock) | 38/38 | verified |
 | Alerts end-to-end (emergency with/without fix, all types, replay, acknowledgement, SMS EMERGENCY) | 20/20 | verified |

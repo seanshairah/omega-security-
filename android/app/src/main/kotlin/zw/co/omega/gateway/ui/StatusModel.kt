@@ -66,6 +66,33 @@ fun syncView(f: StatusFacts): SyncView = when {
     else -> SyncView.WAITING
 }
 
+/** Colour family of a card icon. Never red for "unknown": unknown is amber. */
+enum class Tone { OK, WARN, CRITICAL, NEUTRAL, INFO }
+
+fun gpsTone(v: GpsView): Tone = when (v) {
+    GpsView.INSIDE -> Tone.OK
+    GpsView.OUTSIDE -> Tone.CRITICAL
+    GpsView.OUTSIDE_VERIFYING, GpsView.UNKNOWN -> Tone.WARN
+    GpsView.CHECKING -> Tone.INFO
+    GpsView.OFF -> Tone.NEUTRAL
+}
+
+fun syncTone(v: SyncView): Tone = when (v) {
+    SyncView.SYNCED -> Tone.OK
+    SyncView.SENDING -> Tone.INFO
+    SyncView.QUEUED, SyncView.NO_INTERNET, SyncView.RETRY_PENDING, SyncView.SYNCED_WITH_FAILURES, SyncView.WAITING -> Tone.WARN
+    SyncView.REVOKED -> Tone.CRITICAL
+}
+
+/** The one-word verdict in the GPS card's STATUS cell. */
+fun gpsStatusWord(v: GpsView): String = when (v) {
+    GpsView.INSIDE -> "Verified"
+    GpsView.OUTSIDE -> "Outside"
+    GpsView.OFF -> "Off"
+    GpsView.CHECKING -> "Checking"
+    else -> "Not verified"
+}
+
 /** "±121.4 m": one decimal so a 100.4 m fix is never shown as the 100 m limit it just failed. */
 fun formatAccuracy(accuracyM: Float): String = "±" + String.format(java.util.Locale.US, "%.1f", accuracyM) + " m"
 

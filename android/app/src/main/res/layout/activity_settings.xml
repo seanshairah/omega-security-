@@ -1,35 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-            <Button android:id="@+id/back" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/back" />
-            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/settings_title" android:textColor="@color/ink" android:textSize="20sp" android:textStyle="bold" />
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent" android:background="@color/surface2" android:clipToPadding="false"
+    android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="8dp" android:paddingBottom="24dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="4dp">
+            <ImageButton android:id="@+id/back" android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_back" app:tint="@color/ink" android:contentDescription="@string/back" />
+            <TextView style="@style/Headline" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:text="@string/settings_title" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/card" android:orientation="vertical" android:padding="18dp">
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/server_url_label" />
-            <TextView android:id="@+id/serverUrl" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/device_id_label" />
-            <TextView android:id="@+id/deviceId" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13sp" android:fontFamily="monospace" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/connection_label" />
-            <TextView android:id="@+id/gatewayStatus" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/heartbeat_label" />
-            <TextView android:id="@+id/heartbeat" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/queue_label" />
-            <TextView android:id="@+id/queue" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_error_label" />
-            <TextView android:id="@+id/lastError" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13sp" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/version_label" />
-            <TextView android:id="@+id/appVersion" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" />
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/android_label" />
-            <TextView android:id="@+id/android" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-        </LinearLayout>
-        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/sync_diag_label" />
-        <TextView android:id="@+id/syncSummary" style="@style/Value" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" />
-        <Button android:id="@+id/syncNow" style="?attr/borderlessButtonStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/sync_now" />
-        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sync_history_label" />
-        <TextView android:id="@+id/syncHistory" style="@style/Value" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="11sp" android:fontFamily="monospace" />
-        <Button android:id="@+id/test" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/test_connection" />
-        <TextView android:id="@+id/testResult" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/ink2" android:textSize="13sp" />
-        <Button android:id="@+id/deactivate" style="?attr/borderlessButtonStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="24dp" android:text="@string/deactivate" android:textColor="@color/critical" />
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/connection_label" />
+                <TextView android:id="@+id/gatewayStatus" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textSize="20sp" />
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/server_url_label" />
+                <TextView android:id="@+id/serverUrl" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/device_id_label" />
+                <TextView android:id="@+id/deviceId" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13sp" android:fontFamily="monospace" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false">
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/heartbeat_label" />
+                        <TextView android:id="@+id/heartbeat" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/queue_label" />
+                        <TextView android:id="@+id/queue" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" />
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_error_label" />
+                <TextView android:id="@+id/lastError" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="13.5sp" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:baselineAligned="false">
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/version_label" />
+                        <TextView android:id="@+id/appVersion" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" />
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/android_label" />
+                        <TextView android:id="@+id/android" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
+                <Button android:id="@+id/test" style="@style/Button.Outlined" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/test_connection" />
+                <TextView android:id="@+id/testResult" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/ink2" android:textSize="13.5sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/sync_diag_label" />
+                <TextView android:id="@+id/syncSummary" style="@style/Value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textSize="13.5sp" android:lineSpacingExtra="3dp" />
+                <Button android:id="@+id/syncNow" style="@style/Button.Outlined" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/sync_now" app:icon="@drawable/ic_sync" app:iconGravity="textStart" app:iconTint="@color/accent_strong" />
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sync_history_label" />
+                <TextView android:id="@+id/syncHistory" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:background="@drawable/bg_stat" android:padding="12dp" android:textColor="@color/ink2" android:textSize="11sp" android:fontFamily="monospace" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <Button android:id="@+id/deactivate" style="@style/Button.Text" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:minHeight="52dp" android:text="@string/deactivate" android:textColor="@color/critical" />
     </LinearLayout>
 </ScrollView>

@@ -4,21 +4,165 @@
         <item name="colorPrimaryVariant">@color/accent_strong</item>
         <item name="colorOnPrimary">@color/surface</item>
         <item name="colorSecondary">@color/accent</item>
+        <item name="colorError">@color/critical</item>
         <item name="android:windowBackground">@color/surface2</item>
         <item name="android:statusBarColor">@color/surface2</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/surface2</item>
         <item name="android:textColorPrimary">@color/ink</item>
+        <item name="materialCardViewStyle">@style/Card</item>
+        <item name="materialButtonStyle">@style/Button.Filled</item>
+        <item name="materialAlertDialogTheme">@style/Dialog</item>
+        <item name="alertDialogTheme">@style/Dialog</item>
     </style>
+
+    <style name="Dialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="colorPrimary">@color/accent_strong</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Button.Text</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Button.Text</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Button.Text</item>
+    </style>
+
+    <!-- Cards: white, 16 dp corners, a soft shadow, no outline. -->
+    <style name="Card" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/surface</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="android:layout_marginTop">12dp</item>
+    </style>
+
+    <!-- Buttons: tall, rounded, bold, never smaller than a thumb. -->
+    <style name="Button.Filled" parent="Widget.MaterialComponents.Button">
+        <item name="cornerRadius">14dp</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="backgroundTint">@color/accent</item>
+        <item name="android:textColor">@color/surface</item>
+        <item name="elevation">0dp</item>
+    </style>
+    <style name="Button.Outlined" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="cornerRadius">14dp</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="strokeColor">@color/accent</item>
+        <item name="strokeWidth">1.5dp</item>
+        <item name="android:textColor">@color/accent_strong</item>
+        <item name="rippleColor">@color/accent_soft</item>
+    </style>
+    <style name="Button.Text" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/accent_strong</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="rippleColor">@color/accent_soft</item>
+    </style>
+    <style name="Button.Pill" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="cornerRadius">20dp</item>
+        <item name="android:minHeight">40dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textSize">12.5sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="backgroundTint">@color/accent_soft</item>
+        <item name="android:textColor">@color/accent_strong</item>
+        <item name="rippleColor">@color/line</item>
+    </style>
+    <style name="Button.Emergency" parent="Widget.MaterialComponents.Button">
+        <item name="cornerRadius">16dp</item>
+        <item name="android:minHeight">76dp</item>
+        <item name="android:textSize">21sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="backgroundTint">@color/critical</item>
+        <item name="android:textColor">@color/surface</item>
+        <item name="iconTint">@color/surface</item>
+        <item name="iconSize">28dp</item>
+        <item name="iconPadding">14dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="rippleColor">@color/critical_strong</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <!-- Type -->
     <style name="Label">
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">11.5sp</item>
         <item name="android:textColor">@color/ink3</item>
         <item name="android:textAllCaps">true</item>
-        <item name="android:letterSpacing">0.06</item>
+        <item name="android:letterSpacing">0.1</item>
         <item name="android:layout_marginTop">14dp</item>
     </style>
     <style name="Value">
         <item name="android:textSize">17sp</item>
         <item name="android:textColor">@color/ink</item>
         <item name="android:layout_marginTop">2dp</item>
+    </style>
+    <style name="Headline">
+        <item name="android:textSize">21sp</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="Body">
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/ink2</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+    </style>
+    <style name="Divider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/line</item>
+    </style>
+
+    <!-- Alerts list rows -->
+    <style name="ActionRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">64dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:background">?attr/selectableItemBackground</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+    <style name="ActionIconWrap">
+        <item name="android:layout_width">40dp</item>
+        <item name="android:layout_height">40dp</item>
+    </style>
+    <style name="ActionIcon">
+        <item name="android:layout_width">22dp</item>
+        <item name="android:layout_height">22dp</item>
+        <item name="android:layout_gravity">center</item>
+        <item name="android:contentDescription">@null</item>
+    </style>
+    <style name="ActionText">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginStart">14dp</item>
+        <item name="android:textColor">@color/ink</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="ActionChevron">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:src">@drawable/ic_chevron</item>
+        <item name="android:tint">@color/ink3</item>
+        <item name="android:contentDescription">@null</item>
+    </style>
+    <style name="RowDivider">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:layout_marginStart">70dp</item>
+        <item name="android:background">@color/line</item>
     </style>
 </resources>

@@ -1,110 +1,195 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/surface2" android:clipToPadding="false" android:fillViewport="true"
+    android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="8dp" android:paddingBottom="24dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
 
         <!-- Header -->
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="@string/app_name" android:textAllCaps="true" android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" android:letterSpacing="0.08" />
-            <Button android:id="@+id/settings" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diagnostics" />
-        </LinearLayout>
-
-        <!-- Connection status -->
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="16dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView android:id="@+id/statusDot" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="24sp" android:text="🔴" />
-                <TextView android:id="@+id/statusWord" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="12dp" android:textColor="@color/ink" android:textSize="24sp" android:textStyle="bold" android:letterSpacing="0.06" />
-                <TextView android:id="@+id/network" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/ink2" android:textSize="13sp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="8dp" android:paddingBottom="4dp">
+            <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/app_name" android:textAllCaps="true" android:textColor="@color/ink" android:textSize="22sp" android:textStyle="bold" android:letterSpacing="0.06" />
+                <TextView android:id="@+id/modeLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="15sp" />
             </LinearLayout>
-            <TextView android:id="@+id/modeLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/ink2" android:textSize="13sp" />
-            <TextView android:id="@+id/connection" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/ink" android:textSize="13.5sp" android:textStyle="bold" />
+            <Button android:id="@+id/settings" style="@style/Button.Pill" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/diagnostics" />
         </LinearLayout>
 
-        <Button android:id="@+id/permissions" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/grant_permissions" />
-        <Button android:id="@+id/battery" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="@string/battery_button" />
+        <!-- Connection -->
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <View android:id="@+id/statusDot" android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/circle_green" />
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:id="@+id/statusWord" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/ink" android:textSize="26sp" android:textStyle="bold" android:letterSpacing="0.04" />
+                        <TextView android:id="@+id/identityLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="15sp" />
+                    </LinearLayout>
+                    <View android:layout_width="1dp" android:layout_height="44dp" android:layout_marginStart="8dp" android:layout_marginEnd="14dp" android:background="@color/line" />
+                    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                        <ImageView android:id="@+id/networkIcon" android:layout_width="26dp" android:layout_height="26dp" android:src="@drawable/ic_wifi" app:tint="@color/accent" android:contentDescription="@null" />
+                        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="8dp">
+                            <TextView android:id="@+id/network" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/ink2" android:textSize="13sp" />
+                            <TextView android:id="@+id/networkState" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/accent_strong" android:textSize="12.5sp" android:textStyle="bold" android:letterSpacing="0.06" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView android:id="@+id/connection" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/bg_banner_amber" android:padding="12dp" android:textColor="@color/ink" android:textSize="13.5sp" android:textStyle="bold" android:visibility="gone" />
+                <Button android:id="@+id/permissions" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="@string/grant_permissions" android:visibility="gone" />
+                <Button android:id="@+id/battery" style="@style/Button.Outlined" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/battery_button" android:visibility="gone" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- ================= GUARD MODE ================= -->
         <LinearLayout android:id="@+id/guardRows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
 
+            <Button android:id="@+id/emergency" style="@style/Button.Emergency" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="@string/emergency_button" app:icon="@drawable/ic_warning" />
+            <TextView android:id="@+id/feedback" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_banner_green" android:padding="14dp" android:textColor="@color/ink" android:textSize="14sp" android:visibility="gone" />
+
             <!-- Quick actions -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
-                <Button android:id="@+id/emergency" android:layout_width="match_parent" android:layout_height="64dp" android:backgroundTint="@color/critical" android:text="@string/emergency_button" android:textColor="@color/surface" android:textSize="19sp" android:textStyle="bold" android:letterSpacing="0.06" />
-                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
-                    <Button android:id="@+id/quickAssist" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="50dp" android:layout_marginEnd="4dp" android:text="@string/alert_assistance" android:textSize="12.5sp" />
-                    <Button android:id="@+id/quickOk" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="50dp" android:layout_marginStart="4dp" android:layout_marginEnd="4dp" android:text="@string/alert_ok" android:textSize="12.5sp" />
-                    <Button android:id="@+id/quickMore" style="?attr/materialButtonOutlinedStyle" android:layout_width="0dp" android:layout_weight="1" android:layout_height="50dp" android:layout_marginStart="4dp" android:text="@string/alerts_more" android:textSize="12.5sp" />
-                </LinearLayout>
-                <TextView android:id="@+id/unackedLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/warn" android:textSize="12.5sp" android:visibility="gone" />
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="2dp" android:baselineAligned="false">
+                <com.google.android.material.card.MaterialCardView android:id="@+id/quickAssist" android:layout_width="0dp" android:layout_weight="1" android:layout_height="112dp" android:layout_marginEnd="5dp" android:clickable="true" android:focusable="true" app:rippleColor="@color/accent_soft">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="12dp" android:paddingEnd="6dp">
+                        <FrameLayout android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/circle_green_soft"><ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_people" app:tint="@color/accent" android:contentDescription="@null" /></FrameLayout>
+                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:text="@string/alert_assistance" android:textColor="@color/ink" android:textSize="14.5sp" android:textStyle="bold" android:lineSpacingExtra="1dp" />
+                        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_chevron" app:tint="@color/ink3" android:contentDescription="@null" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView android:id="@+id/quickOk" android:layout_width="0dp" android:layout_weight="1" android:layout_height="112dp" android:layout_marginStart="5dp" android:layout_marginEnd="5dp" android:clickable="true" android:focusable="true" app:rippleColor="@color/accent_soft">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="12dp" android:paddingEnd="6dp">
+                        <FrameLayout android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/circle_green_soft"><ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_thumb_up" app:tint="@color/accent" android:contentDescription="@null" /></FrameLayout>
+                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:text="@string/alert_ok" android:textColor="@color/ink" android:textSize="14.5sp" android:textStyle="bold" android:lineSpacingExtra="1dp" />
+                        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_chevron" app:tint="@color/ink3" android:contentDescription="@null" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+                <com.google.android.material.card.MaterialCardView android:id="@+id/quickMore" android:layout_width="0dp" android:layout_weight="0.85" android:layout_height="112dp" android:layout_marginStart="5dp" android:clickable="true" android:focusable="true" app:rippleColor="@color/accent_soft">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal" android:gravity="center_vertical" android:paddingStart="12dp" android:paddingEnd="6dp">
+                        <FrameLayout android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/circle_grey_soft"><ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_more" app:tint="@color/ink2" android:contentDescription="@null" /></FrameLayout>
+                        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:text="@string/alerts_more" android:textColor="@color/ink" android:textSize="14.5sp" android:textStyle="bold" />
+                        <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_chevron" app:tint="@color/ink3" android:contentDescription="@null" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
+            <TextView android:id="@+id/unackedLine" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_pill_amber" android:paddingStart="14dp" android:paddingEnd="14dp" android:paddingTop="8dp" android:paddingBottom="8dp" android:textColor="@color/warn_strong" android:textSize="13sp" android:textStyle="bold" android:visibility="gone" />
 
             <!-- Shift and duty site -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
-                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/shift_label" />
-                <TextView android:id="@+id/shiftLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" android:textStyle="bold" />
-                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/duty_site_label" />
-                <TextView android:id="@+id/dutySiteLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-            </LinearLayout>
+            <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/shift_label_short" />
+                    <TextView android:id="@+id/shiftLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/ink" android:textSize="20sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/shiftSub" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13.5sp" android:visibility="gone" />
+                    <View style="@style/Divider" android:layout_marginTop="14dp" />
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/duty_site_label_short" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="4dp">
+                        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_place" app:tint="@color/accent" android:contentDescription="@null" />
+                        <TextView android:id="@+id/dutySiteName" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="8dp" android:textColor="@color/ink" android:textSize="17sp" android:textStyle="bold" />
+                    </LinearLayout>
+                    <TextView android:id="@+id/dutySiteMeta" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:layout_marginStart="28dp" android:textColor="@color/ink2" android:textSize="13.5sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- GPS verification -->
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
-                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/gps_card_label" />
-                <TextView android:id="@+id/gpsLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" />
-                <TextView android:id="@+id/gpsReasonLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" android:visibility="gone" />
-                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/monitoring_card_label" />
-                <TextView android:id="@+id/monitoringLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_check_label" />
-                <TextView android:id="@+id/lastCheckLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-                <TextView android:id="@+id/locationPermLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textColor="@color/ink2" android:textSize="12.5sp" />
-                <Button android:id="@+id/checkNow" style="?attr/materialButtonOutlinedStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/check_location_now" />
-            </LinearLayout>
+            <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/gps_card_label" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp">
+                        <FrameLayout android:id="@+id/gpsIconWrap" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/circle_amber"><ImageView android:id="@+id/gpsIcon" android:layout_width="28dp" android:layout_height="28dp" android:layout_gravity="center" android:src="@drawable/ic_exclaim" app:tint="@color/surface" android:contentDescription="@null" /></FrameLayout>
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                            <TextView android:id="@+id/gpsLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/ink" android:textSize="20sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/gpsReasonLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/ink2" android:textSize="14sp" android:lineSpacingExtra="2dp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="14dp" android:background="@drawable/bg_stat" android:padding="14dp" android:baselineAligned="false">
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="1.1" android:layout_height="wrap_content" android:orientation="vertical">
+                            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/stat_last_check" />
+                            <TextView android:id="@+id/lastCheckTime" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/lastCheckMeta" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="12.5sp" />
+                        </LinearLayout>
+                        <View android:layout_width="1dp" android:layout_height="match_parent" android:layout_marginStart="8dp" android:layout_marginEnd="10dp" android:background="@color/line" />
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="0.9" android:layout_height="wrap_content" android:orientation="vertical">
+                            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/stat_accuracy" />
+                            <TextView android:id="@+id/accuracyValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/accuracyMeta" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="12.5sp" />
+                        </LinearLayout>
+                        <View android:layout_width="1dp" android:layout_height="match_parent" android:layout_marginStart="8dp" android:layout_marginEnd="10dp" android:background="@color/line" />
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
+                            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/stat_status" />
+                            <TextView android:id="@+id/statusValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/statusMeta" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="12.5sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                    <TextView android:id="@+id/monitoringLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:textColor="@color/ink2" android:textSize="13sp" />
+                    <Button android:id="@+id/checkNow" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/check_location_now" app:icon="@drawable/ic_my_location" app:iconGravity="textStart" app:iconTint="@color/surface" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
         <!-- ================= OPERATIONS GATEWAY MODE ================= -->
         <LinearLayout android:id="@+id/opsRows" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:visibility="gone">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
-                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/call_monitoring_label" />
-                <TextView android:id="@+id/callMonitorLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textSize="15sp" />
-                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_call_label" />
-                <TextView android:id="@+id/lastCall" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/recent_calls_label" />
-                <LinearLayout android:id="@+id/opsCalls" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="2dp" />
-            </LinearLayout>
+            <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/call_monitoring_label" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp">
+                        <FrameLayout android:id="@+id/callIconWrap" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/circle_green"><ImageView android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="center" android:src="@drawable/ic_phone" app:tint="@color/surface" android:contentDescription="@null" /></FrameLayout>
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                            <TextView android:id="@+id/callMonitorTitle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/ink" android:textSize="20sp" android:textStyle="bold" />
+                            <TextView android:id="@+id/callMonitorLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textColor="@color/ink2" android:textSize="14sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_call_label" />
+                    <TextView android:id="@+id/lastCall" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" />
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/recent_calls_label" />
+                    <LinearLayout android:id="@+id/opsCalls" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="2dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
         </LinearLayout>
 
-        <!-- Delivery (both modes): sync is independent of GPS -->
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/sync_label" />
-            <TextView android:id="@+id/syncLine" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textSize="14sp" />
-            <TextView android:id="@+id/pendingLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="12.5sp" />
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
-                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_sync_label" />
-                    <TextView android:id="@+id/lastSync" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
+        <!-- Sync (both modes): independent of GPS -->
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
+                <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/sync_label_short" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp" android:baselineAligned="false">
+                    <FrameLayout android:id="@+id/syncIconWrap" android:layout_width="48dp" android:layout_height="48dp" android:background="@drawable/circle_green_soft"><ImageView android:id="@+id/syncIcon" android:layout_width="26dp" android:layout_height="26dp" android:layout_gravity="center" android:src="@drawable/ic_check" app:tint="@color/accent" android:contentDescription="@null" /></FrameLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:id="@+id/syncLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/ink" android:textSize="20sp" android:textStyle="bold" android:letterSpacing="0.02" />
+                        <TextView android:id="@+id/syncDetail" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13.5sp" />
+                        <TextView android:id="@+id/pendingLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" />
+                    </LinearLayout>
+                    <View android:layout_width="1dp" android:layout_height="match_parent" android:layout_marginStart="8dp" android:layout_marginEnd="12dp" android:background="@color/line" />
+                    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical">
+                        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/last_event_sync" />
+                        <TextView android:id="@+id/lastSync" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" />
+                        <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/last_heartbeat" />
+                        <TextView android:id="@+id/lastHeartbeat" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink" android:textSize="18sp" android:textStyle="bold" />
+                    </LinearLayout>
                 </LinearLayout>
-                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical">
-                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/last_heartbeat_label" />
-                    <TextView android:id="@+id/lastHeartbeat" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
-                </LinearLayout>
+                <Button android:id="@+id/syncNow" style="@style/Button.Outlined" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="@string/sync_now" app:icon="@drawable/ic_sync" app:iconGravity="textStart" app:iconTint="@color/accent_strong" />
             </LinearLayout>
-            <Button android:id="@+id/syncNow" style="?attr/materialButtonOutlinedStyle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/sync_now" />
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        <!-- Communication history (guard mode) -->
-        <LinearLayout android:id="@+id/commCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp" android:visibility="gone">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
-                <TextView style="@style/Label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/comm_label" />
-                <Button android:id="@+id/commAll" style="?attr/borderlessButtonStyle" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/comm_see_all" android:textSize="12sp" />
+        <!-- Sent to operations (guard mode) -->
+        <com.google.android.material.card.MaterialCardView android:id="@+id/commCard" android:layout_width="match_parent" android:layout_height="wrap_content" android:visibility="gone">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="18dp" android:paddingEnd="18dp" android:paddingTop="18dp" android:paddingBottom="12dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+                    <TextView style="@style/Label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/comm_label" />
+                    <Button android:id="@+id/commAll" style="@style/Button.Text" android:layout_width="wrap_content" android:layout_height="wrap_content" android:minHeight="40dp" android:text="@string/comm_see_all" android:textSize="13sp" app:icon="@drawable/ic_chevron" app:iconGravity="end" app:iconTint="@color/accent_strong" app:iconSize="18dp" />
+                </LinearLayout>
+                <LinearLayout android:id="@+id/commList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginTop="4dp" />
             </LinearLayout>
-            <LinearLayout android:id="@+id/commList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" />
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <!-- Device -->
-        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:background="@drawable/card" android:orientation="vertical" android:padding="14dp">
-            <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/device_health_label" />
-            <TextView android:id="@+id/deviceName" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="15sp" />
-            <TextView android:id="@+id/deviceLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" />
-            <TextView android:id="@+id/healthLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" />
-        </LinearLayout>
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="18dp">
+                <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/circle_grey_soft"><ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_phone_android" app:tint="@color/ink2" android:contentDescription="@null" /></FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/device_health_label" />
+                    <TextView android:id="@+id/deviceName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/deviceLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" />
+                    <TextView android:id="@+id/healthLine" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="@string/privacy_line" android:textColor="@color/ink3" android:textSize="12sp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:paddingStart="4dp" android:paddingEnd="4dp" android:text="@string/privacy_line" android:textColor="@color/ink3" android:textSize="12sp" />
     </LinearLayout>
 </ScrollView>
