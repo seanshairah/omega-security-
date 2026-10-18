@@ -30,8 +30,11 @@ class SettingsActivity : AppCompatActivity() {
         b.back.setOnClickListener { finish() }
         b.test.setOnClickListener { testConnection() }
         b.deactivate.setOnClickListener { confirmDeactivate() }
+        b.syncNow.setOnClickListener { GatewayService.requestSync(this, zw.co.omega.gateway.service.Trigger.MANUAL); b.syncNow.isEnabled = false; b.root.postDelayed({ b.syncNow.isEnabled = true; render() }, 3000) }
         render()
     }
+
+    override fun onResume() { super.onResume(); render() }
 
     private fun render() {
         b.serverUrl.text = prefs.serverUrl
@@ -42,6 +45,19 @@ class SettingsActivity : AppCompatActivity() {
         b.queue.text = EventQueue(this).size().toString()
         b.gatewayStatus.text = when { prefs.authRejected -> getString(R.string.status_rejected); prefs.lastHeartbeatOk -> getString(R.string.status_online); else -> getString(R.string.status_offline) }
         b.lastError.text = prefs.lastError ?: getString(R.string.none)
+        // Sync diagnostics: what is waiting, why, and the last runs.
+        val q = EventQueue(this)
+        val c = q.counts()
+        val f = java.text.SimpleDateFormat("dd MMM HH:mm:ss", java.util.Locale.getDefault())
+        val nextRetry = q.nextAttemptAt()?.takeIf { it > System.currentTimeMillis() }?.let { f.format(java.util.Date(it)) }
+        b.syncSummary.text = getString(R.string.sync_summary, prefs.syncState, c.queued, c.sending, c.retryPending, c.failed,
+            if (prefs.lastSyncAt > 0) f.format(java.util.Date(prefs.lastSyncAt)) else "—",
+            if (prefs.lastSyncAttemptAt > 0) "${f.format(java.util.Date(prefs.lastSyncAttemptAt))} (${prefs.lastSyncTrigger ?: "?"})" else "—",
+            nextRetry ?: "—", prefs.lastSyncError ?: getString(R.string.none))
+        val rows = q.recentLog(15)
+        b.syncHistory.text = if (rows.isEmpty()) getString(R.string.sync_history_none) else rows.joinToString("\n") { r ->
+            "${f.format(java.util.Date(r.at))} · ${r.trigger.lowercase()} · ${if (r.online) "online" else "offline"} · sent ${r.sent} ok ${r.acked}${if (r.duplicates > 0) " dup ${r.duplicates}" else ""}${if (r.rejected > 0) " rejected ${r.rejected}" else ""}${if (r.retried > 0) " retry ${r.retried}" else ""} · ${r.durationMs} ms${r.error?.let { " · $it" } ?: ""}"
+        }
     }
 
     private fun testConnection() {

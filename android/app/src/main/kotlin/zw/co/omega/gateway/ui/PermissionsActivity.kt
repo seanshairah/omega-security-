@@ -41,7 +41,16 @@ class PermissionsActivity : AppCompatActivity() {
         b.phone.setOnClickListener { launcher.launch(arrayOf(Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG)) }
         b.notifications.setOnClickListener { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) launcher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS)) }
         b.battery.setOnClickListener { try { startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName"))) } catch (e: Exception) { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) } }
-        b.done.setOnClickListener { prefs.onboardingDone = true; GatewayService.start(this); startActivity(Intent(this, MainActivity::class.java)); finish() }
+        // Start: remember that onboarding was completed, bring the service up and return to the
+        // dashboard. MainActivity is normally already underneath (it opened us), so finishing is
+        // enough; when we were opened straight from activation there is nothing underneath, so
+        // open the dashboard explicitly. MainActivity never re-opens onboarding on its own after this.
+        b.done.setOnClickListener {
+            prefs.onboardingDone = true
+            GatewayService.start(this)
+            if (isTaskRoot) startActivity(Intent(this, MainActivity::class.java))
+            finish()
+        }
     }
 
     override fun onResume() { super.onResume(); render() }

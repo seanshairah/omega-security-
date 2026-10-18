@@ -57,6 +57,7 @@ class ActivationActivity : AppCompatActivity() {
                 prefs.lastSyncAt = System.currentTimeMillis()
                 prefs.authRejected = false
                 GatewayService.start(this@ActivationActivity)
+                GatewayService.requestSync(this@ActivationActivity, zw.co.omega.gateway.service.Trigger.ACTIVATION)
                 SyncWorker.schedule(this@ActivationActivity)
                 Toast.makeText(this@ActivationActivity, getString(R.string.activated_as, r.deviceName), Toast.LENGTH_LONG).show()
                 startActivity(Intent(this@ActivationActivity, if (prefs.isGuardMode && !prefs.onboardingDone) PermissionsActivity::class.java else MainActivity::class.java))

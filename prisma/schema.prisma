@@ -91,6 +91,13 @@ model Location {
   latitude            Float?
   longitude           Float?
   geofenceRadiusM     Int          @default(150)
+  // Where the coordinates came from (map picker, typed by hand, temporary test values) and when they were set.
+  coordinatesSource   CoordinatesSource?
+  coordinatesUpdatedAt DateTime?
+  coordinatesVerifiedAt DateTime?
+  placeId             String?
+  // Incremented whenever centre or radius changes; guard phones echo the version they applied.
+  configVersion       Int          @default(1)
   active              Boolean      @default(true)
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
@@ -234,6 +241,13 @@ model Shift {
   notes           String?
   status          ShiftStatus   @default(SCHEDULED)
   pendingPrompt   PendingPrompt @default(NONE)
+
+  // Optional geofence override for this shift only (e.g. a gate post away from the site centre)
+  geofenceLatitude  Float?
+  geofenceLongitude Float?
+  geofenceRadiusM   Int?
+  geofenceNote      String?
+  configVersion     Int           @default(1)
 
   // automation markers — each is set once, making the engine idempotent
   arrivalSmsSentAt        DateTime?
@@ -635,6 +649,21 @@ model GatewayDevice {
   lastAccuracyM    Float?
   lastLocationAt   DateTime?
   lastLocationState LocationState?
+  // Shift config the phone reports it applied ("<siteVersion>.<shiftVersion>" of the shift it monitors)
+  configVersionApplied String?
+  configAppliedAt  DateTime?
+  // Separate facts reported by the phone (Stage 1/3): shift, GPS with reason, and the sync engine
+  shiftState       String?           // NONE | UPCOMING | ACTIVE
+  gpsState         String?           // OFF | MONITORING | VERIFYING_OUTSIDE | OUTSIDE | LOCATION_UNAVAILABLE
+  gpsReason        String?           // no_fix | poor_accuracy | location_disabled | permission_revoked | site_has_no_coordinates | on_boundary
+  syncState        String?           // SYNCED | SENDING | QUEUED | QUEUED_OFFLINE | RETRY_PENDING | SYNCED_WITH_FAILURES | REVOKED
+  queuedEvents     Int?
+  failedEvents     Int?
+  oldestPendingSeconds Int?
+  lastEventSyncAt  DateTime?
+  lastSyncAttemptAt DateTime?
+  lastSyncError    String?
+  lastSyncTrigger  String?
   status           GatewayStatus     @default(OFFLINE)
   activationStatus GatewayActivation @default(PENDING)
   activationCode   String?           @unique
@@ -669,6 +698,12 @@ enum DeviceMode {
   OPERATIONS_GATEWAY
   GUARD
 }
+enum CoordinatesSource {
+  MAP
+  MANUAL
+  TEST
+}
+
 enum LocationState {
   INSIDE
   OUTSIDE

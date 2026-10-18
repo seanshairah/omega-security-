@@ -21,7 +21,7 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val engine = SyncEngine(applicationContext)
         engine.heartbeat()
-        engine.syncOnce()
+        engine.syncOnce(Trigger.WORKER)
         GatewayService.start(applicationContext)
         Result.success()
     }

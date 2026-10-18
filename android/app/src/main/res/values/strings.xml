@@ -19,9 +19,11 @@
     <string name="status_offline">OFFLINE</string>
     <string name="status_rejected">REVOKED</string>
     <string name="device_label">Device:</string>
-    <string name="location_label">Location:</string>
+    <string name="location_label">Registered at:</string>
     <string name="phone_label">Phone:</string>
-    <string name="last_sync_label">Last Sync:</string>
+    <string name="last_sync_label">Last event sync:</string>
+    <string name="last_heartbeat_label">Last heartbeat:</string>
+    <string name="sync_label">Sync:</string>
     <string name="battery_label">Battery:</string>
     <string name="network_label">Network:</string>
     <string name="version_label">App version:</string>
@@ -40,9 +42,11 @@
     <string name="conn_rejected">DEVICE REVOKED · ask the administrator</string>
     <string name="conn_no_permission">PHONE PERMISSION NEEDED · tap Grant permissions</string>
     <string name="conn_no_call_log">CALL LOG PERMISSION NEEDED · numbers will not be seen</string>
+    <string name="conn_no_location_permission">LOCATION PERMISSION NEEDED · tap Grant permissions and choose “Allow all the time”</string>
     <string name="grant_permissions">Grant permissions</string>
     <string name="battery_button">Allow running in background</string>
     <string name="sync_now">Sync now</string>
+    <string name="check_location_now">Check location now</string>
     <string name="open_settings">Settings</string>
     <string name="privacy_line">This app records only call metadata: number, time, duration and outcome. It never records audio.</string>
 
@@ -77,19 +81,12 @@
     <string name="mode_ops">Operations gateway phone</string>
     <string name="mode_guard">Guard phone · %1$s</string>
     <string name="shift_label">Shift:</string>
-    <string name="shift_none">No shift to monitor. Location is not checked outside shifts.</string>
-    <string name="shift_active">%1$s · %2$s–%3$s · site radius %4$d m</string>
-    <string name="shift_upcoming">%1$s · starts %2$s · monitoring begins 10 min before</string>
-    <string name="monitoring_label">Location monitoring:</string>
-    <string name="mon_inside">INSIDE SITE · checking every few minutes</string>
-    <string name="mon_verifying">OUTSIDE READING · verifying</string>
-    <string name="mon_outside">OUTSIDE SITE · reported</string>
-    <string name="mon_unavailable">LOCATION UNAVAILABLE · turn on location</string>
-    <string name="mon_offline">MONITORING OFFLINE · events saved on the phone</string>
-    <string name="mon_waiting">WAITING FOR SHIFT</string>
-    <string name="mon_off">NOT ON SHIFT</string>
+    <string name="shift_none">NO SHIFT · location is not checked outside shifts</string>
+    <string name="shift_active">ON SHIFT · %1$s–%2$s</string>
+    <string name="shift_upcoming">UPCOMING · starts %1$s · GPS checks begin 10 min before</string>
     <string name="last_check_label">Last location check:</string>
-    <string name="last_check">%1$s · %2$s · %3$s from site · ±%4$d m</string>
+    <string name="last_check">%1$s · %2$s · %3$s from site · %4$s</string>
+    <string name="last_check_no_fix">%1$s · no usable fix</string>
     <string name="last_check_none">None yet</string>
     <string name="location_perm_label">Location permission:</string>
     <string name="perm_bg">Allowed all the time</string>
@@ -121,4 +118,45 @@
     <string name="perm_summary">Location: %1$s · Phone: %2$s</string>
     <string name="perm_privacy">What is collected: your position during shifts (with its accuracy), call times and numbers, battery and network. What is not: audio, messages, contacts, photos, or your position outside shifts.</string>
     <string name="perm_done">Start</string>
+
+    <!-- Duty site and GPS (guard mode, Stage 1) -->
+    <string name="duty_site_label">Duty site:</string>
+    <string name="duty_site">%1$s · radius %2$d m</string>
+    <string name="duty_site_override"> · shift-specific fence</string>
+    <string name="duty_site_test"> · TEST coordinates</string>
+    <string name="duty_site_version"> · config v%1$s</string>
+    <string name="duty_site_no_coordinates">Site has no coordinates yet · ask the administrator to place it on the map</string>
+    <string name="gps_label">GPS:</string>
+    <string name="gps_off">OFF · no shift being monitored</string>
+    <string name="gps_checking">CHECKING… · waiting for a GPS fix (up to 60 s)</string>
+    <string name="gps_inside">INSIDE SITE</string>
+    <string name="gps_verifying">OUTSIDE READING · confirming with a second check</string>
+    <string name="gps_outside">OUTSIDE SITE · reported</string>
+    <string name="gps_unknown">UNKNOWN · position could not be verified</string>
+    <string name="gps_reason_not_checked">No check yet. Tap “Check location now”.</string>
+    <string name="gps_reason_no_fix">No GPS fix. Move near a window or outdoors; GPS does not need data.</string>
+    <string name="gps_reason_poor_accuracy">GPS accuracy %1$s is worse than the %2$d m limit, so the reading is not counted. This is not “outside”. Move to open sky and check again.</string>
+    <string name="gps_reason_location_off">Location is switched off on the phone. Turn it on in Settings.</string>
+    <string name="gps_reason_permission">Location permission was removed. Tap Grant permissions.</string>
+    <string name="gps_reason_site">The duty site has no coordinates, so inside/outside cannot be decided.</string>
+    <string name="gps_reason_boundary">Reading %1$s is too close to the site boundary to decide. Not counted as outside.</string>
+
+    <!-- Sync (independent of GPS) -->
+    <string name="sync_revoked">DEVICE REVOKED · nothing is sent</string>
+    <string name="sync_no_internet">NO INTERNET · %1$d event(s) saved on the phone, sent automatically later</string>
+    <string name="sync_queued">QUEUED · %1$d event(s) waiting · sent automatically</string>
+    <string name="sync_sending">SENDING · %1$d event(s)</string>
+    <string name="sync_retry">RETRYING · %1$d event(s) · %2$s</string>
+    <string name="sync_failures">UP TO DATE · some events were rejected by the server (see Settings)</string>
+    <string name="sync_diag_label">Sync engine</string>
+    <string name="sync_summary">State %1$s · queued %2$d · sending %3$d · retry %4$d · failed %5$d\nLast successful sync %6$s\nLast attempt %7$s\nNext retry %8$s\nLast error: %9$s</string>
+    <string name="sync_history_label">Recent sync runs</string>
+    <string name="sync_history_none">No sync runs yet</string>
+    <string name="sync_synced">UP TO DATE · last event sent %1$s</string>
+    <string name="sync_nothing_yet">UP TO DATE · no events to send yet</string>
+    <string name="sync_waiting">RECONNECTING · %1$s</string>
+    <string name="notif_mon_checking">checking location</string>
+    <string name="notif_mon_poor_accuracy">GPS accuracy too poor</string>
+    <string name="notif_mon_location_off">location switched off</string>
+    <string name="notif_mon_permission">location permission missing</string>
 </resources>

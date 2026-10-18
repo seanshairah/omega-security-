@@ -17,6 +17,7 @@ import { setLocationActive } from "@/actions/locations";
 import { fmtDate, fmtTime, fmtShort } from "@/lib/time";
 import { clientPhoneFor } from "@/lib/sms/client-updates";
 import { SiteMap } from "@/components/map/site-map";
+import { COORDINATES_SOURCE_META } from "@/lib/site-config";
 
 export const metadata = { title: "Location" };
 const PATTERN: Record<string, string> = { DAY_8: "Day · 8 h", NIGHT_8: "Night · 8 h", DAY_12: "Day · 12 h", NIGHT_12: "Night · 12 h", CUSTOM: "Custom" };
@@ -87,7 +88,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
               <Meta label="Site code">{l.code}</Meta><Meta label="Type">{l.siteType ?? "—"}</Meta>
               <Meta label="Client">{l.client.name}</Meta><Meta label="Pattern">{PATTERN[l.shiftPattern]}</Meta>
               <Meta label="Required guards">{l.requiredGuards}</Meta><Meta label="Supervisor">{l.supervisor?.name ?? "—"}</Meta>
-              <Meta label="Geofence" className="col-span-2">{l.latitude != null && l.longitude != null ? <span className="tnum">{l.geofenceRadiusM} m radius · {l.latitude.toFixed(5)}, {l.longitude.toFixed(5)}</span> : <span className="text-warn">No coordinates: GPS verification is off for this site. <Link href={`/locations/${l.id}/edit`} className="underline">Add them</Link>.</span>}</Meta>
+              <Meta label="Geofence" className="col-span-2">{l.latitude != null && l.longitude != null ? <span className="tnum">{l.geofenceRadiusM} m radius · {l.latitude.toFixed(5)}, {l.longitude.toFixed(5)} · config v{l.configVersion}{l.coordinatesSource && <> · <Status tone={COORDINATES_SOURCE_META[l.coordinatesSource].tone}>{COORDINATES_SOURCE_META[l.coordinatesSource].label}</Status></>}{l.coordinatesSource === "TEST" && <span className="block text-warn">{COORDINATES_SOURCE_META.TEST.description} <Link href={`/locations/${l.id}/edit`} className="underline">Place it on the map</Link>.</span>}</span> : <span className="text-warn">No coordinates: GPS verification is off for this site. <Link href={`/locations/${l.id}/edit`} className="underline">Place it on the map</Link>.</span>}</Meta>
               <Meta label="Site contact" className="col-span-2">{l.contactName ?? "—"}{l.contactPhone ? ` · ${l.contactPhone}` : ""}</Meta>
               <Meta label="Status" className="col-span-2">{l.active ? <Status tone="ok">Active</Status> : <Status tone="muted">Inactive</Status>}</Meta>
               <Meta label="Client updates" className="col-span-2">{l.clientUpdates ? <span>{[l.notifyClientArrival && "arrival", l.notifyClientWelfare && "all well", l.notifyClientCompletion && "shift ended"].filter(Boolean).join(", ") || "none selected"} · to {clientPhoneFor(l) ?? <span className="text-critical">no number set</span>}</span> : <span className="text-ink-3">Off</span>}</Meta>

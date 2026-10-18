@@ -11,7 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.core.content.ContextCompat
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONObject
 import zw.co.omega.gateway.data.EventQueue
@@ -19,18 +19,23 @@ import zw.co.omega.gateway.data.Prefs
 import zw.co.omega.gateway.data.ShiftConfig
 import zw.co.omega.gateway.geofence.*
 import zw.co.omega.gateway.model.GatewayEvent
+import zw.co.omega.gateway.service.GatewayService
+import zw.co.omega.gateway.service.Trigger
 import zw.co.omega.gateway.util.DeviceInfo
 import java.util.UUID
-import kotlin.coroutines.resume
 
 /**
- * Shift-aware location monitoring for guard devices. Runs inside the foreground service.
+ * Shift-aware location monitoring for guard devices. One `step()` per check, run by the
+ * MonitoringCoordinator inside the foreground service.
  *
- * - Uses the platform LocationManager (GPS first, network as fallback) so no Play Services are
- *   needed on old phones. One fix per check, never a stream.
+ * - Platform LocationManager only (no Play Services): GPS and network providers are listened to
+ *   at the same time for up to the acquisition budget; the best fix wins (see AcquisitionPolicy).
  * - Classifies the fix locally against the cached site and radius, drives the pure state
  *   machine, and queues events to the same outbox as calls. Needs no internet at all.
- * - Reports LOCATION_UNAVAILABLE with a reason when it cannot see where the phone is.
+ * - Writes three separate facts for the dashboard and the server: shift state, GPS state with
+ *   its reason, and the composite `monitoringState` kept for older portal versions.
+ * - The accuracy safeguard is unchanged: a fix worse than `policy.accuracyMaxM` is UNKNOWN
+ *   (`poor_accuracy`), never INSIDE or OUTSIDE.
  */
 class LocationMonitor(private val context: Context) {
     private val prefs = Prefs(context)
@@ -40,32 +45,46 @@ class LocationMonitor(private val context: Context) {
         private set
     private var configShiftId: String? = null
 
-    data class Result(val phase: Phase, val nextCheckSeconds: Int, val fix: Location?, val classification: Classification?)
+    data class Result(val phase: Phase, val nextCheckSeconds: Int, val fix: Location?, val classification: Classification?, val producedEvents: Boolean, val hasConfig: Boolean)
 
-    /** One monitoring step. Returns how long to wait before the next one. */
+    /** One monitoring step. Returns how long to wait before the next one (≤ 0 when no config is cached yet). */
     suspend fun step(now: Long = System.currentTimeMillis()): Result {
         val cfg = ShiftConfig.load(context)
+        prefs.lastAttemptAt = now
         if (cfg == null || !cfg.isActiveAt(now)) {
-            val phase = if (cfg != null && cfg.isUpcomingAt(now)) Phase.WAITING_FOR_SHIFT else Phase.NOT_ON_SHIFT
+            val upcoming = cfg != null && cfg.isUpcomingAt(now)
+            val phase = if (upcoming) Phase.WAITING_FOR_SHIFT else Phase.NOT_ON_SHIFT
             if (state.phase != phase) { state = MonitorState(phase, now); configShiftId = null }
             prefs.monitoringState = phase.name
-            val wait = if (cfg != null && cfg.isUpcomingAt(now)) ((cfg.startAtMs - 10 * 60_000L - now) / 1000).toInt().coerceIn(60, 15 * 60) else 15 * 60
-            return Result(phase, wait, null, null)
+            prefs.shiftState = if (upcoming) "UPCOMING" else "NONE"
+            prefs.gpsState = "OFF"
+            prefs.gpsReason = null
+            prefs.dutySiteName = cfg?.site?.name ?: ""
+            val wait = when { cfg == null -> 0; upcoming -> ((cfg.startAtMs - 10 * 60_000L - now) / 1000).toInt().coerceIn(60, 15 * 60); else -> 15 * 60 }
+            return Result(phase, wait, null, null, producedEvents = false, hasConfig = cfg != null)
         }
+        prefs.shiftState = "ACTIVE"
+        prefs.dutySiteName = cfg.site?.name ?: ""
         val fix = obtainFix(cfg.policy)
         val obs = observe(fix, cfg, now)
         val c = fix?.let { f -> cfg.site?.let { classify(f.latitude, f.longitude, f.accuracy, it, cfg.policy.accuracyMaxM) } }
+        var produced = false
         if (configShiftId != cfg.shiftId) {
             // New shift: announce monitoring with the first fix, then seed the state machine from it.
             configShiftId = cfg.shiftId
             state = MonitorState(Phase.MONITORING, now)
-            enqueue("SHIFT_STARTED", obs, fix, cfg)
+            enqueue("SHIFT_STARTED", obs, fix, cfg); produced = true
         }
         val r = stepMonitor(state, obs, cfg.policy)
         state = r.next
-        for (e in r.events) enqueue(e.type, obs.copy(reason = e.reason ?: obs.reason), fix, cfg, e.durationOutsideSeconds)
+        for (e in r.events) { enqueue(e.type, obs.copy(reason = e.reason ?: obs.reason), fix, cfg, e.durationOutsideSeconds); produced = true }
+        // Record the observation even when the state machine emitted nothing (e.g. a repeated UNKNOWN).
+        prefs.lastCheckAt = obs.at
+        prefs.gpsState = state.phase.name
+        prefs.gpsReason = if (obs.state == LocState.UNKNOWN) obs.reason else null
+        if (fix != null) { prefs.lastFixLat = fix.latitude; prefs.lastFixLng = fix.longitude; prefs.lastFixAccuracy = fix.accuracy; prefs.lastFixAt = obs.at; prefs.lastFixState = obs.state.name; prefs.lastFixDistanceM = (obs.distanceM ?: -1.0).toFloat() }
         prefs.monitoringState = if (!DeviceInfo.isOnline(context) && state.phase == Phase.MONITORING) "OFFLINE_MONITORING" else state.phase.name
-        return Result(state.phase, r.nextCheckSeconds, fix, c)
+        return Result(state.phase, r.nextCheckSeconds, fix, c, produced, hasConfig = true)
     }
 
     private fun observe(fix: Location?, cfg: ShiftConfig, now: Long): Observation {
@@ -87,12 +106,12 @@ class LocationMonitor(private val context: Context) {
             put("locationState", o.state.name); put("shiftId", cfg.shiftId); put("mock", mock)
             o.reason?.let { put("reason", it) }
             durationOutsideSeconds?.let { put("durationOutsideSeconds", it) }
-            put("meta", JSONObject().put("phase", state.phase.name).put("online", DeviceInfo.isOnline(context)))
+            put("meta", JSONObject().put("phase", state.phase.name).put("online", DeviceInfo.isOnline(context)).put("accuracyMaxM", cfg.policy.accuracyMaxM))
         }
         queue.enqueue(GatewayEvent(eventId = UUID.randomUUID().toString(), eventType = type, timestampMs = o.at, extra = extra))
-        if (fix != null) { prefs.lastFixLat = fix.latitude; prefs.lastFixLng = fix.longitude; prefs.lastFixAccuracy = fix.accuracy; prefs.lastFixAt = o.at; prefs.lastFixState = o.state.name; prefs.lastFixDistanceM = (o.distanceM ?: -1.0).toFloat() }
-        prefs.lastCheckAt = o.at
-        Log.i(TAG, "queued $type ${o.state} ${o.distanceM?.let { "${it.toInt()} m" } ?: ""} ${o.reason ?: ""}")
+        // The coordinator also asks for a sync after the step; this covers callers outside the service.
+        GatewayService.requestSync(context, Trigger.NEW_EVENT)
+        Log.i(TAG, "queued $type ${o.state} ${o.distanceM?.let { "${it.toInt()} m" } ?: ""} ${fix?.let { "±${it.accuracy} m ${it.provider}" } ?: ""} ${o.reason ?: ""}")
     }
 
     /** The latest fix as the server expects it, for heartbeats and call events. */
@@ -103,31 +122,50 @@ class LocationMonitor(private val context: Context) {
 
     fun hasLocationPermission(): Boolean = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
 
-    /** One fresh fix: GPS with a 45 s budget, then the network provider, then a last-known fix under two minutes old. */
-    suspend fun obtainFix(policy: Policy): Location? {
+    /**
+     * One fresh fix. Listens to GPS and network together for up to the budget, keeps the best
+     * reading and stops early when it is good enough (see AcquisitionPolicy). Falls back to a
+     * last-known fix under two minutes old. Marks `gpsChecking` while running.
+     */
+    suspend fun obtainFix(policy: Policy, acquisition: AcquisitionPolicy = AcquisitionPolicy(acceptableM = policy.accuracyMaxM.toFloat())): Location? {
         if (!hasLocationPermission()) return null
-        val gps = if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) requestOnce(LocationManager.GPS_PROVIDER, 45_000) else null
-        if (gps != null && gps.accuracy <= policy.accuracyMaxM) return gps
-        val net = if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) requestOnce(LocationManager.NETWORK_PROVIDER, 20_000) else null
-        val best = listOfNotNull(gps, net).minByOrNull { it.accuracy }
-        if (best != null) return best
-        return try { listOfNotNull(lm.getLastKnownLocation(LocationManager.GPS_PROVIDER), lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)).filter { System.currentTimeMillis() - it.time < 120_000 }.minByOrNull { it.accuracy } } catch (e: SecurityException) { null }
+        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) }
+        if (providers.isEmpty()) return null
+        prefs.gpsChecking = true
+        try {
+            val fresh = listen(providers, acquisition)
+            if (fresh != null) return fresh
+            return try { listOfNotNull(lm.getLastKnownLocation(LocationManager.GPS_PROVIDER), lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)).filter { System.currentTimeMillis() - it.time < 120_000 }.minByOrNull { it.accuracy } } catch (e: SecurityException) { null }
+        } finally { prefs.gpsChecking = false }
     }
 
-    private suspend fun requestOnce(provider: String, timeoutMs: Long): Location? = withTimeoutOrNull(timeoutMs) {
-        suspendCancellableCoroutine { cont ->
-            val listener = object : LocationListener {
-                override fun onLocationChanged(location: Location) { if (cont.isActive) cont.resume(location) }
-                @Deprecated("Deprecated in Java") override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
-                override fun onProviderEnabled(provider: String) {}
-                override fun onProviderDisabled(provider: String) { if (cont.isActive) cont.resume(null) }
-            }
-            try {
-                @Suppress("DEPRECATION")
-                lm.requestSingleUpdate(provider, listener, Looper.getMainLooper())
-            } catch (e: Exception) { Log.w(TAG, "requestSingleUpdate $provider: ${e.message}"); if (cont.isActive) cont.resume(null) }
-            cont.invokeOnCancellation { Handler(Looper.getMainLooper()).post { runCatching { lm.removeUpdates(listener) } } }
+    private suspend fun listen(providers: List<String>, acquisition: AcquisitionPolicy): Location? {
+        val updates = Channel<Location>(Channel.UNLIMITED)
+        val listener = object : LocationListener {
+            override fun onLocationChanged(location: Location) { updates.trySend(location) }
+            @Deprecated("Deprecated in Java") override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
         }
+        val main = Handler(Looper.getMainLooper())
+        main.post { for (p in providers) try { lm.requestLocationUpdates(p, 1000L, 0f, listener, Looper.getMainLooper()) } catch (e: Exception) { Log.w(TAG, "requestLocationUpdates $p: ${e.message}") } }
+        val started = System.currentTimeMillis()
+        var best: Location? = null
+        try {
+            while (true) {
+                val elapsed = System.currentTimeMillis() - started
+                val summary = best?.let { FixSummary(it.accuracy, it.time, it.provider ?: "?") }
+                if (decide(acquisition, summary, elapsed) == Decision.STOP) break
+                val next = withTimeoutOrNull(acquisition.budgetMs - elapsed) { updates.receive() } ?: break
+                val cand = FixSummary(next.accuracy, next.time, next.provider ?: "?")
+                val cur = best?.let { FixSummary(it.accuracy, it.time, it.provider ?: "?") }
+                if (better(cur, cand) === cand) best = next
+            }
+        } finally {
+            main.post { runCatching { lm.removeUpdates(listener) } }
+            updates.close()
+        }
+        return best
     }
 
     private fun isMock(l: Location): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) l.isMock else @Suppress("DEPRECATION") l.isFromMockProvider

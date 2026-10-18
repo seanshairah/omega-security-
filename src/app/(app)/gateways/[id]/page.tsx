@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { requireUser, can } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { getSettingNumber } from "@/lib/settings";
-import { effectiveStatus, gatewayInclude, GATEWAY_STATUS_META, ACTIVATION_CODE_HOURS } from "@/lib/gateway/service";
+import { effectiveStatus, gatewayInclude, GATEWAY_STATUS_META, ACTIVATION_CODE_HOURS, guardDeviceConfig } from "@/lib/gateway/service";
+import { configApplied } from "@/lib/site-config";
 import { callInclude, callMetrics } from "@/lib/gateway/calls";
 import { regenerateGatewayCode, setGatewayDisabledAction, revokeGatewayAction } from "@/actions/gateways";
 import { PageHeader, Meta } from "@/components/ui/page";
@@ -36,6 +37,7 @@ export default async function GatewayPage({ params }: { params: Promise<{ id: st
   const locEvents = g?.mode === "GUARD" ? await db.locationEvent.findMany({ where: { gatewayDeviceId: id }, include: { shift: { select: { id: true, startAt: true, endAt: true } }, location: { select: { id: true, name: true, latitude: true, longitude: true, geofenceRadiusM: true } } }, orderBy: { occurredAt: "desc" }, take: 40 }) : [];
   const lastSite = locEvents.find((e) => e.location?.latitude != null)?.location ?? null;
   if (!g) notFound();
+  const currentConfigVersion = g.mode === "GUARD" ? (await guardDeviceConfig(g)).configVersion : null;
   const status = effectiveStatus(g, offlineMinutes);
   const manage = can.manageLocations(user);
   const serverUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? `https://${COMPANY.domain}`;
@@ -92,6 +94,7 @@ export default async function GatewayPage({ params }: { params: Promise<{ id: st
               <Meta label="Phone model">{g.deviceModel ?? "—"}</Meta>
               <Meta label="Android">{g.androidVersion ?? "—"}</Meta>
               <Meta label="App version">{g.appVersion ?? "—"}</Meta>
+              {g.mode === "GUARD" && <Meta label="Shift config on phone" className="col-span-2">{currentConfigVersion ? (configApplied(currentConfigVersion, g.configVersionApplied) ? <Status tone="ok">v{g.configVersionApplied} applied{g.configAppliedAt ? ` · ${ago(g.configAppliedAt)}` : ""}</Status> : <Status tone="warn">phone has {g.configVersionApplied ? `v${g.configVersionApplied}` : "no config yet"} · current is v{currentConfigVersion} · applied on the next heartbeat</Status>) : <span className="text-ink-3">No shift to monitor{g.configVersionApplied ? ` · phone last applied v${g.configVersionApplied}` : ""}</span>}</Meta>}
               <Meta label="Last IP">{g.lastIp ?? "—"}</Meta>
               <Meta label="Last call">{g.lastCallAt ? fmtDateTime(g.lastCallAt) : "—"}</Meta>
               <Meta label="Registered">{fmtDateTime(g.createdAt)}</Meta>

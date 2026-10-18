@@ -46,14 +46,26 @@ Treat this as a serious regression. The call gateway does not touch SMS; verify:
 6. Database: `SmsMessage`, `MessageTemplate`, `Setting` rows are intact (`npx tsx scripts/dev/db-counts.ts`).
 7. Rule out the gateway completely: it can be disabled by disabling every device; SMS continues regardless.
 
-## Guard phone shows "Location unavailable" or no checks
+## Guard phone shows "GPS: UNKNOWN" or no checks
 
-1. Permissions on the phone: Settings → Apps → Security Gateway → Permissions → Location must be **Allow all the time**; the app's screen says "Only while using the app" otherwise. Location services must be on.
-2. The site needs coordinates (Locations → Edit → Position and geofence). Reason `site_has_no_coordinates`.
-3. A shift must exist for the guard; monitoring starts 10 minutes before it. The app shows NOT ON SHIFT / WAITING FOR SHIFT.
-4. Indoors or in a vehicle the GPS fix can be worse than the 100 m limit → `poor_accuracy` → UNKNOWN, never OUTSIDE. Raise *Worst usable GPS accuracy* only if the site is large.
-5. Battery managers: the overdue alert means the phone was online but sent no check; see the per-brand settings in ANDROID_INSTALLATION.md.
-6. `adb logcat -s LocationMonitor GatewayService` shows each check and its classification.
+The dashboard now shows three separate rows: **Shift**, **GPS** (with the reason underneath) and **Sync**. Read the reason first; each one has a different fix.
+
+| GPS reason on the phone | Meaning | Fix |
+|---|---|---|
+| *GPS accuracy ±121.4 m is worse than the 100 m limit* | A fix was obtained but it is too loose to decide. Not "outside". | Move to open sky and tap **Check location now**. Raise *Worst usable GPS accuracy* only for very large sites. |
+| *No GPS fix* | Nothing came back within 60 s. | Near a window or outdoors; GPS does not need data or airtime. |
+| *Location is switched off on the phone* | Location services are off. | Turn them on in the phone's Settings. |
+| *Location permission was removed* | The app lost its location permission. | Tap **Grant permissions** → **Allow all the time**. |
+| *The duty site has no coordinates* | The site was never placed on the map. | Locations → Edit → **Position and geofence**: use the map picker. |
+| *Reading … is too close to the site boundary* | Distance ± accuracy straddles the fence. | Normal near the fence; the next check decides. |
+| **GPS: OFF · no shift being monitored** | No shift within 10 minutes. | Create the shift; the phone picks up the config within one heartbeat. |
+
+Other checks:
+
+1. The **Sync** row is about internet, not GPS. *NO INTERNET · 3 event(s) saved on the phone* with *GPS: INSIDE SITE* means the guard is on site and the events will arrive later as SYNCED LATE.
+2. **Check location now** never cancels a check that is already running; it joins it and runs one more afterwards. The button is disabled for a moment after each tap.
+3. Battery managers: the overdue alert means the phone was online but sent no check; see the per-brand settings in ANDROID_INSTALLATION.md.
+4. `adb logcat -s LocationMonitor GatewayService` shows each check, its provider and accuracy, and the classification.
 
 ## Guard shown outside but is on site
 

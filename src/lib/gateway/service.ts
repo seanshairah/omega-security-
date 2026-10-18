@@ -10,6 +10,7 @@ import { notify } from "@/lib/notifications";
 import { getSettingNumber } from "@/lib/settings";
 import { normalisePhone, isValidPhone } from "@/lib/phone";
 import { generateActivationCode, generateDeviceToken, hashToken } from "./auth";
+import { effectiveGeofence, configVersionString } from "@/lib/site-config";
 
 export const ACTIVATION_CODE_HOURS = 24;
 
@@ -66,7 +67,9 @@ export async function regenerateActivationCode(id: string, actor: { userId: stri
   return updated;
 }
 
-export type DeviceInfo = { appVersion?: string; androidVersion?: string; deviceModel?: string; batteryLevel?: number; networkType?: string; locationPermission?: string; callPermission?: string; monitoringState?: string; mockLocation?: boolean; lastLocation?: { latitude: number; longitude: number; accuracyM?: number; at?: string; state?: string } };
+export type DeviceInfo = { appVersion?: string; androidVersion?: string; deviceModel?: string; batteryLevel?: number; networkType?: string; locationPermission?: string; callPermission?: string; monitoringState?: string; mockLocation?: boolean; lastLocation?: { latitude: number; longitude: number; accuracyM?: number; at?: string; state?: string }; configVersion?: string;
+  // Stage 1/3 diagnostics (all optional; older app versions do not send them)
+  shiftState?: string; gpsState?: string; gpsReason?: string | null; syncState?: string; queuedEvents?: number; failedEvents?: number; oldestPendingSeconds?: number | null; lastEventSyncAt?: string | null; lastSyncAttemptAt?: string | null; lastSyncError?: string | null; lastSyncTrigger?: string | null };
 
 /** Exchange an activation code for a device token. The token is returned exactly once. */
 export async function activateGateway(code: string, info: DeviceInfo, ip: string | null) {
@@ -106,6 +109,27 @@ function deviceInfoData(info: DeviceInfo) {
   };
 }
 
+const date = (v: unknown) => { if (typeof v !== "string") return undefined; const d = new Date(v); return Number.isNaN(d.getTime()) ? undefined : d; };
+const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : undefined);
+const int = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.round(v)) : undefined);
+
+/** Separate shift / GPS / sync facts from the phone. A key that is absent is left untouched; null clears it. */
+function syncDiagnosticsData(info: DeviceInfo) {
+  const out: Record<string, unknown> = {};
+  if (info.shiftState !== undefined) out.shiftState = str(info.shiftState, 20) ?? null;
+  if (info.gpsState !== undefined) out.gpsState = str(info.gpsState, 30) ?? null;
+  if (info.gpsReason !== undefined) out.gpsReason = str(info.gpsReason, 40) ?? null;
+  if (info.syncState !== undefined) out.syncState = str(info.syncState, 30) ?? null;
+  if (info.queuedEvents !== undefined) out.queuedEvents = int(info.queuedEvents) ?? null;
+  if (info.failedEvents !== undefined) out.failedEvents = int(info.failedEvents) ?? null;
+  if (info.oldestPendingSeconds !== undefined) out.oldestPendingSeconds = int(info.oldestPendingSeconds) ?? null;
+  if (info.lastEventSyncAt !== undefined) out.lastEventSyncAt = date(info.lastEventSyncAt) ?? null;
+  if (info.lastSyncAttemptAt !== undefined) out.lastSyncAttemptAt = date(info.lastSyncAttemptAt) ?? null;
+  if (info.lastSyncError !== undefined) out.lastSyncError = str(info.lastSyncError, 200) ?? null;
+  if (info.lastSyncTrigger !== undefined) out.lastSyncTrigger = str(info.lastSyncTrigger, 30) ?? null;
+  return out as Prisma.GatewayDeviceUncheckedUpdateInput;
+}
+
 /** Guard mode: mark the guard as an Android guard once a device is active; back to feature phone when none is. */
 async function syncGuardDeviceKind(guardId: string | null | undefined) {
   if (!guardId) return;
@@ -131,13 +155,21 @@ export async function guardDeviceConfig(device: GatewayDevice, now = new Date())
   const guard = await db.guard.findUnique({ where: { id: device.guardId }, select: { id: true, firstName: true, lastName: true, guardNo: true } });
   const shift = await db.shift.findFirst({
     where: { guardId: device.guardId, status: { notIn: ["COMPLETED", "MISSED", "CANCELLED"] }, endAt: { gte: addMinutes(now, -60) } },
-    include: { location: { select: { id: true, name: true, latitude: true, longitude: true, geofenceRadiusM: true, address: true } } },
+    include: { location: { select: { id: true, name: true, latitude: true, longitude: true, geofenceRadiusM: true, address: true, configVersion: true, coordinatesSource: true } } },
     orderBy: { startAt: "asc" },
   });
+  // The fence the phone judges against: the shift's override when set, else the site. Versioned so the phone can echo what it applied.
+  const eff = shift ? effectiveGeofence(shift, shift.location) : null;
+  const configVersion = shift ? configVersionString(shift.location.configVersion, shift.configVersion) : null;
   return {
     mode: device.mode,
     guard: guard ? { id: guard.id, name: `${guard.firstName} ${guard.lastName}`, guardNo: guard.guardNo } : null,
-    shift: shift ? { id: shift.id, startAt: shift.startAt.toISOString(), endAt: shift.endAt.toISOString(), status: shift.status, site: { id: shift.location.id, name: shift.location.name, latitude: shift.location.latitude, longitude: shift.location.longitude, radiusM: shift.location.geofenceRadiusM, hasCoordinates: shift.location.latitude != null && shift.location.longitude != null } } : null,
+    shift: shift ? {
+      id: shift.id, startAt: shift.startAt.toISOString(), endAt: shift.endAt.toISOString(), status: shift.status,
+      site: { id: shift.location.id, name: shift.location.name, latitude: eff?.fence.latitude ?? null, longitude: eff?.fence.longitude ?? null, radiusM: eff?.fence.radiusM ?? shift.location.geofenceRadiusM, hasCoordinates: eff != null, geofenceSource: eff?.source ?? "NONE", coordinatesSource: shift.location.coordinatesSource, geofenceNote: shift.geofenceNote },
+      configVersion,
+    } : null,
+    configVersion,
     config,
   };
 }
@@ -148,7 +180,8 @@ export async function heartbeat(device: GatewayDevice, info: DeviceInfo, ip: str
   const loc = info.lastLocation && typeof info.lastLocation.latitude === "number" && typeof info.lastLocation.longitude === "number" ? info.lastLocation : null;
   const locAt = loc?.at ? new Date(loc.at) : now;
   const locData = loc && (!device.lastLocationAt || device.lastLocationAt < locAt) ? { lastLatitude: loc.latitude, lastLongitude: loc.longitude, lastAccuracyM: typeof loc.accuracyM === "number" ? loc.accuracyM : null, lastLocationAt: Number.isNaN(locAt.getTime()) ? now : locAt, lastLocationState: (loc.state === "INSIDE" || loc.state === "OUTSIDE" ? loc.state : "UNKNOWN") as "INSIDE" | "OUTSIDE" | "UNKNOWN" } : {};
-  const updated = await db.gatewayDevice.update({ where: { id: device.id }, data: { lastSeenAt: now, lastIp: ip, ...(device.status === "DISABLED" ? {} : { status: "ONLINE" }), ...deviceInfoData(info), ...locData }, include: gatewayInclude });
+  const cfgData = typeof info.configVersion === "string" && info.configVersion.length <= 40 && info.configVersion !== device.configVersionApplied ? { configVersionApplied: info.configVersion, configAppliedAt: now } : {};
+  const updated = await db.gatewayDevice.update({ where: { id: device.id }, data: { lastSeenAt: now, lastIp: ip, ...(device.status === "DISABLED" ? {} : { status: "ONLINE" }), ...deviceInfoData(info), ...syncDiagnosticsData(info), ...locData, ...cfgData }, include: gatewayInclude });
   if (wasOffline) await audit({ actor: "gateway", action: "GATEWAY_ONLINE", entity: "GatewayDevice", entityId: device.id, ip });
   if (typeof info.batteryLevel === "number" && info.batteryLevel < 15 && (device.batteryLevel == null || device.batteryLevel >= 15)) {
     await notify({ type: "DEVICE_LOW_BATTERY", severity: "WARNING", title: `Low battery · ${device.deviceName}`, body: `${Math.round(info.batteryLevel)}% left. ${device.mode === "GUARD" ? "Location monitoring stops when the phone dies; that is not the same as leaving the site." : "Calls will not be reported once the phone dies."}`, guardId: device.guardId, url: `/gateways/${device.id}` });

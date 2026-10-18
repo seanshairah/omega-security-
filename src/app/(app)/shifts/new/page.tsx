@@ -7,6 +7,7 @@ import { ActionForm } from "@/components/ui/action-form";
 import { Field, Input, Select, Textarea, FormSection } from "@/components/ui/form";
 import { ShiftTimePicker } from "@/components/shift-time-picker";
 import { dateInputValue } from "@/lib/time";
+import { GeofenceOverrideSection } from "@/components/map/site-picker";
 
 export const metadata = { title: "New shift" };
 
@@ -31,6 +32,9 @@ export default async function NewShiftPage({ searchParams }: { searchParams: Pro
           <FormSection title="When" description="Pick a preset or set custom times. The duration and welfare-check midpoint are calculated.">
             <Field label="Date" required><Input type="date" name="date" defaultValue={sp.date ?? dateInputValue(new Date())} required /></Field>
             <div className="sm:col-span-2"><ShiftTimePicker /></div>
+          </FormSection>
+          <FormSection title="Geofence for this shift" description="By default the guard's phone is judged against the site's own geofence. Override it only when this shift's post is somewhere else.">
+            <GeofenceOverrideSection initial={{ enabled: false, lat: null, lng: null, radiusM: null, note: null }} mapsKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} siteRadius={150} />
           </FormSection>
           <FormSection title="Instructions" description="Shown on the shift record. Site instructions are included automatically.">
             <Field label="Shift instructions" className="sm:col-span-2"><Textarea name="instructions" placeholder="Anything specific to this shift" /></Field>

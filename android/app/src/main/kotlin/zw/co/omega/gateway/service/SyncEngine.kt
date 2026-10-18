@@ -2,51 +2,88 @@ package zw.co.omega.gateway.service
 
 import android.content.Context
 import android.util.Log
+import org.json.JSONObject
 import zw.co.omega.gateway.data.EventQueue
 import zw.co.omega.gateway.data.Prefs
-import zw.co.omega.gateway.net.ApiClient
-import zw.co.omega.gateway.util.DeviceInfo
 import zw.co.omega.gateway.data.ShiftConfig
 import zw.co.omega.gateway.location.LocationMonitor
+import zw.co.omega.gateway.model.GatewayEvent
+import zw.co.omega.gateway.net.ApiClient
+import zw.co.omega.gateway.util.DeviceInfo
 
-/** Drains the outbox and sends heartbeats. Shared by the foreground service and the WorkManager fallback. */
+/**
+ * One sync run (drain the outbox) and one heartbeat. Shared by the foreground service's
+ * SyncCoordinator and the WorkManager fallback; a process-wide lock keeps the two from sending
+ * the same rows at the same time. Pure of GPS: it never reads or changes monitoring state.
+ */
 class SyncEngine(private val context: Context) {
     private val prefs = Prefs(context)
     private val queue = EventQueue(context)
 
     sealed class Outcome { object Done : Outcome(); data class Retry(val error: String) : Outcome(); data class Rejected(val error: String) : Outcome() }
 
-    /** Send queued events in order; stops at the first transport failure. */
-    fun syncOnce(): Outcome {
-        if (!prefs.isActivated) return Outcome.Rejected("not activated")
-        if (!DeviceInfo.isOnline(context)) return Outcome.Retry("offline")
+    data class RunReport(val outcome: Outcome, val sent: Int, val acked: Int, val duplicates: Int, val rejected: Int, val retried: Int)
+
+    /** Send due events, highest priority first, in batches of 100; stops at the first transport failure. Every run is logged. */
+    fun syncOnce(trigger: Trigger = Trigger.MANUAL): Outcome = synchronized(LOCK) { run(trigger).outcome }
+
+    fun syncOnceReport(trigger: Trigger = Trigger.MANUAL): RunReport = synchronized(LOCK) { run(trigger) }
+
+    private fun run(trigger: Trigger): RunReport {
+        val started = System.currentTimeMillis()
+        val online = DeviceInfo.isOnline(context)
+        var sent = 0; var acked = 0; var dups = 0; var rejected = 0; var retried = 0
+        prefs.lastSyncAttemptAt = started
+        prefs.lastSyncTrigger = trigger.name
+        fun finish(outcome: Outcome, error: String? = null): RunReport {
+            queue.log(EventQueue.LogRow(started, trigger.name, online, sent, acked, dups, rejected, retried, error, System.currentTimeMillis() - started))
+            prefs.lastSyncError = error
+            refreshSyncState()
+            return RunReport(outcome, sent, acked, dups, rejected, retried)
+        }
+        if (!prefs.isActivated) return finish(Outcome.Rejected("not activated"), "not activated")
+        if (!online) return finish(Outcome.Retry("offline"), "offline")
         val api = ApiClient(prefs.serverUrl, prefs.deviceToken)
+        queue.purgeFailed()
         while (true) {
-            val batch = queue.peek(100)
-            if (batch.isEmpty()) return Outcome.Done
+            val batch = queue.due(limit = 100)
+            if (batch.isEmpty()) return finish(Outcome.Done)
+            queue.markSending(batch.map { it.id })
+            sent += batch.size
             try {
                 val acks = api.sendEvents(batch.map { it.event })
-                val ok = acks.filter { it.status == "ok" || it.status == "duplicate" }.map { it.eventId }
+                val byId = acks.associateBy { it.eventId }
+                val ok = mutableListOf<String>(); val retry = mutableListOf<EventQueue.Row>()
+                for (row in batch) {
+                    val a = byId[row.event.eventId]
+                    when (SyncPlanner.ackOutcome(a?.status)) {
+                        AckOutcome.ACKED -> { ok += row.event.eventId; if (a?.status == "duplicate") dups++ else acked++ }
+                        AckOutcome.FAILED_PERMANENT -> { rejected++; Log.w(TAG, "event ${row.event.eventId} rejected: ${a?.error}"); queue.fail(row.event.eventId, a?.error) }
+                        AckOutcome.UNKNOWN -> retry += row
+                    }
+                }
                 queue.ack(ok)
-                acks.filter { it.status == "rejected" }.forEach { Log.w(TAG, "event ${it.eventId} rejected: ${it.error}"); queue.drop(it.eventId) }
-                // Anything the server did not mention stays queued for the next round.
-                val mentioned = acks.map { it.eventId }.toSet()
-                val unmentioned = batch.filter { it.event.eventId !in mentioned }
-                if (unmentioned.isNotEmpty()) { queue.markAttempt(unmentioned.map { it.id }, "no ack"); if (unmentioned.size == batch.size) return Outcome.Retry("no acks") }
-                prefs.lastSyncAt = System.currentTimeMillis()
-                prefs.lastError = null
-                prefs.authRejected = false
+                if (retry.isNotEmpty()) { retried += retry.size; queue.markRetry(retry, "no ack"); if (retry.size == batch.size) return finish(Outcome.Retry("no acks"), "no acks") }
+                if (ok.isNotEmpty()) { prefs.lastSyncAt = System.currentTimeMillis(); prefs.lastError = null; prefs.authRejected = false }
             } catch (e: ApiClient.ApiException) {
-                queue.markAttempt(batch.map { it.id }, e.message)
+                retried += batch.size
+                queue.markRetry(batch, e.message)
                 prefs.lastError = e.message
-                if (e.status == 401 || e.status == 403) { prefs.authRejected = true; return Outcome.Rejected(e.message ?: "unauthorised") }
-                return Outcome.Retry(e.message ?: "HTTP ${e.status}")
+                if (e.status == 401 || e.status == 403) { prefs.authRejected = true; return finish(Outcome.Rejected(e.message ?: "unauthorised"), e.message) }
+                return finish(Outcome.Retry(e.message ?: "HTTP ${e.status}"), e.message)
             } catch (e: Exception) {
-                queue.markAttempt(batch.map { it.id }, e.message)
+                retried += batch.size
+                queue.markRetry(batch, e.message)
                 prefs.lastError = e.message
-                return Outcome.Retry(e.message ?: "network error")
+                return finish(Outcome.Retry(e.message ?: "network error"), e.message ?: "network error")
             }
         }
+    }
+
+    /** Recompute the dashboard's sync state from the outbox; also called after the service's `syncing` flag changes. */
+    fun refreshSyncState(syncing: Boolean = false) {
+        val c = queue.counts()
+        prefs.syncState = SyncPlanner.syncState(DeviceInfo.isOnline(context), prefs.authRejected, c.queued + c.sending, c.retryPending, c.failed, syncing)
     }
 
     fun heartbeat(): Outcome {
@@ -54,7 +91,15 @@ class SyncEngine(private val context: Context) {
         if (!DeviceInfo.isOnline(context)) { prefs.lastHeartbeatOk = false; return Outcome.Retry("offline") }
         return try {
             val api = ApiClient(prefs.serverUrl, prefs.deviceToken)
+            val c = queue.counts()
             val info = DeviceInfo.json(context).put("monitoringState", prefs.monitoringState).put("mockLocation", prefs.mockSeen)
+                .put("shiftState", prefs.shiftState).put("gpsState", prefs.gpsState).put("gpsReason", prefs.gpsReason ?: JSONObject.NULL)
+                .put("syncState", prefs.syncState).put("queuedEvents", c.pending).put("failedEvents", c.failed)
+                .put("lastEventSyncAt", if (prefs.lastSyncAt > 0) GatewayEvent.iso(prefs.lastSyncAt) else JSONObject.NULL)
+                .put("lastSyncAttemptAt", if (prefs.lastSyncAttemptAt > 0) GatewayEvent.iso(prefs.lastSyncAttemptAt) else JSONObject.NULL)
+                .put("lastSyncError", prefs.lastSyncError ?: JSONObject.NULL).put("lastSyncTrigger", prefs.lastSyncTrigger ?: JSONObject.NULL)
+                .put("oldestPendingSeconds", queue.oldestPendingMs()?.let { it / 1000 } ?: JSONObject.NULL)
+                .put("configVersion", ShiftConfig.load(context)?.configVersion ?: JSONObject.NULL)
             if (prefs.isGuardMode) LocationMonitor(context).lastFixJson()?.let { info.put("lastLocation", it) }
             val r = api.heartbeat(info)
             prefs.mode = r.mode
@@ -64,7 +109,7 @@ class SyncEngine(private val context: Context) {
             prefs.phoneNumber = r.phoneNumber.ifBlank { prefs.phoneNumber }
             prefs.locationName = r.locationName ?: ""
             prefs.heartbeatSeconds = r.heartbeatSeconds
-            prefs.lastSyncAt = System.currentTimeMillis()
+            prefs.lastHeartbeatAt = System.currentTimeMillis() // a heartbeat is not an event sync; lastSyncAt is set by syncOnce()
             prefs.lastHeartbeatOk = true
             prefs.lastError = null
             prefs.authRejected = false
@@ -78,20 +123,21 @@ class SyncEngine(private val context: Context) {
         }
     }
 
-    /** Pull the shift/site/policy for offline monitoring. Failures keep the cached copy. */
-    fun refreshConfig(api: ApiClient = ApiClient(prefs.serverUrl, prefs.deviceToken)): ShiftConfig? {
+    /** Pull the shift/site/policy for offline monitoring. Failures keep the cached copy. Returns true when the config changed. */
+    fun refreshConfig(api: ApiClient = ApiClient(prefs.serverUrl, prefs.deviceToken)): Boolean {
         return try {
-            val r = api.config()
-            val cfg = ShiftConfig.fromServer(r)
-            ShiftConfig.save(context, cfg)
-            cfg
+            val before = ShiftConfig.fingerprint(ShiftConfig.load(context))
+            val cfg = ShiftConfig.fromServer(api.config())
+            ShiftConfig.save(context, cfg) // notifies ConfigBus when anything that matters changed
+            ShiftConfig.fingerprint(cfg) != before
         } catch (e: Exception) {
             Log.w(TAG, "config refresh failed: ${e.message}")
-            ShiftConfig.load(context)
+            false
         }
     }
 
     fun queueSize(): Int = queue.size()
+    fun nextRetryAt(): Long? = queue.nextAttemptAt()
 
-    companion object { private const val TAG = "SyncEngine" }
+    companion object { private const val TAG = "SyncEngine"; private val LOCK = Any() }
 }
