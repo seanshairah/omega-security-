@@ -32,6 +32,7 @@
     "db:check": "tsx scripts/dev/prisma-check.ts",
     "db:check:db": "tsx scripts/dev/prisma-check.ts --db",
     "icons:build": "node scripts/dev/build-icons.mjs",
+    "test:shift-edit": "tsx scripts/dev/shift-edit-e2e.ts",
     "test:map": "node scripts/dev/map-e2e.mjs",
     "test:layout": "node scripts/dev/layout-e2e.mjs"
   },

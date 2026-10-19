@@ -11,7 +11,9 @@ import { Avatar } from "@/components/ui/avatar";
 import { Status } from "@/components/ui/status";
 import { ConfirmButton } from "@/components/ui/confirm-button";
 import { ButtonGroup, LinkButton } from "@/components/ui/button";
-import { cancelShift, manualArrival, manualComplete, addShiftNote, updateShiftGeofence } from "@/actions/shifts";
+import { cancelShift, deleteShift, manualArrival, manualComplete, addShiftNote, updateShiftGeofence } from "@/actions/shifts";
+import { editPolicy, deletePolicy, DELETE_EXPLAINER } from "@/lib/shift-edit";
+import { shiftTraceCounts } from "@/lib/services/shifts";
 import { effectiveGeofence, COORDINATES_SOURCE_META } from "@/lib/site-config";
 import { GeofenceOverrideSection } from "@/components/map/site-picker";
 import { ActionForm } from "@/components/ui/action-form";
@@ -47,16 +49,21 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   const outsideSeconds = locEvents.filter((e) => e.eventType === "LOCATION_RETURNED").reduce((n, e) => n + (e.durationOutsideSeconds ?? 0), 0);
   const verification = s.attendance?.locationVerification ?? "NOT_APPLICABLE";
   const fence = effectiveGeofence(s, s.location);
+  // What an operator may still change on this shift, and whether it can be removed outright.
+  const edit = editPolicy({ status: s.status, arrivalConfirmedAt: s.attendance?.arrivalConfirmedAt ?? null, arrivalSmsSentAt: s.arrivalSmsSentAt });
+  const del = can.manageShifts(user) ? deletePolicy({ status: s.status, arrivalConfirmedAt: s.attendance?.arrivalConfirmedAt ?? null }, await shiftTraceCounts(s.id)) : { canDelete: false, reason: null };
   const VERIFY: Record<string, { label: string; tone: "ok" | "warn" | "muted" | "neutral" }> = { NOT_APPLICABLE: { label: androidGuard ? "Awaiting SMS confirmation and a GPS fix" : "Not applicable (feature phone)", tone: "neutral" }, VERIFIED: { label: "ARRIVAL VERIFIED · SMS + GPS inside", tone: "ok" }, EXCEPTION: { label: "LOCATION EXCEPTION · SMS yes, GPS outside", tone: "warn" }, UNAVAILABLE: { label: "Location unavailable at arrival", tone: "muted" } };
 
   return (
     <div>
       <PageHeader title={`${guardName} · ${s.location.name}`} description={`${fmtDate(s.startAt)} · ${fmtTime(s.startAt)}–${fmtTime(s.endAt)} · ${fmtDuration(s.durationMinutes)}`} actions={
-        can.manageShifts(user) && live && (
+        can.manageShifts(user) && (live || del.canDelete) && (
           <ButtonGroup>
-            {!s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Confirm arrival manually" title="Confirm arrival manually?" body={`Record ${guardName} as on post now, for example after a phone call.`} withNote="How was this confirmed?" confirmLabel="Confirm arrival" action={async (note) => { "use server"; await manualArrival(s.id, note); }} />}
-            {s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Mark completed" title="Mark this shift completed?" body="Use when the guard confirmed by phone or radio rather than SMS." withNote="Note" confirmLabel="Mark completed" action={async (note) => { "use server"; await manualComplete(s.id, note); }} />}
-            <ConfirmButton size="md" label="Cancel shift" variant="danger" title="Cancel this shift?" body="The guard will no longer receive checks for it. This is recorded on the timeline." withNote="Reason" confirmLabel="Cancel shift" action={async (note) => { "use server"; await cancelShift(s.id, note); }} />
+            {live && edit.canEdit && <LinkButton href={`/shifts/${s.id}/edit`} size="md">Edit</LinkButton>}
+            {live && !s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Confirm arrival manually" title="Confirm arrival manually?" body={`Record ${guardName} as on post now, for example after a phone call.`} withNote="How was this confirmed?" confirmLabel="Confirm arrival" action={async (note) => { "use server"; await manualArrival(s.id, note); }} />}
+            {live && s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Mark completed" title="Mark this shift completed?" body="Use when the guard confirmed by phone or radio rather than SMS." withNote="Note" confirmLabel="Mark completed" action={async (note) => { "use server"; await manualComplete(s.id, note); }} />}
+            {live && <ConfirmButton size="md" label="Cancel shift" variant="danger" title="Cancel this shift?" body="The guard will no longer receive checks for it. This is recorded on the timeline." withNote="Reason" confirmLabel="Cancel shift" action={async (note) => { "use server"; await cancelShift(s.id, note); }} />}
+            {del.canDelete && <ConfirmButton size="md" label="Delete" variant="danger" title="Delete this shift?" body={DELETE_EXPLAINER} confirmLabel="Delete permanently" action={async () => { "use server"; await deleteShift(s.id); }} />}
           </ButtonGroup>
         )
       } />

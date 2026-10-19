@@ -8,6 +8,7 @@ import { PageHeader, Segments } from "@/components/ui/page";
 import { Card } from "@/components/ui/card";
 import { Table, THead, TBody, Empty } from "@/components/ui/table";
 import { ShiftStatusLabel } from "@/components/shift-status";
+import { editPolicy } from "@/lib/shift-edit";
 import { ButtonGroup, LinkButton } from "@/components/ui/button";
 import { Select, Input } from "@/components/ui/form";
 import { Status } from "@/components/ui/status";
@@ -21,6 +22,7 @@ const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default async function ShiftsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
+  const canEdit = can.manageShifts(user);
   const sp = await searchParams;
   const view = sp.view ?? "upcoming";
   const today = startOfDay(new Date());
@@ -96,9 +98,9 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
             ))
           } table={
           <Table>
-            <THead><tr><th>Date</th><th>Guard</th><th>Location</th><th>Hours</th><th>Duration</th><th>Supervisor</th><th>Arrival</th><th>Status</th></tr></THead>
+            <THead><tr><th>Date</th><th>Guard</th><th>Location</th><th>Hours</th><th>Duration</th><th>Supervisor</th><th>Arrival</th><th>Status</th>{canEdit && <th><span className="sr-only">Edit</span></th>}</tr></THead>
             <TBody>
-              {shifts.length === 0 && <Empty colSpan={8} title="No shifts match" body="Try another view or clear the filters." />}
+              {shifts.length === 0 && <Empty colSpan={canEdit ? 9 : 8} title="No shifts match" body="Try another view or clear the filters." />}
               {shifts.map((s) => (
                 <tr key={s.id}>
                   <td className="tnum"><Link href={`/shifts/${s.id}`} className="font-medium text-ink hover:underline">{fmtDate(s.startAt)}</Link></td>
@@ -109,6 +111,9 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
                   <td className="text-ink-2">{s.supervisor?.name ?? "—"}</td>
                   <td className="tnum">{s.attendance?.arrivalConfirmedAt ? fmtTime(s.attendance.arrivalConfirmedAt) : <span className="text-ink-3">—</span>}</td>
                   <td><ShiftStatusLabel status={s.status} /></td>
+                  {canEdit && <td className="text-right">{editPolicy({ status: s.status, arrivalConfirmedAt: s.attendance?.arrivalConfirmedAt ?? null, arrivalSmsSentAt: s.arrivalSmsSentAt }).canEdit
+                    ? <Link href={`/shifts/${s.id}/edit`} className="text-[13px] font-medium text-accent-strong hover:underline">Edit</Link>
+                    : <span className="text-[13px] text-ink-3">—</span>}</td>}
                 </tr>
               ))}
             </TBody>
