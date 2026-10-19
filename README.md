@@ -45,6 +45,7 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 | [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) | Phase 1 audit: baseline, confirmed defects and root causes, risks, stage results |
 | [docs/ANDROID_ARCHITECTURE.md](docs/ANDROID_ARCHITECTURE.md) | the app after Phase 1: monitoring coordinator, sync coordinator, app state, status rows |
 | [docs/AUTO_SYNC.md](docs/AUTO_SYNC.md) | the automatic sync engine: outbox statuses, priorities, triggers, retries, diagnostics |
+| [docs/CALL_CHECKIN.md](docs/CALL_CHECKIN.md) | call-triggered check-in: the qualifying call, the GPS verification, the five-minute grace rule, late arithmetic, statuses, fraud resistance and settings |
 | [docs/MAPBOX.md](docs/MAPBOX.md) | the map architecture, token restriction, cost and billing alerts, telemetry, and the raster fallback |
 | [docs/ICONS.md](docs/ICONS.md) | the icon system: why Material Symbols, how icons are generated, the concept map, accessibility rules |
 | [docs/UX_WRITING_REVIEW.md](docs/UX_WRITING_REVIEW.md) | the interface copy review, what changed and what was deliberately left dense |

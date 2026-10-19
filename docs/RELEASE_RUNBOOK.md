@@ -88,3 +88,78 @@ Install on one guard phone and one operations phone, run `docs/DEVICE_TEST_PLAN.
 - Vercel logs: filter `[config]`, `[automation]`, `Unhandled`.
 - Portal pages to watch for the first hour: `/gateways` (heartbeats, sync *Up to date*), `/alerts`, `/operations/exceptions`, `/notifications`.
 - Audit log (super admin): `LOGIN_THROTTLED`, `GATEWAY_*`, `LOCATION_REQUESTED`.
+
+---
+
+## Release: call-triggered check-in (added 2026-10-19)
+
+### Migration
+
+One additive migration, `20261019183149_attendance_check_in`. It creates the `AttendanceCheckIn`
+table with two enums, and adds two nullable columns, `Location.checkInGraceMinutes` and
+`Shift.checkInGraceMinutes`. **No column is dropped, renamed or made non-nullable, and no row is
+rewritten**, so it is safe to apply while the current version is serving.
+
+```bash
+# Check first: this prints what would run and changes nothing.
+npx prisma migrate status
+
+# Apply. Never `migrate dev` or `migrate reset` against production.
+npx prisma migrate deploy
+```
+
+Order: apply the migration **before** deploying the new build. The old build ignores the new table,
+so the gap is harmless in that direction; the new build needs the table to exist.
+
+### Configuration
+
+Nothing is required: every setting has a working default and the feature is on. Review these in
+Settings → Call check-in before the first shift:
+
+| Setting | Default | Change it when |
+|---|---|---|
+| `checkin.enabled` | true | Set false to roll the feature back without deploying |
+| `checkin.graceMinutes` | 5 | The company's own rule differs |
+| `checkin.numbers` | blank | Guards must ring one specific control-room number |
+| `checkin.windowBeforeMinutes` | 60 | Guards ring in earlier than an hour before |
+
+A site can override the grace period on its own form, and a single shift on the shift edit page.
+
+### Release checks
+
+```bash
+npm run db:check            # schema, generated client, migration folders
+npm test                    # unit, includes the grace table
+npm run test:check-in       # end to end against a non-production database
+```
+
+Then on the deployed URL, with one test shift:
+
+1. Confirm a check-in row appears as the shift approaches its start (Operations → Check-ins).
+2. Place a call from an activated guard phone and confirm the row reaches GPS pending.
+3. Confirm the fix arrives and the row reads verified, with the distance and accuracy shown.
+4. Confirm the shift's attendance record shows the same arrival time and late minutes.
+
+### Rollback
+
+In order of preference, least disruptive first:
+
+1. **Switch the feature off.** Settings → Call check-in → `checkin.enabled` = false. The scheduler
+   stops opening expectations and calls stop creating GPS requests. Existing rows stay for the
+   record. This needs no deploy and takes effect within the settings cache window.
+2. **Redeploy the previous build.** The old build does not read the new table. Nothing has to be
+   undone in the database, because the migration only added things.
+3. **Reverse the migration** only if the table itself must go. This destroys the check-in history,
+   so export it first:
+   ```sql
+   -- keep the evidence before dropping anything
+   CREATE TABLE "AttendanceCheckIn_backup" AS TABLE "AttendanceCheckIn";
+   ```
+   Then drop the table, the two enums and the two columns. Attendance records themselves are in
+   `Attendance` and are not affected.
+
+### What this release does not change
+
+SMS arrival checks, welfare checks, completion, emergencies, call monitoring, background GPS
+monitoring, remote location requests and offline synchronisation are untouched. Guards on feature
+phones keep the SMS flow exactly as before and are never escalated by the new feature.

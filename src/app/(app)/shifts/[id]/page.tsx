@@ -13,6 +13,8 @@ import { ConfirmButton } from "@/components/ui/confirm-button";
 import { ButtonGroup, LinkButton } from "@/components/ui/button";
 import { cancelShift, deleteShift, manualArrival, manualComplete, addShiftNote, updateShiftGeofence } from "@/actions/shifts";
 import { editPolicy, deletePolicy, DELETE_EXPLAINER } from "@/lib/shift-edit";
+import { CheckInRow, type CheckInView } from "@/components/attendance/check-in-card";
+import type { CheckInStatus } from "@/lib/attendance/check-in";
 import { shiftTraceCounts } from "@/lib/services/shifts";
 import { effectiveGeofence, COORDINATES_SOURCE_META } from "@/lib/site-config";
 import { GeofenceOverrideSection } from "@/components/map/site-picker";
@@ -49,6 +51,17 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   const outsideSeconds = locEvents.filter((e) => e.eventType === "LOCATION_RETURNED").reduce((n, e) => n + (e.durationOutsideSeconds ?? 0), 0);
   const verification = s.attendance?.locationVerification ?? "NOT_APPLICABLE";
   const fence = effectiveGeofence(s, s.location);
+  // The call check-in for this shift, when the feature has opened one.
+  const checkInRow = await db.attendanceCheckIn.findUnique({ where: { shiftId: s.id }, include: { gatewayDevice: true, decidedBy: { select: { name: true } } } });
+  const checkIn: CheckInView | null = checkInRow ? {
+    id: checkInRow.id, shiftId: s.id, guardName, guardPhone: s.guard.phone, siteName: s.location.name,
+    status: checkInRow.status as CheckInStatus, scheduledStartAt: checkInRow.scheduledStartAt,
+    callAt: checkInRow.callAt, gpsCapturedAt: checkInRow.gpsCapturedAt, verifiedArrivalAt: checkInRow.verifiedArrivalAt,
+    accuracyM: checkInRow.accuracyM, distanceM: checkInRow.distanceM, minutesAfterStart: checkInRow.minutesAfterStart,
+    lateMinutes: checkInRow.lateMinutes, graceMinutes: checkInRow.graceMinutes, source: checkInRow.source,
+    exceptionReason: checkInRow.exceptionReason, deviceOnline: null,
+    decidedBy: checkInRow.decidedBy?.name ?? null, decisionReason: checkInRow.decisionReason,
+  } : null;
   // What an operator may still change on this shift, and whether it can be removed outright.
   const edit = editPolicy({ status: s.status, arrivalConfirmedAt: s.attendance?.arrivalConfirmedAt ?? null, arrivalSmsSentAt: s.arrivalSmsSentAt });
   const del = can.manageShifts(user) ? deletePolicy({ status: s.status, arrivalConfirmedAt: s.attendance?.arrivalConfirmedAt ?? null }, await shiftTraceCounts(s.id)) : { canDelete: false, reason: null };
@@ -70,6 +83,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
 
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <div className="min-w-0 space-y-4">
+          {checkIn && <CheckInRow v={checkIn} />}
           {androidGuard && (
             <Card>
               <CardHeader title="Location" description={`Shift-aware monitoring from the guard's phone. ${exits} exit${exits === 1 ? "" : "s"}${outsideSeconds ? `, ${Math.round(outsideSeconds / 60)} min outside in total` : ""}. GPS is approximate; every point carries its accuracy.`} action={latestFix ? <span className="flex items-center gap-2"><Status tone={freshness(latestFix.occurredAt, new Date(), latestFix.syncStatus).tone}>{freshness(latestFix.occurredAt, new Date(), latestFix.syncStatus).label}</Status><Status tone={LOCATION_STATE_META[latestFix.locationState].tone}>{LOCATION_STATE_META[latestFix.locationState].label}</Status></span> : <Status tone="muted">No fix yet</Status>} />

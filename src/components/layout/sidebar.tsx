@@ -28,6 +28,7 @@ export function Sidebar({ counts, role, onClose, simulator = true }: { counts: S
       { href: "/monitoring", label: "Monitoring", icon: "visibility", count: counts.watched },
       { href: "/shifts", label: "Shifts", icon: "calendar_today" },
       { href: "/attendance", label: "Attendance", icon: "assignment" },
+      { href: "/attendance/check-ins", label: "Check-ins", icon: "phone_callback" },
       { href: "/incidents", label: "Incidents", icon: "report", count: counts.incidents },
     ] },
     { label: "Workforce", icon: "groups", items: [

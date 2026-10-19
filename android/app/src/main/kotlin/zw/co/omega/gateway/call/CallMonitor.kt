@@ -14,6 +14,7 @@ import zw.co.omega.gateway.data.Prefs
 import zw.co.omega.gateway.model.GatewayEvent
 import zw.co.omega.gateway.service.GatewayService
 import zw.co.omega.gateway.service.Trigger
+import zw.co.omega.gateway.service.CommandWakeSource
 import zw.co.omega.gateway.location.LocationMonitor
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -47,6 +48,14 @@ object CallMonitor {
         }
         GatewayService.requestSync(app, Trigger.NEW_EVENT)
         if (prefs.isGuardMode && event.eventType == GatewayEvent.CALL_STARTED) GatewayService.requestLocationCheck(app) // refresh the fix around the call
+        // A check-in call makes the server create a location request for this phone, but it can only
+        // do that once the call event has been uploaded. The command poll that follows a sync may
+        // therefore run a moment too early, leaving the request waiting for the next poll up to
+        // half a minute later. A second poll a few seconds afterwards closes that gap, so a guard
+        // who rings in is asked for a fix straight away rather than after the next cycle.
+        if (prefs.isGuardMode && (event.eventType == GatewayEvent.CALL_STARTED || event.eventType == GatewayEvent.CALL_ENDED)) {
+            handler.postDelayed({ CommandWakeSource.onWake() }, 6_000)
+        }
         if (event.eventType == GatewayEvent.CALL_STARTED || event.eventType == GatewayEvent.CALL_ENDED || event.eventType == GatewayEvent.CALL_MISSED) {
             val label = when (event.eventType) { GatewayEvent.CALL_STARTED -> if (event.direction == "OUTGOING") "Dialling" else "Ringing"; GatewayEvent.CALL_MISSED -> "Missed"; else -> "Ended ${event.durationSeconds ?: 0}s" }
             prefs.lastCallSummary = "${event.phoneNumber ?: "unknown number"} · $label"

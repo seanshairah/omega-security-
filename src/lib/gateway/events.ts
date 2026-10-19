@@ -175,9 +175,19 @@ async function createCall(device: GatewayDevice, ev: IncomingGatewayEvent, at: D
   if (unknown && raw && state.direction === "INCOMING" && device.mode !== "GUARD" && (await getSettingBool("gateway.unknownCallerAlert"))) {
     await notify({ type: "UNKNOWN_CALLER", severity: "INFO", title: `Unknown caller on ${device.deviceName}`, body: `${formatPhone(normalized || raw)} called at ${fmtTime(at)} and is not a registered guard.`, url: `/calls/${call.id}` });
   }
+  // A call from a guard's own registered phone may be the shift check-in. Never throws into the
+  // call pipeline: a failure here must not lose the call record.
+  let checkIn = "";
+  try {
+    const { handleCall } = await import("@/lib/attendance/check-in-service");
+    const r = await handleCall(call, device, at);
+    if (r && !r.startsWith("no ") && r !== "check-in disabled" && r !== "not the guard's registered device") checkIn = ` · check-in: ${r}`;
+  } catch (e) {
+    console.warn("[check-in] call handling failed", (e as Error).message);
+  }
   // A single event can already be terminal (for example a CALL_MISSED arriving first).
   await afterTransition(device, call, "RINGING", at, true);
-  return { outcome: `created ${call.status}${guard ? ` · ${guard.firstName} ${guard.lastName}` : " · unknown caller"}${shift ? " · on live shift" : ""}`, callLogId: call.id };
+  return { outcome: `created ${call.status}${guard ? ` · ${guard.firstName} ${guard.lastName}` : " · unknown caller"}${shift ? " · on live shift" : ""}${checkIn}`, callLogId: call.id };
 }
 
 function readFix(ev: IncomingGatewayEvent): { latitude: number; longitude: number; state: LocationState } | null {

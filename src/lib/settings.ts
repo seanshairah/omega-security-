@@ -4,7 +4,7 @@ export type SettingDef = {
   key: string;
   label: string;
   description: string;
-  group: "arrival" | "welfare" | "completion" | "handover" | "recurrence" | "general" | "gateway" | "geofence";
+  group: "arrival" | "welfare" | "completion" | "handover" | "recurrence" | "general" | "gateway" | "geofence" | "checkin";
   default: string;
   type: "number" | "text" | "boolean";
 };
@@ -28,6 +28,15 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "gateway.unknownCallerAlert", label: "Alert on unknown callers", description: "Raise a notification when a number that is not a registered guard calls a gateway.", group: "gateway", default: "true", type: "boolean" },
   { key: "gateway.missedCallAlert", label: "Alert on missed calls", description: "Raise a notification when a guard's call to a gateway goes unanswered. Calls from guards on duty are always critical.", group: "gateway", default: "true", type: "boolean" },
   // GPS verification and geofencing (guard devices)
+  { key: "checkin.enabled", label: "Call check-in", description: "Expect a check-in call at the start of every shift, and verify it with a fresh GPS fix from the guard's phone.", group: "checkin", default: "true", type: "boolean" },
+  { key: "checkin.graceMinutes", label: "Check-in grace period", description: "Minutes after the scheduled start that still count as on time. A site or a single shift can override this.", group: "checkin", default: "5", type: "number" },
+  { key: "checkin.windowBeforeMinutes", label: "Check-in window opens", description: "Minutes before the scheduled start that a check-in call already counts.", group: "checkin", default: "60", type: "number" },
+  { key: "checkin.windowAfterMinutes", label: "Check-in window closes", description: "Minutes after the scheduled start that a call still counts as the check-in.", group: "checkin", default: "120", type: "number" },
+  { key: "checkin.correlationMinutes", label: "Call to fix window", description: "Minutes after the check-in call within which a GPS fix still counts as evidence of that arrival.", group: "checkin", default: "10", type: "number" },
+  { key: "checkin.escalationMinutes", label: "Check-in escalation", description: "Minutes after the grace period before an unverified check-in is raised to the supervisor as missed.", group: "checkin", default: "15", type: "number" },
+  { key: "checkin.maxGpsAttempts", label: "GPS attempts per check-in", description: "How many times the system asks the phone for a fix before giving up and raising an exception.", group: "checkin", default: "3", type: "number" },
+  { key: "checkin.numbers", label: "Authorised check-in numbers", description: "Comma-separated numbers a guard may call to check in. Blank accepts a call to any registered operations gateway phone.", group: "checkin", default: "", type: "text" },
+  { key: "checkin.maxClockSkewMinutes", label: "Accepted clock skew", description: "Minutes a guard phone's clock may differ from the server before its timestamps are replaced by the server's.", group: "checkin", default: "10", type: "number" },
   { key: "geofence.checkMinutes", label: "Location check interval", description: "Minutes between location checks during a shift when the guard is inside the site.", group: "geofence", default: "10", type: "number" },
   { key: "geofence.verifySeconds", label: "Exit verification delay", description: "Seconds to wait before a second reading confirms that a guard has left the site.", group: "geofence", default: "60", type: "number" },
   { key: "geofence.outsideCheckMinutes", label: "Check interval while outside", description: "Minutes between location updates while a guard is outside the site.", group: "geofence", default: "3", type: "number" },

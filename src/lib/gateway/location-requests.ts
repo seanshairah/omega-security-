@@ -22,7 +22,8 @@ import { saneTimestamp } from "./call-state";
 
 export const LOCATION_REQUEST_EVENT_TYPES = ["LOCATION_REQUEST_RESULT"] as const;
 
-export type Actor = { userId: string; name: string };
+/** `userId` is null for the automation engine, which has no user behind it. */
+export type Actor = { userId: string | null; name: string };
 
 export class LocationRequestError extends Error { constructor(message: string, public status = 400) { super(message); } }
 
@@ -45,7 +46,7 @@ export async function commandPollSeconds() {
  * Create (or reuse) a request. Idempotent per device: while one request is open, asking again
  * returns it instead of queueing a second GPS acquisition. Rate-limited per device per hour.
  */
-export async function createLocationRequest(input: { guardId?: string; deviceId?: string; actor: Actor; purpose?: "CHECK" | "SITE_SETUP" | "WELFARE"; locationId?: string | null; maxAccuracyM?: number; ttlSeconds?: number }, now = new Date()) {
+export async function createLocationRequest(input: { guardId?: string; deviceId?: string; actor: Actor; purpose?: "CHECK" | "SITE_SETUP" | "WELFARE" | "CHECKIN"; locationId?: string | null; maxAccuracyM?: number; ttlSeconds?: number }, now = new Date()) {
   const device = input.deviceId
     ? await db.gatewayDevice.findUnique({ where: { id: input.deviceId }, include: { guard: true, location: true } })
     : input.guardId ? await eligibleDeviceForGuard(input.guardId) : null;
@@ -174,6 +175,23 @@ export async function applyLocationRequestResult(device: GatewayDevice, ev: Inco
     }
   }
   if (ev.mock) await db.gatewayDevice.update({ where: { id: device.id }, data: { mockLocationSeen: true } });
+
+  // A fix asked for by the check-in flow decides that shift's attendance. Imported lazily so the
+  // request pipeline keeps no static dependency on the attendance layer.
+  const checkIn = await db.attendanceCheckIn.findUnique({ where: { locationRequestId: r.id } });
+  if (checkIn) {
+    const { applyFix, requestFix } = await import("@/lib/attendance/check-in-service");
+    if (data.status === "COMPLETED" && ev.latitude != null && ev.longitude != null) {
+      const res = await applyFix(checkIn.id, { latitude: ev.latitude, longitude: ev.longitude, accuracyM: ev.accuracyM ?? null, capturedAt: saneTimestamp(ev.capturedAt!, now), mock: Boolean(ev.mock), locationRequestId: r.id, source: "CALL_GPS" }, now);
+      return { outcome: `${outcome} · check-in ${res.status}` };
+    }
+    // A failed or unusable fix: try again within the attempt limit, otherwise the step escalates it.
+    const shift = await db.shift.findUnique({ where: { id: checkIn.shiftId }, include: { guard: true, location: true, attendance: true, attendanceCheckIn: true, supervisor: true } });
+    if (shift) {
+      const retry = await requestFix(checkIn.id, shift, now);
+      return { outcome: `${outcome} · check-in retry: ${retry}` };
+    }
+  }
   return { outcome };
 }
 
