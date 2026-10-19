@@ -13,7 +13,7 @@ type Group = { label: string; icon: React.ElementType; items: Item[] };
 
 export type SidebarCounts = { attention: number; incidents: number; watched: number; alerts?: number };
 
-export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role: string; onClose?: () => void }) {
+export function Sidebar({ counts, role, onClose, simulator = true }: { counts: SidebarCounts; role: string; onClose?: () => void; simulator?: boolean }) {
   const path = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [open, setOpen] = useState<Record<string, boolean>>({ Operations: true, Workforce: true, Communications: true });
@@ -112,16 +112,16 @@ export function Sidebar({ counts, role, onClose }: { counts: SidebarCounts; role
       <div className={cn("p-3", collapsed && "px-2")}>
         {collapsed ? (
           <div className="flex flex-col items-center gap-2">
-            <Link href="/simulator" title="SMS simulator" className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-accent text-white"><DeviceMobileIcon size={18} weight="fill" /></Link>
+            {simulator && <Link href="/simulator" title="SMS simulator" className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-accent text-white"><DeviceMobileIcon size={18} weight="fill" /></Link>}
             <button onClick={() => setCollapsed(false)} className="rounded-md p-1 text-ink-3 hover:bg-surface-2 hover:text-ink" aria-label="Expand sidebar"><CaretDoubleRightIcon size={16} weight="fill" /></button>
           </div>
-        ) : (
+        ) : simulator ? (
           <div className="rounded-[14px] p-4 text-white" style={{ background: "linear-gradient(160deg, #78c653 0%, #5aa83e 100%)" }}>
             <p className="flex items-center gap-2 text-[14px] font-semibold leading-tight"><DeviceMobileIcon size={16} weight="fill" /> Demo mode</p>
             <p className="mt-1 text-[12px] leading-snug text-white/90">Simulate guard replies without sending real SMS.</p>
             <Link href="/simulator" className="mt-3 flex h-8 items-center justify-center rounded-[8px] bg-white text-[13px] font-semibold text-accent-strong hover:bg-white/90">Open simulator</Link>
           </div>
-        )}
+        ) : null}
       </div>
     </aside>
   );

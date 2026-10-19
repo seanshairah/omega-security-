@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, usesNeonHttp } from "@/lib/db";
+import { checkEnv } from "@/lib/env-check";
 
 export const dynamic = "force-dynamic";
 
@@ -19,12 +20,15 @@ export async function GET() {
     database,
     config: {
       databaseUrlSet: Boolean(url),
-      databaseHost: url.match(/@([^/:?]+)/)?.[1] ?? null,
+      databaseHost: process.env.NODE_ENV === "production" ? undefined : url.match(/@([^/:?]+)/)?.[1] ?? null,
       databaseTransport: usesNeonHttp() ? "neon-http" : "tcp",
       smsProvider: process.env.SMS_PROVIDER ?? "simulated",
       automationInProcess: process.env.AUTOMATION_INPROCESS !== "false",
       authSecretSet: Boolean(process.env.AUTH_SECRET),
       timezone: process.env.TZ ?? null,
+      environment: process.env.NODE_ENV ?? "development",
+      configIssues: checkEnv().length, // count only; details are logged at startup
+      version: process.env.npm_package_version ?? null,
     },
   }, { status: database.ok ? 200 : 503 });
 }

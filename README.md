@@ -50,6 +50,9 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 | [docs/DATABASE_CHANGES.md](docs/DATABASE_CHANGES.md) | every Phase 1 and 2 column, all additive |
 | [docs/DEVICE_LOCATION_AND_SITE_SETUP.md](docs/DEVICE_LOCATION_AND_SITE_SETUP.md) | root cause of the wrong site centre, the confirmed-position picker, remote guard-phone location requests, using a guard phone's fix as site coordinates |
 | [docs/ANDROID_UI_AUDIT.md](docs/ANDROID_UI_AUDIT.md) | every dashboard control mapped to its Android handler, event type, backend route and portal workflow |
+| [docs/STAGE0_FINDINGS.md](docs/STAGE0_FINDINGS.md) | production-hardening audit: confirmed defects, risks, blockers, what is preserved |
+| [docs/GUARD_WORKSPACE.md](docs/GUARD_WORKSPACE.md) | the viewport-aware guard workspace: layout, scrolling hierarchy, location-state model, polling |
+| [docs/RELEASE_RUNBOOK.md](docs/RELEASE_RUNBOOK.md) | env checklist, backup, migration, deploy, Android release, smoke test, rollback, monitoring |
 | [docs/EMERGENCY_ALERTS.md](docs/EMERGENCY_ALERTS.md) | the emergency button end to end: phone, outbox, server, portal, acknowledgement, offline fallback |
 | [docs/GUARD_COMMUNICATION.md](docs/GUARD_COMMUNICATION.md) | status messages (assistance, incident, security, late, update, going well, handover) and how operations sees them |
 | [docs/ANDROID_UI.md](docs/ANDROID_UI.md) | the redesigned guard and operations dashboards, card by card |

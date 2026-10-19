@@ -6,17 +6,26 @@ import { db } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth/password";
 import { createSession, destroySession, getSessionUser } from "@/lib/auth/session";
 import { audit } from "@/lib/audit";
+import { loginBlocked, recordLoginFailure, clearLoginFailures } from "@/lib/auth/throttle";
 
 export async function login(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const h = await headers();
+  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? h.get("x-real-ip");
+  const throttle = loginBlocked(ip, email);
+  if (throttle.blocked) {
+    await audit({ actor: email || "unknown", action: "LOGIN_THROTTLED", entity: "User", details: { email, retryAfterSeconds: throttle.retryAfterSeconds }, ip });
+    redirect("/login?error=throttled");
+  }
   const user = await db.user.findUnique({ where: { email } });
   if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    await audit({ actor: email || "unknown", action: "LOGIN_FAILED", entity: "User", details: { email } });
+    recordLoginFailure(ip, email);
+    await audit({ actor: email || "unknown", action: "LOGIN_FAILED", entity: "User", details: { email }, ip });
     redirect("/login?error=1");
   }
   if (!user.active) redirect("/login?error=inactive");
-  const h = await headers();
+  clearLoginFailures(email);
   await createSession(user.id);
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await audit({ userId: user.id, actor: user.name, action: "USER_LOGIN", entity: "User", entityId: user.id, ip: h.get("x-forwarded-for") ?? h.get("x-real-ip"), userAgent: h.get("user-agent") });

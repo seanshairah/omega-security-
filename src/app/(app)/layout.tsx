@@ -4,6 +4,7 @@ import { unreadCount } from "@/lib/notifications";
 import { AppShell } from "@/components/layout/app-shell";
 import { EmergencyBanner } from "@/components/layout/emergency-banner";
 import { activeProviderName } from "@/lib/sms";
+import { simulatorEnabled } from "@/lib/env-check";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       : { tone: "ok" as const, label: provider === "simulated" ? "All systems operational · SMS simulated" : "All systems operational" };
 
   return (
-    <AppShell counts={{ attention, incidents, watched, alerts }} role={user.role} user={user} unread={unread} systemStatus={systemStatus} banner={<EmergencyBanner />}>
+    <AppShell counts={{ attention, incidents, watched, alerts }} role={user.role} user={user} unread={unread} systemStatus={systemStatus} banner={<EmergencyBanner />} simulator={simulatorEnabled()}>
       {children}
     </AppShell>
   );

@@ -163,6 +163,19 @@ async function main() {
     check("disabled device → 404 (no eligible device)", disabled.status === 404, String(disabled.status));
     await db.gatewayDevice.update({ where: { id: guardDev.id }, data: { status: "ONLINE" } });
 
+    console.log("Workspace status and activity APIs");
+    const st = await call("GET", `/api/guards/${guard.id}/status`);
+    const lr = await call("GET", `/api/guards/${guard.id}/location-requests`);
+    check("status and location panels name the same device (one selection rule)", st.status === 200 && st.json.device?.id === guardDev.id && lr.json.device?.id === st.json.device.id, JSON.stringify({ st: st.json.device?.id, lr: lr.json.device?.id }));
+    check("status: four location concepts present and consistent with the accepted fix", st.json.presentation?.connection?.state === "ONLINE" && st.json.presentation.position?.source === "REQUESTED" && st.json.presentation.position.accuracyM === 18 && st.json.presentation.geofence?.assessment === "INSIDE", JSON.stringify(st.json.presentation));
+    const act = await call("GET", `/api/guards/${guard.id}/activity?limit=10`);
+    check("activity feed merges requests and device events newest first", act.status === 200 && act.json.items.length > 0 && act.json.items.some((i: any) => i.category === "request") && act.json.items.every((i: any, n: number, arr: any[]) => n === 0 || arr[n - 1].at >= i.at), JSON.stringify(act.json.items?.slice(0, 2)));
+    const onlyReq = await call("GET", `/api/guards/${guard.id}/activity?cat=request&limit=5`);
+    check("activity feed filters by category", onlyReq.json.items.every((i: any) => i.category === "request") && onlyReq.json.items.length > 0);
+    if (act.json.nextBefore) { const page2 = await call("GET", `/api/guards/${guard.id}/activity?limit=10&before=${encodeURIComponent(act.json.nextBefore)}`); check("activity feed pages by time cursor without repeating items", page2.json.items.every((i: any) => !act.json.items.some((j: any) => j.id === i.id))); }
+    const unauthStatus = await fetch(`${BASE}/api/guards/${guard.id}/status`);
+    check("status API needs a session", [401, 403].includes(unauthStatus.status));
+
     console.log("Site handoff");
     const edit = await fetch(`${BASE}/locations/${site.id}/edit?fromRequest=${req1.id}`, { headers: { cookie } });
     const html = await edit.text();

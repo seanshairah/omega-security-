@@ -2,13 +2,14 @@ import { guarded, json, error } from "@/lib/api";
 import { db } from "@/lib/db";
 import { freshness } from "@/lib/geofence";
 import { audit } from "@/lib/audit";
+import { eligibleDeviceForGuard } from "@/lib/gateway/location-requests";
 
 /** Latest known fix for a guard, labelled LIVE / RECENT / STALE / SYNCED LATE. Reads are audited: location is sensitive. */
 export const GET = guarded<{ params: Promise<{ id: string }> }>("SUPERVISOR", async (_req, ctx, user) => {
   const { id } = await ctx.params;
-  const guard = await db.guard.findUnique({ where: { id }, select: { id: true, firstName: true, lastName: true, deviceKind: true, devices: { where: { mode: "GUARD", activationStatus: "ACTIVE" }, take: 1 } } });
+  const guard = await db.guard.findUnique({ where: { id }, select: { id: true, firstName: true, lastName: true, deviceKind: true } });
   if (!guard) return error("Guard not found", 404);
-  const device = guard.devices[0] ?? null;
+  const device = await eligibleDeviceForGuard(id); // the same selection every guard panel uses
   const last = await db.locationEvent.findFirst({ where: { guardId: id, latitude: { not: null } }, orderBy: { occurredAt: "desc" } });
   await audit({ userId: user.id, actor: user.name, action: "LOCATION_VIEWED", entity: "Guard", entityId: id, details: { via: "api" } });
   const at = last?.occurredAt ?? device?.lastLocationAt ?? null;

@@ -48,3 +48,11 @@ The APK built and passed its JVM tests but has not been run on a physical device
 - `npx tsx scripts/dev/location-request-e2e.ts` (part of `npm run test:e2e`): the whole request path over HTTP with an admin session and device tokens.
 - `npm run test:geolocation`: Playwright with a mocked Geolocation API against the running dev server; granted/good, granted/±400 m, denied, insecure context. Mocked positions prove the flow, not GPS accuracy.
 - Android: `LocationRequestPolicyTest` (expiry, reuse, budget, judging). On-device cases L1–L9 in `docs/DEVICE_TEST_PLAN.md` remain manual.
+
+## Production hardening and the guard workspace (added)
+
+- `tests/env-check.test.ts`: production configuration rules (AUTH_SECRET fatal in production, example defaults flagged, simulator gating) and the login throttle (10 failures / 15 min per address and per account, cleared on success).
+- `tests/guard-status.test.ts`: the four-concept location presentation (connection from heartbeat age; requested fixes count as verified positions while monitoring is idle; poor accuracy → uncertain; stale → stale; mock never trusted; no site coordinates → not assessed).
+- `scripts/dev/location-request-e2e.ts` now also covers `/api/guards/{id}/status` (same device as the location panel, consistent concepts) and `/api/guards/{id}/activity` (merged, newest first, category filter, time-cursor paging, session required).
+- `npm run test:layout` (`scripts/dev/layout-e2e.mjs`, Playwright): at 1440×900 and 1280×720 the guard workspace has no page scroll and no horizontal overflow, identity bar, location state, map, request controls, feed and detail region are visible together, the feed scrolls in its own panel without moving the identity bar or the map, filter chips work without reload; at 390×844 no horizontal overflow and a full-width map; `/operations`, `/monitoring`, `/operations/map`, `/gateways`, `/alerts` have no horizontal overflow.
+- `npm run db:check`: schema validates, generated client matches the schema, every migration folder has SQL (`--db` adds the migration status against `DATABASE_URL`).

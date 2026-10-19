@@ -5,7 +5,12 @@ import type { Role } from "@prisma/client";
 import { db } from "@/lib/db";
 
 const COOKIE = "omega_session";
-const secret = () => new TextEncoder().encode(process.env.AUTH_SECRET || "dev-secret-change-me-dev-secret-change-me");
+const secret = () => {
+  const v = process.env.AUTH_SECRET;
+  // Development keeps a fixed fallback so a fresh checkout works; production refuses (see instrumentation.ts / env-check).
+  if (!v && process.env.NODE_ENV === "production") throw new Error("AUTH_SECRET is not set");
+  return new TextEncoder().encode(v || "dev-secret-change-me-dev-secret-change-me");
+};
 
 export type SessionUser = {
   id: string;

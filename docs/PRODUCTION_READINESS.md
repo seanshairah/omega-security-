@@ -1,4 +1,4 @@
-# Production Readiness Assessment (after Phase 3)
+# Production Readiness Assessment (after production hardening, 2026-10-19)
 
 Date: 2026-10-19 · Portal on `main` · App v1.6.0 (versionCode 7)
 
@@ -11,6 +11,9 @@ Date: 2026-10-19 · Portal on `main` · App v1.6.0 (versionCode 7)
 | Area | Evidence | Status |
 |---|---|---|
 | Typecheck, lint, production build | clean | verified |
+| Prisma consistency (`npm run db:check`) | schema valid, generated client matches, migrations complete | verified |
+| Security headers, login throttle, production env validation, simulator gating | code + unit tests | verified |
+| Guard workspace layout (desktop 1440×900, laptop 1280×720, phone 390×844) | `npm run test:layout` 30/30 | verified in headless Chromium |
 | Web unit tests | 40/40 | verified |
 | Android JVM unit tests | 51/51 | verified |
 | Redesigned guard dashboard (U1–U12 in DEVICE_TEST_PLAN) | compiles, every control mapped to its handler (`ANDROID_UI_AUDIT.md`) | **unverified on device** |

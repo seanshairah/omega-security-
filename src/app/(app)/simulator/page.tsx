@@ -1,4 +1,6 @@
 import { requireUser } from "@/lib/auth/rbac";
+import { notFound } from "next/navigation";
+import { simulatorEnabled } from "@/lib/env-check";
 import { db } from "@/lib/db";
 import { shiftInclude, CLOSED_STATUSES } from "@/lib/services/shifts";
 import { PageHeader } from "@/components/ui/page";
@@ -17,6 +19,7 @@ export const metadata = { title: "Simulator" };
 
 export default async function SimulatorPage() {
   await requireUser("ADMIN");
+  if (!simulatorEnabled()) notFound();
   const shifts = await db.shift.findMany({ where: { status: { notIn: CLOSED_STATUSES }, startAt: { lte: new Date(Date.now() + 6 * 3600_000) } }, include: { ...shiftInclude, smsMessages: { orderBy: { createdAt: "desc" }, take: 6 } }, orderBy: { startAt: "asc" } });
   const provider = activeProviderName();
   const guardDevices = await db.gatewayDevice.findMany({ where: { mode: "GUARD", activationStatus: "ACTIVE", status: { not: "REVOKED" }, guardId: { not: null } }, include: { guard: { select: { id: true, firstName: true, lastName: true } } }, orderBy: { deviceName: "asc" } });

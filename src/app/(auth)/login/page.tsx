@@ -24,7 +24,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               <h1 className="text-[18px] font-semibold text-ink">Sign in</h1>
               <p className="mt-1 text-[13px] text-ink-2">For administrators and supervisors. Guards report by SMS and do not sign in.</p>
             </div>
-            <FormError message={error === "1" ? "Email or password is incorrect." : error === "inactive" ? "This account has been deactivated." : null} />
+            <FormError message={error === "1" ? "Email or password is incorrect." : error === "inactive" ? "This account has been deactivated." : error === "throttled" ? "Too many failed sign-ins. Wait 15 minutes and try again." : null} />
             <Field label="Email"><Input name="email" type="email" required autoComplete="email" defaultValue="admin@omegasecurity.co.zw" /></Field>
             <Field label="Password"><Input name="password" type="password" required autoComplete="current-password" /></Field>
             <Button type="submit" variant="primary" className="w-full">Sign in</Button>

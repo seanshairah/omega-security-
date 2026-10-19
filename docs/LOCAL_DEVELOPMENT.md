@@ -115,3 +115,10 @@ The **Android debug app** may call a laptop over plain `http://` only if the hos
 `next.config.ts` sets `output: "standalone"`, so `npm run build` produces `.next/standalone` with a self-contained `server.js`. The repository `Dockerfile` builds that image (`npm ci`, `prisma generate`, `next build`) and runs `node server.js` on port 3000; pass `DATABASE_URL`, `AUTH_SECRET` and the SMS variables at run time, never bake them into the image. Apply migrations from outside the container (`npx prisma migrate deploy` or `scripts/neon-migrate.ts`); the image does not reset or migrate the database on start. Keep `package.json` and `package-lock.json` committed together: `npm ci` refuses a lockfile that is out of date.
 
 Files that must never be committed: `.env*` (except `.env.example`), `android/local.properties`, `android/keystore.properties`, keystores, device activation data. `.gitignore` covers them.
+
+## Which server am I looking at? (ports)
+
+- **Docker image** (`docker run -p 3000:3000 …`): the production bundle on **http://localhost:3000**. It only changes when you rebuild the image.
+- **`npm run dev`**: the development server, also on port 3000 (`next dev -p 3000`); it refuses to start while the Docker container holds the port, which is intended. If you really need both, start the dev server with `npx next dev -p 3001` and open **3001** for development; nothing you change in Docker appears there, and nothing you change in the source appears on 3000 until the image is rebuilt.
+- To tell them apart, open `/api/health` on the port: `config.environment` is `development` for `npm run dev` and `production` for the image, and `config.version` is the package version.
+- `npm run dev` now runs `prisma generate` first (`predev`), so a schema pulled from git is always compiled into the client. A dev server that was already running when the schema changed must be restarted. `npm run db:check` confirms the generated client matches `prisma/schema.prisma`.
