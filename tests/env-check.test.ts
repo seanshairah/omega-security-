@@ -11,6 +11,8 @@ test("production refuses a missing or default AUTH_SECRET; development only warn
   assert.equal(prod.find((i) => i.key === "AUTH_SECRET")?.level, "fatal");
   const dev = checkEnv({ ...base, NODE_ENV: "development", AUTH_SECRET: "" });
   assert.equal(dev.find((i) => i.key === "AUTH_SECRET")?.level, "warn");
+  const short = checkEnv({ ...base, NODE_ENV: "production", AUTH_SECRET: "real-but-short-secret" });
+  assert.equal(short.find((i) => i.key === "AUTH_SECRET")?.level, "warn", "a real but short secret never blocks a deploy");
 });
 
 test("example defaults and plain-http app URL are flagged in production", () => {

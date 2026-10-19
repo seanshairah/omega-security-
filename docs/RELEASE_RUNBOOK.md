@@ -10,7 +10,7 @@ The following must be supplied by the operator; the repository holds no producti
 |---|---|---|
 | Production domain (https) | Vercel project domain, `NEXT_PUBLIC_APP_URL`, `GATEWAY_DEFAULT_SERVER_URL` at APK build time | guard phones refuse plain http in release builds |
 | `DATABASE_URL` (Neon, pooled) | Vercel env | `DATABASE_OVER_HTTP=true` on Vercel |
-| `AUTH_SECRET` (≥ 32 random chars) | Vercel env | the server **refuses to start** without it in production |
+| `AUTH_SECRET` (≥ 32 random chars) | Vercel env, **Production and Preview** | the server **refuses to start** in production when it is unset or the example default; shorter values only warn |
 | `CRON_SECRET`, `AUTOMATION_SECRET` | Vercel env + cron | not the example defaults |
 | SMS provider: `SMS_PROVIDER=sendai`, `SMS_API_KEY`, `SMS_SENDER_ID`, `SMS_WEBHOOK_SECRET` | Vercel env + Sendai webhook config | the webhook URL is `https://<domain>/api/sms/webhook/sendai` |
 | `VAPID_*` keys | Vercel env | browser push |

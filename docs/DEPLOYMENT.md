@@ -52,7 +52,7 @@ Build a release APK with a real keystore (see LOCAL_DEVELOPMENT.md) and set the 
 
 ## 6. Production security checklist
 
-- The server refuses to start in production without a real `AUTH_SECRET` (≥ 32 chars); other example defaults are logged as `[config]` warnings and counted in `/api/health` → `config.configIssues`.
+- The server refuses to start in production when `AUTH_SECRET` is unset or the example default (set 32+ random characters; shorter values warn). Vercel preview deployments also run with `NODE_ENV=production`, so set it for the Preview environment too. Other example defaults are logged as `[config]` warnings and counted in `/api/health` → `config.configIssues`.
 - Security headers (HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy) are set by `next.config.ts` for every response.
 - Sign-in is throttled (10 failures per 15 minutes per address and per account, audited as `LOGIN_THROTTLED`).
 - The simulator page and `/api/gateways/simulate` are off in production unless `SMS_PROVIDER=simulated` or `SIMULATOR_ENABLED=true`.

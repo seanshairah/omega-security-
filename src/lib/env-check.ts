@@ -11,7 +11,10 @@ export function checkEnv(env: Record<string, string | undefined> = process.env):
   const prod = env.NODE_ENV === "production";
   const issues: EnvIssue[] = [];
   const secret = env.AUTH_SECRET ?? "";
-  if (!secret || DEFAULTS.has(secret) || secret.length < 32) issues.push({ key: "AUTH_SECRET", level: prod ? "fatal" : "warn", message: "AUTH_SECRET must be a random string of at least 32 characters; sessions are signed with it." });
+  // Missing or an example default is fatal in production (sessions would be signed with a public value).
+  // A real but short secret only warns, so a deploy never takes a running site down over key length.
+  if (!secret || DEFAULTS.has(secret)) issues.push({ key: "AUTH_SECRET", level: prod ? "fatal" : "warn", message: "AUTH_SECRET is unset or the example default; sessions are signed with it. Set a random string of at least 32 characters." });
+  else if (secret.length < 32) issues.push({ key: "AUTH_SECRET", level: "warn", message: "AUTH_SECRET is shorter than 32 characters; rotate it to a longer random string." });
   if (!env.DATABASE_URL) issues.push({ key: "DATABASE_URL", level: "fatal", message: "DATABASE_URL is not set." });
   for (const k of ["CRON_SECRET", "AUTOMATION_SECRET"]) if (prod && (!env[k] || DEFAULTS.has(env[k]!))) issues.push({ key: k, level: "warn", message: `${k} is unset or the example default; the automation endpoints accept anyone who knows it.` });
   if (prod && env.SMS_PROVIDER && env.SMS_PROVIDER !== "simulated" && (!env.SMS_WEBHOOK_SECRET || DEFAULTS.has(env.SMS_WEBHOOK_SECRET))) issues.push({ key: "SMS_WEBHOOK_SECRET", level: "warn", message: "SMS_WEBHOOK_SECRET is the example default; inbound SMS webhooks cannot be verified." });
