@@ -37,7 +37,7 @@ export function LocationSimulator({ devices }: { devices: Device[] }) {
   const noCoords = d && !(d.site?.lat != null && d.site?.lng != null);
   return (
     <Card>
-      <CardHeader title="Guard location simulator" description="Pretend the guard's phone is reporting. Fixes are computed from the shift's site and go through the same intake as the app, including the exit verification rule." />
+      <CardHeader title="Guard location simulator" description="Pretend the guard's phone is reporting. Fixes go through the same intake as the real app." />
       <CardBody>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Guard device"><Select value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>{devices.map((x) => <option key={x.id} value={x.id}>{x.guardName} · {x.deviceName}{x.site ? ` · ${x.site.name}` : " · no live shift"}</option>)}</Select></Field>

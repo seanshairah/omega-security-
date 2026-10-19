@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { Icon } from "@/components/ui/icon";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { MagnifyingGlassIcon, ArrowsClockwiseIcon, BellIcon, CaretRightIcon, SignOutIcon, ListIcon } from "@phosphor-icons/react";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/cn";
 
@@ -30,11 +30,11 @@ export function Topbar({ user, unread, systemStatus, onMenu }: { user: { name: s
   return (
     <header className="mb-3 flex h-14 items-center justify-between gap-2 rounded-[var(--radius-card)] border border-line bg-surface px-3 sm:mb-4 sm:gap-4 sm:px-4">
       <div className="flex min-w-0 items-center gap-2 text-[14px]">
-        <button onClick={onMenu} className="-ml-1 mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-ink-2 hover:bg-surface-2 hover:text-ink lg:hidden" aria-label="Open menu"><ListIcon size={20} weight="bold" /></button>
+        <button onClick={onMenu} className="-ml-1 mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-ink-2 hover:bg-surface-2 hover:text-ink lg:hidden" aria-label="Open menu"><Icon name="menu" size={20} filled /></button>
         <span className="hidden text-ink-2 sm:inline">{section}</span>
         {crumbs.map((c, i) => (
           <span key={c.href} className={cn("items-center gap-2", i === crumbs.length - 1 ? "flex" : "hidden sm:flex")}>
-            <CaretRightIcon size={12} weight="fill" className="hidden text-ink-3 sm:block" />
+            <Icon name="chevron_right" size={12} className="hidden text-ink-3 sm:block" filled />
             {i === crumbs.length - 1 ? <span className="truncate font-medium text-ink">{c.label}</span> : <Link href={c.href} className="text-ink-2 hover:text-ink">{c.label}</Link>}
           </span>
         ))}
@@ -45,12 +45,12 @@ export function Topbar({ user, unread, systemStatus, onMenu }: { user: { name: s
       </div>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         <form action="/guards" className="relative hidden md:block">
-          <MagnifyingGlassIcon size={16} weight="bold" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
+          <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" filled />
           <input name="q" placeholder="Search guards" className="h-9 w-56 rounded-[var(--radius-control)] border border-line bg-surface pl-9 pr-3 text-sm placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
         </form>
-        <button onClick={() => start(() => router.refresh())} className={cn("hidden h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border border-line text-ink-2 hover:bg-surface-2 hover:text-ink sm:flex", pending && "animate-spin")} aria-label="Refresh"><ArrowsClockwiseIcon size={16} weight="bold" /></button>
+        <button onClick={() => start(() => router.refresh())} className={cn("hidden h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border border-line text-ink-2 hover:bg-surface-2 hover:text-ink sm:flex", pending && "animate-spin")} aria-label="Refresh"><Icon name="refresh" size={16} filled /></button>
         <Link href="/notifications" className="relative flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] border border-line text-ink-2 hover:bg-surface-2 hover:text-ink" aria-label="Notifications">
-          <BellIcon size={16} weight="fill" />
+          <Icon name="notifications" size={16} filled />
           {unread > 0 && <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-critical px-1 text-[10px] font-semibold text-white tnum">{unread > 99 ? "99+" : unread}</span>}
         </Link>
         <div className="relative">
@@ -65,7 +65,7 @@ export function Topbar({ user, unread, systemStatus, onMenu }: { user: { name: s
               </div>
               <div className="my-1 border-t border-line" />
               <form action="/api/auth/logout" method="post">
-                <button className="flex h-8 w-full items-center gap-2 rounded-[8px] px-3 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"><SignOutIcon size={15} weight="fill" /> Sign out</button>
+                <button className="flex h-8 w-full items-center gap-2 rounded-[8px] px-3 text-[13px] text-ink-2 hover:bg-surface-2 hover:text-ink"><Icon name="logout" size={15} filled /> Sign out</button>
               </form>
             </div>
           )}

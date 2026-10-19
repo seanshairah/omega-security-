@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Icon } from "@/components/ui/icon";
 import { useRouter } from "next/navigation";
-import { DeviceMobileIcon, PlayIcon, FastForwardIcon } from "@phosphor-icons/react";
 import { simulateInbound, runTickNow } from "@/actions/sms";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Button, ButtonGroup } from "@/components/ui/button";
@@ -37,7 +37,7 @@ export function Simulator({ shifts }: { shifts: Shift[] }) {
             <Select value={sel} onChange={(e) => setSel(e.target.value)}>{shifts.map((s) => <option key={s.id} value={s.id}>{s.guardName} · {s.location} · {s.start}–{s.end}</option>)}</Select>
             {shift && (
               <div className="mt-4 max-w-full overflow-hidden rounded-[20px] border-[6px] border-[#2a2a2a] bg-[#f6f6f4] p-3">
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 px-1 text-[11px] text-ink-3"><span className="flex items-center gap-1"><DeviceMobileIcon size={12} weight="fill" /> {shift.phone}</span><span className="truncate">{shift.status} · awaiting {shift.pending === "NONE" ? "nothing" : shift.pending.toLowerCase().replace("_", " ")}</span></div>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5 px-1 text-[11px] text-ink-3"><span className="flex items-center gap-1"><Icon name="mobile" size={12} filled /> {shift.phone}</span><span className="truncate">{shift.status} · awaiting {shift.pending === "NONE" ? "nothing" : shift.pending.toLowerCase().replace("_", " ")}</span></div>
                 <div className="h-72 space-y-2 overflow-y-auto scroll-thin px-1">
                   {shift.messages.length === 0 && <p className="pt-10 text-center text-[12px] text-ink-3">No messages yet. Run the engine to send the arrival check.</p>}
                   {shift.messages.map((m) => (
@@ -58,11 +58,11 @@ export function Simulator({ shifts }: { shifts: Shift[] }) {
         <Card>
           <CardHeader title="Automation engine" description="The engine runs every minute on its own. Run it now, or pretend time has passed to reach the next step." action={
             <ButtonGroup>
-              <Button size="sm" disabled={busy} onClick={() => tick(0)}><PlayIcon size={13} weight="fill" /> Run now</Button>
-              <Button size="sm" disabled={busy} onClick={() => tick(20)}><FastForwardIcon size={13} weight="fill" /> +20 min</Button>
-              <Button size="sm" disabled={busy} onClick={() => tick(60)}><FastForwardIcon size={13} weight="fill" /> +1 h</Button>
-              <Button size="sm" disabled={busy} onClick={() => tick(360)}><FastForwardIcon size={13} weight="fill" /> +6 h</Button>
-              <Button size="sm" disabled={busy} onClick={() => tick(720)}><FastForwardIcon size={13} weight="fill" /> +12 h</Button>
+              <Button size="sm" disabled={busy} onClick={() => tick(0)}><Icon name="play_arrow" size={13} filled /> Run now</Button>
+              <Button size="sm" disabled={busy} onClick={() => tick(20)}><Icon name="fast_forward" size={13} filled /> +20 min</Button>
+              <Button size="sm" disabled={busy} onClick={() => tick(60)}><Icon name="fast_forward" size={13} filled /> +1 h</Button>
+              <Button size="sm" disabled={busy} onClick={() => tick(360)}><Icon name="fast_forward" size={13} filled /> +6 h</Button>
+              <Button size="sm" disabled={busy} onClick={() => tick(720)}><Icon name="fast_forward" size={13} filled /> +12 h</Button>
             </ButtonGroup>
           } />
           <CardBody>

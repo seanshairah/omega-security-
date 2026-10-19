@@ -34,7 +34,7 @@ try {
     console.log(`${label} ${w}×${h}`);
     const ctx = await browser.newContext({ viewport: { width: w, height: h } });
     const page = await login(ctx);
-    await page.goto(`${BASE}/guards/${guardId}`); await page.waitForSelector("[data-testid=guard-identity]", { timeout: 60000 }); await page.waitForSelector(".leaflet-container", { timeout: 60000 }); await page.waitForTimeout(800);
+    await page.goto(`${BASE}/guards/${guardId}`); await page.waitForSelector("[data-testid=guard-identity]", { timeout: 60000 }); await page.waitForSelector(".leaflet-container, canvas.mapboxgl-canvas", { timeout: 60000 }); await page.waitForTimeout(800);
     const m = await metrics(page);
     check("no horizontal page overflow", m.sw <= m.iw + 1, JSON.stringify(m));
     check("no page-level vertical scroll (workspace fits the viewport)", m.sh <= m.ih + 2, JSON.stringify(m));
@@ -59,7 +59,7 @@ try {
   console.log("phone 390×844");
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await login(ctx);
-  await page.goto(`${BASE}/guards/${guardId}`); await page.waitForSelector("[data-testid=guard-identity]", { timeout: 60000 }); await page.waitForSelector(".leaflet-container", { timeout: 60000 }); await page.waitForTimeout(800);
+  await page.goto(`${BASE}/guards/${guardId}`); await page.waitForSelector("[data-testid=guard-identity]", { timeout: 60000 }); await page.waitForSelector(".leaflet-container, canvas.mapboxgl-canvas", { timeout: 60000 }); await page.waitForTimeout(800);
   const m = await metrics(page);
   check("phone: no horizontal overflow", m.sw <= m.iw + 1, JSON.stringify(m));
   const mapBox = await page.evaluate(() => { const r = document.querySelector("[data-testid=guard-map]").getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), top: Math.round(r.top) }; });

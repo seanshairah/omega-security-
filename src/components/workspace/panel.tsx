@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { Icon, type IconName } from "@/components/ui/icon";
 
 /**
  * Fixed-height workspace primitives. The page owns one scrolling hierarchy:
@@ -49,8 +50,19 @@ export function MetricStrip({ items, className }: { items: { label: string; valu
   );
 }
 
-export function EmptyState({ title, body, className }: { title: string; body?: string; className?: string }) {
-  return <div className={cn("flex flex-col items-center justify-center px-4 py-8 text-center", className)}><p className="text-[13px] font-medium text-ink">{title}</p>{body && <p className="mt-1 max-w-sm text-[12.5px] text-ink-3">{body}</p>}</div>;
+/**
+ * Three parts, in this order: what belongs here, why it is empty, and the one action that fills it.
+ * `body` is kept as an alias of `detail` for the existing callers.
+ */
+export function EmptyState({ title, body, detail, icon, action, className }: { title: string; body?: string; detail?: string; icon?: IconName; action?: React.ReactNode; className?: string }) {
+  return (
+    <div className={cn("flex flex-col items-center justify-center px-4 py-8 text-center", className)}>
+      {icon && <Icon name={icon} size={24} className="mb-2 text-ink-3" />}
+      <p className="text-[13px] font-medium text-ink">{title}</p>
+      {(detail ?? body) && <p className="mt-1 max-w-sm text-[12.5px] text-ink-3">{detail ?? body}</p>}
+      {action && <div className="mt-3">{action}</div>}
+    </div>
+  );
 }
 
 export function Skeleton({ className }: { className?: string }) { return <div className={cn("animate-pulse rounded-md bg-surface-2", className)} />; }

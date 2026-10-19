@@ -1,5 +1,5 @@
-import { TrendUpIcon, TrendDownIcon } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/cn";
+import { Icon } from "@/components/ui/icon";
 
 function Sparkline({ data, tone }: { data: number[]; tone: "ok" | "critical" | "neutral" }) {
   const w = 96, h = 36;
@@ -29,7 +29,7 @@ export function KpiCard({ title, description, value, delta, deltaLabel, deltaGoo
           <span className="text-[28px] font-semibold leading-none tracking-[-0.02em] text-ink tnum">{value}</span>
           {delta !== undefined && (
             <span className={cn("inline-flex items-center gap-0.5 text-[12px] font-medium tnum", good === null ? "text-ink-3" : good ? "text-ok" : "text-critical")}>
-              {delta > 0 ? <TrendUpIcon size={12} weight="bold" /> : delta < 0 ? <TrendDownIcon size={12} weight="bold" /> : null}
+              {delta > 0 ? <Icon name="trending_up" size={12} filled /> : delta < 0 ? <Icon name="trending_down" size={12} filled /> : null}
               {Math.abs(delta)}{deltaLabel ?? ""}
             </span>
           )}

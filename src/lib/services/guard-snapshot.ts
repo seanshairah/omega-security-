@@ -15,7 +15,7 @@ export async function guardSnapshot(guardId: string, now = new Date()) {
   const guard = await db.guard.findUnique({ where: { id: guardId }, select: { id: true, guardNo: true, firstName: true, lastName: true, phone: true, deviceKind: true, watched: true, active: true, homeLocation: { select: { id: true, name: true, latitude: true, longitude: true, geofenceRadiusM: true } } } });
   if (!guard) return null;
   await expireStaleRequests(now);
-  const [device, shift, lastRequest, lastCompleted, offlineMinutes, accuracyMaxM, openAlerts] = await Promise.all([
+  const [device, shift, lastRequest, lastCompleted, offlineMinutes, accuracyMaxM, openAlerts, trail] = await Promise.all([
     eligibleDeviceForGuard(guardId),
     findLiveShiftForGuard(guardId, now),
     db.deviceLocationRequest.findFirst({ where: { guardId }, orderBy: { requestedAt: "desc" }, include: { requestedBy: { select: { name: true } } } }),
@@ -23,6 +23,8 @@ export async function guardSnapshot(guardId: string, now = new Date()) {
     getSettingNumber("gateway.offlineMinutes"),
     getSettingNumber("geofence.accuracyMaxM"),
     db.guardAlert.count({ where: { guardId, status: "OPEN" } }),
+    // The recent path behind the current position. Mock fixes are left out: they are not evidence of where anyone walked.
+    db.locationEvent.findMany({ where: { guardId, latitude: { not: null }, longitude: { not: null }, mock: false }, orderBy: { occurredAt: "desc" }, take: 25, select: { latitude: true, longitude: true, occurredAt: true } }),
   ]);
   const siteRow = shift?.location ?? device?.location ?? guard.homeLocation ?? null;
   const site = siteRow ? { id: siteRow.id, name: siteRow.name, latitude: siteRow.latitude, longitude: siteRow.longitude, radiusM: siteRow.geofenceRadiusM } : null;
@@ -40,6 +42,7 @@ export async function guardSnapshot(guardId: string, now = new Date()) {
     presentation,
     request: lastRequest ? { ...describeRequest(lastRequest, siteRow ? { name: siteRow.name, latitude: siteRow.latitude, longitude: siteRow.longitude, geofenceRadiusM: siteRow.geofenceRadiusM } : null, accuracyMaxM, now), requestedBy: lastRequest.requestedBy?.name ?? null } : null,
     openAlerts,
+    trail: trail.map((t) => ({ lat: t.latitude!, lng: t.longitude!, at: t.occurredAt.toISOString() })),
     limits: { offlineMinutes, accuracyMaxM },
   };
 }

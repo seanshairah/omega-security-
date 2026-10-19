@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CaretRightIcon, SirenIcon, FirstAidIcon, WarningOctagonIcon, UserMinusIcon, ClockCountdownIcon, CalendarBlankIcon } from "@phosphor-icons/react/dist/ssr";
+import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { todayOverview, dailySeries, activityTrend, attendanceRate, needsAttention } from "@/lib/services/dashboard";
@@ -40,7 +40,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const last = (a: number[]) => a[a.length - 1] - a[a.length - 2];
   const posture = rate.pct >= 85 ? { word: "Strong", tone: "ok" as const, line: "Guards are reporting for duty on time." } : rate.pct >= 60 ? { word: "Watch", tone: "warn" as const, line: "Several guards have not confirmed arrival." } : { word: "Weak", tone: "critical" as const, line: "Attendance is well below target. Call the sites." };
 
-  const icon = (s: string) => s === "CRITICAL" ? SirenIcon : s === "ASSISTANCE" ? FirstAidIcon : s === "INCIDENT" ? WarningOctagonIcon : s === "NOT_CONFIRMED" ? UserMinusIcon : ClockCountdownIcon;
+  const icon = (s: string) => s === "CRITICAL" ? "e911_emergency" : s === "ASSISTANCE" ? "medical_services" : s === "INCIDENT" ? "report" : s === "NOT_CONFIRMED" ? "person_off" : "timer";
 
   return (
     <div className="min-w-0 space-y-4">
@@ -53,7 +53,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       {openAlerts.length > 0 && (
         <Card className="border-critical/40">
-          <CardHeader title={<><SirenIcon weight="fill" className="mr-1 inline h-4 w-4 text-critical" />Guard alerts from phones · {openAlerts.length} open</>} description="Sent through the guard app. Acknowledge so the guard sees who is handling it." action={<Link href="/alerts" className="text-[13px] font-medium text-accent hover:underline">Open alerts <CaretRightIcon className="inline h-3 w-3" /></Link>} />
+          <CardHeader title={<><Icon name="e911_emergency" className="mr-1 inline h-4 w-4 text-critical" filled />Guard alerts from phones · {openAlerts.length} open</>} description="Sent through the guard app. Acknowledge so the guard sees who is handling it." action={<Link href="/alerts" className="text-[13px] font-medium text-accent hover:underline">Open alerts <Icon name="chevron_right" className="inline h-3 w-3" /></Link>} />
           <CardBody className="pt-2">
             <ul className="divide-y divide-line">
               {openAlerts.map((a) => { const m = ALERT_META[a.type]; return (
@@ -98,32 +98,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       {showCalls && (
         <Card className={missedCalls.some((c) => c.shiftId) ? "border-critical" : ""}>
-          <CardHeader title={missedCalls.some((c) => c.shiftId) ? "Active guard missed call" : "Calls"} description={`${gatewayOnline} of ${gateways.length} gateway phone${gateways.length === 1 ? "" : "s"} online. Ringing and in-progress calls, then missed calls from the last 24 hours that nobody has handled.`} action={<Link href="/calls" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-strong hover:underline">All calls <CaretRightIcon size={12} weight="bold" /></Link>} />
+          <CardHeader title={missedCalls.some((c) => c.shiftId) ? "Active guard missed call" : "Calls"} description={`${gatewayOnline} of ${gateways.length} gateway phone${gateways.length === 1 ? "" : "s"} online. Ringing and in-progress calls, then missed calls from the last 24 hours that nobody has handled.`} action={<Link href="/calls" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-strong hover:underline">All calls <Icon name="chevron_right" size={12} filled /></Link>} />
           <CardBody className="pt-3"><LiveCallCards live={live} missed={missedCalls} /></CardBody>
         </Card>
       )}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_480px]">
         <Card>
-          <CardHeader title="Needs attention" action={<Link href="/operations" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-strong hover:underline">View all <CaretRightIcon size={12} weight="bold" /></Link>} />
+          <CardHeader title="Needs attention" action={<Link href="/operations" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-strong hover:underline">View all <Icon name="chevron_right" size={12} filled /></Link>} />
           <CardBody className="pt-3">
             {attention.length === 0 ? (
               <div className="flex items-center gap-3 rounded-[12px] border border-dashed border-line px-4 py-6 text-[13px] text-ink-2"><span className="h-2 w-2 rounded-full bg-ok" />Every live shift is in order. Nothing needs you right now.</div>
             ) : (
               <ul className="divide-y divide-line">
                 {attention.map((s) => {
-                  const Icon = icon(s.status);
                   const meta = STATUS_META[s.status];
                   return (
                     <li key={s.id}>
                       <Link href={`/shifts/${s.id}`} className="flex items-center gap-4 py-3.5 hover:bg-surface-2/60 -mx-2 px-2 rounded-[10px]">
-                        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-line", s.status === "CRITICAL" ? "bg-critical-soft text-critical" : "bg-surface text-ink-2")}><Icon size={18} weight="fill" /></span>
+                        <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-line", s.status === "CRITICAL" ? "bg-critical-soft text-critical" : "bg-surface text-ink-2")}><Icon name={icon(s.status)} size={18} filled /></span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[14px] font-medium text-ink">{s.guard.firstName} {s.guard.lastName} · {s.location.name}</p>
                           <p className="truncate text-[13px] text-ink-2">{fmtTime(s.startAt)}–{fmtTime(s.endAt)} · {s.attendance?.arrivalConfirmedAt ? `arrived ${fmtTime(s.attendance.arrivalConfirmedAt)}` : "arrival not confirmed"}</p>
                         </div>
                         <Status tone={meta.tone} pulse={s.status === "CRITICAL"}>{meta.label}</Status>
-                        <CaretRightIcon size={14} weight="bold" className="text-ink-3" />
+                        <Icon name="chevron_right" size={14} className="text-ink-3" filled />
                       </Link>
                     </li>
                   );
@@ -131,13 +130,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </ul>
             )}
             <div className="mt-3 flex items-center gap-2 border-t border-dashed border-line pt-3 text-[12.5px] text-ink-3">
-              <CalendarBlankIcon size={14} weight="fill" /> {o.scheduledToday} shifts scheduled today · {o.late} late · {o.missedChecks} missed welfare check{o.missedChecks === 1 ? "" : "s"} · {o.totalGuards} active guards
+              <Icon name="calendar_today" size={14} filled /> {o.scheduledToday} shifts scheduled today · {o.late} late · {o.missedChecks} missed welfare check{o.missedChecks === 1 ? "" : "s"} · {o.totalGuards} active guards
             </div>
           </CardBody>
         </Card>
 
         <Card>
-          <CardHeader title="Send a message" description={`Signed as ${user.name}`} action={<Link href="/messages/new" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-strong hover:underline">Compose · groups, WhatsApp, email <CaretRightIcon size={12} weight="bold" /></Link>} />
+          <CardHeader title="Send a message" description={`Signed as ${user.name}`} action={<Link href="/messages/new" className="inline-flex items-center gap-1 text-[13px] font-medium text-accent-strong hover:underline">Compose · groups, WhatsApp, email <Icon name="chevron_right" size={12} filled /></Link>} />
           <CardBody>
             <SendMessage guards={onDutyGuards.map((s) => ({ id: s.guardId, name: `${s.guard.firstName} ${s.guard.lastName}`, status: STATUS_META[s.status].label }))} />
           </CardBody>

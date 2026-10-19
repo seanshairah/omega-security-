@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Icon } from "@/components/ui/icon";
 import { useRouter } from "next/navigation";
-import { DeviceMobileIcon } from "@phosphor-icons/react";
 import { simulateInbound } from "@/actions/sms";
 import { cn } from "@/lib/cn";
 
@@ -23,7 +23,7 @@ export function SimulatorInline({ guardId, guardName, pending }: { guardId: stri
   const opts = [...(REPLIES[pending] ?? []), { label: "EMERGENCY", body: "EMERGENCY", tone: "critical" as const }];
   return (
     <div>
-      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3"><DeviceMobileIcon size={14} weight="fill" /> Demo · reply as {guardName}</p>
+      <p className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.06em] text-ink-3"><Icon name="mobile" size={14} filled /> Demo · reply as {guardName}</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {opts.map((o) => <button key={o.label} disabled={busy} onClick={() => send(o.body)} className={cn("h-8 rounded-[8px] border px-3 text-[12.5px] font-medium disabled:opacity-50", o.tone === "critical" ? "border-critical/40 bg-critical-soft text-[#b3301a]" : "border-line bg-surface text-ink hover:bg-surface-2")}>{o.label}</button>)}
         <form onSubmit={(e) => { e.preventDefault(); if (custom.trim()) send(custom); }} className="flex gap-1">

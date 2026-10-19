@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellRingingIcon, BellSlashIcon } from "@phosphor-icons/react";
+import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 
 function b64ToBytes(b64: string) {
@@ -42,6 +42,6 @@ export function PushToggle({ publicKey, compact }: { publicKey: string | null; c
   if (state === "unconfigured") return compact ? null : <p className="text-[13px] text-ink-3">Push notifications are not configured on the server (VAPID keys missing).</p>;
   if (state === "unsupported") return compact ? null : <p className="text-[13px] text-ink-3">This browser does not support push notifications.</p>;
   if (state === "denied") return compact ? null : <p className="text-[13px] text-ink-3">Notifications are blocked for this site in the browser. Allow them in the address-bar site settings, then try again.</p>;
-  if (state === "on") return <Button size={compact ? "sm" : "md"} variant="secondary" onClick={disable}><BellSlashIcon size={14} weight="fill" /> Push on · turn off</Button>;
-  return <Button size={compact ? "sm" : "md"} variant="primary" disabled={state === "busy"} onClick={enable}><BellRingingIcon size={14} weight="fill" /> {state === "busy" ? "Working…" : "Enable push notifications"}</Button>;
+  if (state === "on") return <Button size={compact ? "sm" : "md"} variant="secondary" onClick={disable}><Icon name="notifications_off" size={14} filled /> Push on · turn off</Button>;
+  return <Button size={compact ? "sm" : "md"} variant="primary" disabled={state === "busy"} onClick={enable}><Icon name="notifications_active" size={14} filled /> {state === "busy" ? "Working…" : "Enable push notifications"}</Button>;
 }

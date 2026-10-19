@@ -14,7 +14,9 @@ The following must be supplied by the operator; the repository holds no producti
 | `CRON_SECRET`, `AUTOMATION_SECRET` | Vercel env + cron | not the example defaults |
 | SMS provider: `SMS_PROVIDER=sendai`, `SMS_API_KEY`, `SMS_SENDER_ID`, `SMS_WEBHOOK_SECRET` | Vercel env + Sendai webhook config | the webhook URL is `https://<domain>/api/sms/webhook/sendai` |
 | `VAPID_*` keys | Vercel env | browser push |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` / `NEXT_PUBLIC_MAPTILER_KEY` (optional) | Vercel env | referrer-restricted at the provider |
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | Vercel env | **public** `pk.*` token, URL-restricted to the portal domain, with a Mapbox billing alert set before launch (docs/MAPBOX.md). Without it every map falls back to raster tiles |
+| `NEXT_PUBLIC_MAPBOX_STYLE` (optional) | Vercel env | custom company style |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` / `NEXT_PUBLIC_MAPTILER_KEY` (optional) | Vercel env | referrer-restricted at the provider; only used by the fallback renderer |
 | `SIMULATOR_ENABLED` | Vercel env | leave unset (off in production unless SMS is simulated) |
 | Android release keystore + `ANDROID_KEYSTORE_*` | build machine only | never committed |
 

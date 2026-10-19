@@ -11,9 +11,11 @@ import { useLocationRequest } from "@/components/location/use-location-request";
 import { REQUEST_STATUS_META, FAILURE_META, isOpen } from "@/lib/location-request-state";
 import { ACTIVITY_CATEGORIES, type ActivityItem, type ActivityCategory, type ActivitySeverity } from "@/lib/guard-activity-types";
 import type { GuardSnapshot } from "@/lib/services/guard-snapshot";
+import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
 
-type Snapshot = Omit<GuardSnapshot, "device" | "shift" | "presentation" | "request"> & {
+type Snapshot = Omit<GuardSnapshot, "device" | "shift" | "presentation" | "request" | "trail"> & {
+  trail: { lat: number; lng: number; at: string }[];
   device: (Omit<NonNullable<GuardSnapshot["device"]>, "lastSeenAt"> & { lastSeenAt: string | null }) | null;
   shift: (Omit<NonNullable<GuardSnapshot["shift"]>, "startAt" | "endAt"> & { startAt: string; endAt: string }) | null;
   presentation: { connection: { state: string; label: string; tone: Tone; lastSeenAt: string | null }; monitoring: { onShift: boolean; active: boolean; gps: string; label: string; detail: string; tone: Tone }; position: { latitude: number; longitude: number; accuracyM: number | null; at: string; ageSeconds: number; freshness: "LIVE" | "RECENT" | "STALE"; source: "MONITORING" | "REQUESTED"; mock: boolean } | null; geofence: { assessment: string; label: string; tone: Tone; distanceM: number | null; detail: string } };
@@ -42,6 +44,7 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
   // Short desktop viewports (laptops at 720 px) keep the map usable by starting with the detail region collapsed.
   useEffect(() => { if (window.innerWidth >= 1280 && window.innerHeight < 800) setDetailOpen(false); }, []);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [showTrail, setShowTrail] = useState(false);
   const pathname = usePathname();
   const req = useLocationRequest(initial.guard.id);
   const guardId = initial.guard.id;
@@ -115,17 +118,18 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
 
   const requestRow = (
     <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2 text-[12.5px]" data-testid="map-request-row">
-      {snap.device && canRequest ? <button type="button" onClick={() => req.start({ purpose: "CHECK" })} disabled={busy || req.busy} className={cn(btn, "border-accent/60 bg-accent-soft text-accent-strong hover:bg-accent-soft")} data-testid="request-location">{busy ? "Locating…" : "Request GPS fix"}</button> : !snap.device ? <span className="text-ink-3">No activated guard phone: SMS and calls only.</span> : null}
-      {busy && canRequest && <button type="button" onClick={() => req.cancel()} disabled={req.busy} className={btn}>Cancel</button>}
+      {snap.device && canRequest ? <button type="button" onClick={() => req.start({ purpose: "CHECK" })} disabled={busy || req.busy} className={cn(btn, "border-accent/60 bg-accent-soft text-accent-strong hover:bg-accent-soft")} data-testid="request-location"><Icon name="my_location" size="sm" filled />{busy ? "Locating…" : "Request fix"}</button> : !snap.device ? <span className="inline-flex items-center gap-1 text-ink-3"><Icon name="location_off" size="sm" />No guard phone: SMS and calls only</span> : null}
+      {busy && canRequest && <button type="button" onClick={() => req.cancel()} disabled={req.busy} className={btn}><Icon name="close" size="sm" />Cancel</button>}
       {liveReq && (
         <span className="inline-flex items-center gap-1.5"><Status tone={REQUEST_STATUS_META[liveReq.status].tone} pulse={isOpen(liveReq.status)}>{REQUEST_STATUS_META[liveReq.status].label}</Status>
           <span className="text-ink-3">{isOpen(liveReq.status) ? `${liveReq.secondsLeft} s left` : liveReq.status === "FAILED" && liveReq.failureReason ? FAILURE_META[liveReq.failureReason] : liveReq.accuracyM != null ? `±${Math.round(liveReq.accuracyM)} m · ${fmtDT(liveReq.capturedAt)}` : ""}</span></span>
       )}
       {req.error && <span className="text-critical">{req.error}</span>}
       <span className="ml-auto flex items-center gap-1.5">
-        <button type="button" onClick={() => setFitKey((k) => k + 1)} className={btn}>Recenter</button>
-        {pos && <button type="button" onClick={() => navigator.clipboard?.writeText(`${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`)} className={btn}>Copy</button>}
-        {canEditSites && snap.site && liveReq?.status === "COMPLETED" && !liveReq.mock && <Link href={`/locations/${snap.site.id}/edit?fromRequest=${liveReq.id}`} className={btn}>Use as site centre…</Link>}
+        {snap.trail.length > 1 && <button type="button" onClick={() => setShowTrail((v) => !v)} aria-pressed={showTrail} title={`Draw the last ${snap.trail.length} recorded positions as a path`} className={cn(btn, showTrail && "border-accent/60 bg-accent-soft text-accent-strong")}><Icon name="route" size="sm" filled={showTrail} />Path</button>}
+        <button type="button" onClick={() => setFitKey((k) => k + 1)} title="Fit the map to the site and the latest position" className={btn}><Icon name="fit_screen" size="sm" />Recenter</button>
+        {pos && <button type="button" onClick={() => navigator.clipboard?.writeText(`${pos.latitude.toFixed(6)}, ${pos.longitude.toFixed(6)}`)} title="Copy the coordinates of the last verified position" className={btn}><Icon name="content_copy" size="sm" />Copy</button>}
+        {canEditSites && snap.site && liveReq?.status === "COMPLETED" && !liveReq.mock && <Link href={`/locations/${snap.site.id}/edit?fromRequest=${liveReq.id}`} title="Open the site with this fix ready to confirm as the new centre" className={btn}><Icon name="pin_drop" size="sm" />Set site centre</Link>}
       </span>
     </div>
   );
@@ -169,7 +173,7 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
 
         {/* Map column */}
         <Panel title="Live map" subtitle={pos ? `${pos.source === "REQUESTED" ? "Requested fix" : "Monitoring fix"} · ${ago(pos.at, now)}${pos.accuracyM != null ? ` · ±${Math.round(pos.accuracyM)} m` : ""} · ${p.geofence.label.toLowerCase()}` : "No verified position yet"} className="order-1 min-h-[400px] overflow-hidden xl:order-2 xl:min-h-0" bodyClassName="flex flex-col">
-          <div className="relative min-h-[280px] flex-1 xl:min-h-0"><GuardMap site={site} position={mapPosition} requested={older} fitKey={fitKey} className="absolute inset-0" /></div>
+          <div className="relative min-h-[280px] flex-1 xl:min-h-0"><GuardMap site={site} position={mapPosition} requested={older} trail={showTrail ? snap.trail : []} fitKey={fitKey} className="absolute inset-0 flex flex-col p-0" /></div>
           {requestRow}
         </Panel>
 

@@ -9,6 +9,8 @@ import { accuracyVerdict, distanceM, fixFreshness, geolocationAvailability, geol
 import { REQUEST_STATUS_META, FAILURE_META, isOpen } from "@/lib/location-request-state";
 import { useLocationRequest } from "@/components/location/use-location-request";
 import { tileLayerConfig, tileProviderName } from "./tiles";
+import { mapboxToken, mapStyleUrl, mapProviderName } from "@/lib/map/provider";
+import { circleRing, MAP_COLOUR } from "@/lib/map/features";
 
 /**
  * Duty-site geofence picker for the admin portal (never shipped in the APK).
@@ -36,7 +38,12 @@ const DEFAULT_CENTRE = { lat: -17.8292, lng: 31.0522 }; // Harare
 const LIMITS = { radiusMin: 20, radiusMax: 5000 };
 const WATCH_BUDGET_MS = 30_000;
 
-type Engine = "google" | "leaflet";
+/**
+ * Mapbox first when a token is configured (the portal's standard renderer), then Google Maps if a
+ * Google key is set and no Mapbox token is, then the raster Leaflet map. Whichever renders, the
+ * form fields below the map stay the source of truth and the position state machine is identical.
+ */
+type Engine = "mapbox" | "google" | "leaflet";
 type LocState = "idle" | "insecure_context" | "unsupported" | "requesting_permission" | "locating" | "acquired" | "accuracy_insufficient" | "permission_denied" | "timed_out" | "unavailable";
 type Candidate = { lat: number; lng: number; accuracyM: number | null; timestamp: number; source: PositionSource; label: string; fresh: boolean; mock?: boolean; requestId?: string };
 
@@ -49,7 +56,7 @@ const LOC_STATE_LABEL: Record<LocState, { label: string; tone: "ok" | "warn" | "
 type EngineHandle = { setPin: (lat: number, lng: number, zoom?: boolean) => void; setRadius: (r: number) => void; clear: () => void; setCandidate: (lat: number, lng: number, accuracyM: number | null) => void; clearCandidate: () => void; destroy: () => void };
 
 export function SitePicker({ names, initial, mapsKey, height = 340, showSource = true, radiusRequired = true, siteFallbackRadius, guardDevices, locationId, candidate: handedCandidate }: { names: PickerNames; initial: PickerValue; mapsKey?: string; height?: number; showSource?: boolean; radiusRequired?: boolean; siteFallbackRadius?: number; guardDevices?: PickerGuardDevice[]; locationId?: string | null; candidate?: PickerCandidate | null }) {
-  const engine: Engine = mapsKey ? "google" : "leaflet";
+  const engine: Engine = mapboxToken() ? "mapbox" : mapsKey ? "google" : "leaflet";
   const [lat, setLat] = useState<string>(initial.lat != null ? String(initial.lat) : "");
   const [lng, setLng] = useState<string>(initial.lng != null ? String(initial.lng) : "");
   const [radius, setRadius] = useState<string>(String(initial.radiusM || 150));
@@ -112,7 +119,18 @@ export function SitePicker({ names, initial, mapsKey, height = 340, showSource =
         engineRef.current = mountLeaflet(L, mapEl.current, hasPin ? { lat: latN, lng: lngN } : null, radiusOk ? radiusN : 150, (la, ln) => place(la, ln, "MAP", ""));
         if (candidate) engineRef.current.setCandidate(candidate.lat, candidate.lng, candidate.accuracyM);
       };
-      if (engine === "google") {
+      if (engine === "mapbox") {
+        try {
+          const mod = (await import("mapbox-gl")).default;
+          if (cancelled || !mapEl.current || engineRef.current) return;
+          mod.accessToken = mapboxToken();
+          engineRef.current = mountMapbox(mod, mapEl.current, hasPin ? { lat: latN, lng: lngN } : null, radiusOk ? radiusN : 150, (la, ln) => place(la, ln, "MAP", ""));
+          if (candidate) engineRef.current.setCandidate(candidate.lat, candidate.lng, candidate.accuracyM);
+        } catch (e) {
+          setStatus(`Mapbox could not start (${e instanceof Error ? e.message : "WebGL unavailable"}). Showing ${tileProviderName()} tiles instead.`);
+          await leaflet();
+        }
+      } else if (engine === "google") {
         try {
           await loadGoogleMaps(mapsKey!);
           const maps = (await google.maps.importLibrary("maps")) as google.maps.MapsLibrary;
@@ -221,6 +239,13 @@ export function SitePicker({ names, initial, mapsKey, height = 340, showSource =
         const r = await geocoder.geocode({ address: q, region: "zw" });
         const list = r.results.slice(0, 5).map((x) => ({ label: x.formatted_address, lat: x.geometry.location.lat(), lng: x.geometry.location.lng(), placeId: x.place_id }));
         setResults(list); setStatus(list.length ? `${list.length} result(s). Pick one, then drag the pin if needed.` : "No results. Try the street or suburb, or zoom and click the map.");
+      } else if (engine === "mapbox") {
+        // Mapbox Geocoding v6 (forward). Billed per request on the same account as the map tiles.
+        const res = await fetch(`https://api.mapbox.com/search/geocode/v6/forward?q=${encodeURIComponent(q)}&country=zw&limit=5&access_token=${encodeURIComponent(mapboxToken())}`);
+        if (!res.ok) throw new Error(`search returned ${res.status}`);
+        const body = (await res.json()) as { features?: { properties?: { full_address?: string; name?: string; mapbox_id?: string }; geometry: { coordinates: [number, number] } }[] };
+        const list = (body.features ?? []).map((f) => ({ label: f.properties?.full_address ?? f.properties?.name ?? "result", lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0], placeId: f.properties?.mapbox_id }));
+        setResults(list); setStatus(list.length ? `${list.length} result(s) from Mapbox. Pick one, then drag the pin to the exact centre.` : "No results. Try the street or suburb, or click the map.");
       } else {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=zw&q=${encodeURIComponent(q)}`, { headers: { Accept: "application/json" } });
         const list = ((await res.json()) as { display_name: string; lat: string; lon: string }[]).map((x) => ({ label: x.display_name, lat: Number(x.lat), lng: Number(x.lon) }));
@@ -256,9 +281,9 @@ export function SitePicker({ names, initial, mapsKey, height = 340, showSource =
           {results.map((r, i) => <li key={i}><button type="button" className="w-full px-3 py-2 text-left hover:bg-surface-2" onClick={() => { place(r.lat, r.lng, "MAP", r.placeId ?? ""); setResults([]); setQuery(r.label); engineRef.current?.setPin(r.lat, r.lng, true); }}>{r.label}</button></li>)}
         </ul>
       )}
-      {engine === "leaflet" && <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />}
+      {engine !== "google" && <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />}
       <div ref={mapEl} style={{ height }} className="w-full overflow-hidden rounded-[12px] border border-line bg-surface-2" />
-      <p className="text-[12px] text-ink-3">{status || (engine === "google" ? "Click the map or drag the pin to the exact centre of the site. The green circle is the geofence." : `${tileProviderName()} tiles${mapsKey ? "" : " (no Google Maps key configured)"}. Click the map or drag the pin to the exact centre of the site. The green circle is the geofence; a dashed purple circle is a measured position's accuracy, waiting for your confirmation.`)}</p>
+      <p className="text-[12px] text-ink-3">{status || `Click the map or drag the pin to the exact centre of the site. The green circle is the geofence; a dashed purple circle is a measured position's accuracy, waiting for your confirmation. Map by ${engine === "google" ? "Google" : engine === "mapbox" ? "Mapbox" : mapProviderName("leaflet")}.`}</p>
 
       {/* Browser-location status: always visible so the admin knows which device is being located and why it may be blocked. */}
       <div className="rounded-[8px] border border-line bg-surface px-3 py-2 text-[12.5px]" data-testid="browser-location">
@@ -472,5 +497,64 @@ function mountLeaflet(L: typeof import("leaflet"), el: HTMLElement, pin: { lat: 
     },
     clearCandidate: () => { cand?.remove(); candCircle?.remove(); cand = null; candCircle = null; },
     destroy: () => { try { map.stop(); map.off(); marker?.remove(); circle?.remove(); cand?.remove(); candCircle?.remove(); map.remove(); } catch { /* already gone */ } },
+  };
+}
+
+
+// ---------------- Mapbox GL ----------------
+
+/**
+ * Mapbox engine for the picker. Same contract as the Google and Leaflet engines: a draggable
+ * centre pin, a fence circle that follows the radius field, and a separate candidate marker with
+ * its accuracy ring that is never saved until the operator confirms it.
+ */
+function mountMapbox(mod: typeof import("mapbox-gl").default, el: HTMLElement, pin: { lat: number; lng: number } | null, radiusM: number, onPin: (lat: number, lng: number) => void): EngineHandle {
+  const map = new mod.Map({ container: el, style: mapStyleUrl("streets"), center: [pin?.lng ?? DEFAULT_CENTRE.lng, pin?.lat ?? DEFAULT_CENTRE.lat], zoom: pin ? 16 : 11, collectResourceTiming: false });
+  map.addControl(new mod.NavigationControl({ visualizePitch: false }), "top-right");
+  map.addControl(new mod.ScaleControl({ maxWidth: 90, unit: "metric" }), "bottom-left");
+  const empty = { type: "FeatureCollection" as const, features: [] };
+  const ring = (lat: number, lng: number, r: number) => ({ type: "FeatureCollection" as const, features: [{ type: "Feature" as const, geometry: { type: "Polygon" as const, coordinates: [circleRing(lat, lng, Math.max(r, 1))] }, properties: {} }] });
+  let marker: import("mapbox-gl").Marker | null = null;
+  let cand: import("mapbox-gl").Marker | null = null;
+  let current: { lat: number; lng: number } | null = pin;
+  let ready = false;
+
+  const dot = (colour: string) => { const d = document.createElement("div"); d.style.cssText = `width:18px;height:18px;border-radius:50%;background:${colour};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)`; return d; };
+  const setFence = (lat: number, lng: number, r: number) => { const src = map.getSource("pick-fence") as import("mapbox-gl").GeoJSONSource | undefined; src?.setData(ring(lat, lng, r) as GeoJSON.FeatureCollection); };
+  const setAcc = (lat: number, lng: number, acc: number | null) => { const src = map.getSource("pick-acc") as import("mapbox-gl").GeoJSONSource | undefined; src?.setData((acc && acc > 0 ? ring(lat, lng, acc) : empty) as GeoJSON.FeatureCollection); };
+
+  const ensure = (lat: number, lng: number) => {
+    current = { lat, lng };
+    if (!marker) {
+      marker = new mod.Marker({ element: dot(MAP_COLOUR.pin), draggable: true }).setLngLat([lng, lat]).addTo(map);
+      marker.on("dragend", () => { const p = marker!.getLngLat(); current = { lat: p.lat, lng: p.lng }; setFence(p.lat, p.lng, radiusM); onPin(p.lat, p.lng); });
+    } else marker.setLngLat([lng, lat]);
+    setFence(lat, lng, radiusM);
+  };
+
+  map.on("load", () => {
+    ready = true;
+    map.addSource("pick-fence", { type: "geojson", data: empty });
+    map.addSource("pick-acc", { type: "geojson", data: empty });
+    map.addLayer({ id: "pick-fence-fill", type: "fill", source: "pick-fence", paint: { "fill-color": MAP_COLOUR.site, "fill-opacity": 0.08 } });
+    map.addLayer({ id: "pick-fence-line", type: "line", source: "pick-fence", paint: { "line-color": MAP_COLOUR.site, "line-width": 2 } });
+    map.addLayer({ id: "pick-acc-fill", type: "fill", source: "pick-acc", paint: { "fill-color": CAND, "fill-opacity": 0.1 } });
+    map.addLayer({ id: "pick-acc-line", type: "line", source: "pick-acc", paint: { "line-color": CAND, "line-width": 1, "line-dasharray": [3, 2] } });
+    if (current) ensure(current.lat, current.lng);
+  });
+  map.on("click", (e) => { ensure(e.lngLat.lat, e.lngLat.lng); onPin(e.lngLat.lat, e.lngLat.lng); });
+
+  return {
+    setPin: (lat, lng, zoom) => { ensure(lat, lng); if (zoom) map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 16) }); },
+    setRadius: (r) => { radiusM = r; if (current) setFence(current.lat, current.lng, r); },
+    clear: () => { marker?.remove(); marker = null; current = null; if (ready) { const src = map.getSource("pick-fence") as import("mapbox-gl").GeoJSONSource | undefined; src?.setData(empty as GeoJSON.FeatureCollection); } },
+    setCandidate: (lat, lng, acc) => {
+      if (!cand) cand = new mod.Marker({ element: dot(CAND) }).setLngLat([lng, lat]).addTo(map);
+      else cand.setLngLat([lng, lat]);
+      setAcc(lat, lng, acc);
+      map.easeTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 16) });
+    },
+    clearCandidate: () => { cand?.remove(); cand = null; if (ready) setAcc(0, 0, null); },
+    destroy: () => { try { marker?.remove(); cand?.remove(); map.remove(); } catch { /* already gone */ } },
   };
 }

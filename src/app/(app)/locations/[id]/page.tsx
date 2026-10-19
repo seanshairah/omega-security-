@@ -17,6 +17,7 @@ import { setLocationActive } from "@/actions/locations";
 import { fmtDate, fmtTime, fmtShort } from "@/lib/time";
 import { clientPhoneFor } from "@/lib/sms/client-updates";
 import { SiteMap } from "@/components/map/site-map";
+import { EmptyState } from "@/components/workspace/panel";
 import { COORDINATES_SOURCE_META } from "@/lib/site-config";
 
 export const metadata = { title: "Location" };
@@ -95,9 +96,11 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
             </div>
             {l.specialInstructions && <div className="mt-4 border-t border-dashed border-line pt-3"><div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">Special instructions</div><p className="mt-1 text-[13px] text-ink">{l.specialInstructions}</p></div>}
           </CardBody></Card>
-          {l.latitude != null && l.longitude != null && (
-            <Card><CardHeader title="Site and geofence" /><CardBody><SiteMap site={{ lat: l.latitude, lng: l.longitude, radiusM: l.geofenceRadiusM, name: l.name }} points={[]} height={240} /></CardBody></Card>
-          )}
+          <Card><CardHeader title="Site and geofence" /><CardBody>
+            {l.latitude != null && l.longitude != null
+              ? <SiteMap site={{ lat: l.latitude, lng: l.longitude, radiusM: l.geofenceRadiusM, name: l.name }} points={[]} height={240} />
+              : <EmptyState icon="pin_drop" title="No site centre set" detail="GPS verification stays off for this site until it has coordinates. SMS attendance checks are unaffected." action={<LinkButton href={`/locations/${l.id}/edit`} variant="primary" size="sm">Set the site centre</LinkButton>} />}
+          </CardBody></Card>
           <Card>
             <CardHeader title="Assigned guards" description="Guards whose usual site is here." />
             <CardBody className="pt-3">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowDownLeftIcon, ArrowUpRightIcon } from "@phosphor-icons/react/dist/ssr";
+import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
@@ -55,7 +55,7 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
         <Rows cards={
           rows.length === 0 ? <Empty title="No messages match" /> : rows.map((m) => (
             <CardRow key={m.id} href={m.shiftId ? `/shifts/${m.shiftId}` : m.guard ? `/guards/${m.guard.id}` : undefined}
-              title={<span className="flex items-center gap-1.5">{m.direction === "OUTBOUND" ? <ArrowUpRightIcon size={13} weight="bold" className="text-ink-3" /> : <ArrowDownLeftIcon size={13} weight="bold" className="text-accent-strong" />}{m.guard ? `${m.guard.firstName} ${m.guard.lastName}` : "Unknown number"}</span>}
+              title={<span className="flex items-center gap-1.5">{m.direction === "OUTBOUND" ? <Icon name="north_east" size={13} className="text-ink-3" filled /> : <Icon name="south_west" size={13} className="text-accent-strong" filled />}{m.guard ? `${m.guard.firstName} ${m.guard.lastName}` : "Unknown number"}</span>}
               subtitle={`${fmtDate(m.createdAt)} ${fmtTime(m.createdAt)} · ${m.channel === "SMS" ? "SMS" : m.channel === "WHATSAPP" ? "WhatsApp" : "Email"} · ${m.type.toLowerCase().replace("_", " ")}`}
               right={<Status tone={tone(m.status)}>{m.status.toLowerCase()}</Status>}>
               <p className={`mt-2 text-[13px] ${m.direction === "INBOUND" ? "font-medium text-ink" : "text-ink-2"}`}>{m.subject ? <span className="block font-medium text-ink">{m.subject}</span> : null}{m.body}</p>
@@ -71,7 +71,7 @@ export default async function SmsLogsPage({ searchParams }: { searchParams: Prom
             {rows.map((m) => (
               <tr key={m.id}>
                 <td className="whitespace-nowrap tnum"><div>{fmtDate(m.createdAt)}</div><div className="text-[12px] text-ink-3">{fmtTime(m.createdAt)}</div></td>
-                <td>{m.direction === "OUTBOUND" ? <ArrowUpRightIcon size={14} weight="bold" className="text-ink-3" aria-label="Sent" /> : <ArrowDownLeftIcon size={14} weight="bold" className="text-accent-strong" aria-label="Received" />}</td>
+                <td>{m.direction === "OUTBOUND" ? <Icon name="north_east" size={14} className="text-ink-3" aria-label="Sent" filled /> : <Icon name="south_west" size={14} className="text-accent-strong" aria-label="Received" filled />}</td>
                 <td>{m.guard ? <Link href={`/guards/${m.guard.id}`} className="hover:underline">{m.guard.firstName} {m.guard.lastName}</Link> : <span className="text-ink-3">Unknown</span>}</td>
                 <td className="whitespace-nowrap tnum text-ink-2">{m.channel === "EMAIL" ? (m.direction === "OUTBOUND" ? m.toNumber : m.fromNumber) : formatPhone(m.direction === "OUTBOUND" ? m.toNumber : m.fromNumber)}</td>
                 <td className="max-w-md">{m.subject && <p className="text-[12px] font-medium text-ink">{m.subject}</p>}<p className={`line-clamp-2 ${m.direction === "INBOUND" ? "font-medium text-ink" : "text-ink-2"}`}>{m.body}</p>{m.error && <p className="text-[12px] text-critical">{m.error}</p>}{m.shiftId && <Link href={`/shifts/${m.shiftId}`} className="text-[12px] text-ink-3 hover:underline">shift</Link>}</td>

@@ -86,7 +86,7 @@ export default async function LocationExceptionsPage() {
         </Card>
 
         <Card>
-          <CardHeader title={`Location unavailable · last 24 h · ${spells.size} spell${spells.size === 1 ? "" : "s"}`} description="Grouped per shift with every reason seen. Poor accuracy and no fix are GPS conditions; location off and permission removed need the guard; site has no coordinates needs an administrator." />
+          <CardHeader title={`Location unavailable · last 24 h · ${spells.size} spell${spells.size === 1 ? "" : "s"}`} description="Grouped per shift, with every reason seen. Who to chase: GPS conditions clear on their own, a phone setting needs the guard, a missing site centre needs an administrator." />
           <Table>
             <THead><tr><th>Guard</th><th>Site</th><th>From</th><th>To</th><th>Events</th><th>Reasons</th><th>Shift</th></tr></THead>
             <TBody>

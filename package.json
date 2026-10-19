@@ -31,6 +31,8 @@
     "android:release": "node scripts/android.mjs release",
     "db:check": "tsx scripts/dev/prisma-check.ts",
     "db:check:db": "tsx scripts/dev/prisma-check.ts --db",
+    "icons:build": "node scripts/dev/build-icons.mjs",
+    "test:map": "node scripts/dev/map-e2e.mjs",
     "test:layout": "node scripts/dev/layout-e2e.mjs"
   },
   "prisma": {
@@ -38,7 +40,6 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
-    "@phosphor-icons/react": "^2.1.10",
     "@prisma/adapter-neon": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
@@ -47,6 +48,7 @@
     "https-proxy-agent": "^9.1.0",
     "jose": "^6.2.12",
     "leaflet": "^1.9.4",
+    "mapbox-gl": "3.33.0",
     "next": "^15.5.27",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -56,6 +58,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@material-symbols/svg-400": "0.48.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/google.maps": "^3.66.7",
     "@types/leaflet": "^1.9.12",

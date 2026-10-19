@@ -1,4 +1,5 @@
 import type { Client, Location, User } from "@prisma/client";
+import { Explainer } from "@/components/ui/page";
 import { ActionForm } from "@/components/ui/action-form";
 import { Field, Input, Select, Textarea, FormSection, Checkbox } from "@/components/ui/form";
 import { SitePicker, type PickerGuardDevice, type PickerCandidate } from "@/components/map/site-picker";
@@ -39,7 +40,13 @@ export function LocationForm({ action, location, clients, supervisors, submitLab
         <Field label="Site type"><Select name="siteType" defaultValue={l?.siteType ?? ""}><option value="">—</option>{SITE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}</Select></Field>
         <Field label="Physical address" required className="sm:col-span-2"><Input name="address" defaultValue={l?.address} required /></Field>
       </FormSection>
-      <FormSection title="Position and geofence" description="Needed for GPS verification from guard phones. Search for the site, click the map or drag the pin to its centre, and set how far from the centre still counts as on site. 'Use my current location' measures the device running this portal; 'Request guard phone position' asks a registered guard phone standing at the site. Both show the result for confirmation before anything is saved. Saving a changed fence raises the site's config version so guard phones pick it up.">
+      <FormSection title="Position and geofence" description="Where the site centre is, and how far from it still counts as on site. Without coordinates, GPS verification stays off for this site.">
+        <Explainer title="How a position gets here, and what happens when you save" className="sm:col-span-2">
+          <p><strong>Map</strong> — search, click or drag the pin.</p>
+          <p><strong>Use my current location</strong> — measures the device running this portal, so only trust it if you are standing at the site.</p>
+          <p><strong>Request guard phone position</strong> — asks a registered guard phone at the site for a fresh GPS fix.</p>
+          <p>Measured positions are shown for confirmation first; nothing is saved until you confirm. Saving a changed fence raises the site&apos;s config version, which is how guard phones pick it up.</p>
+        </Explainer>
         <SitePicker names={{ lat: "latitude", lng: "longitude", radius: "geofenceRadiusM", source: "coordinatesSource", placeId: "placeId" }} initial={{ lat: l?.latitude ?? null, lng: l?.longitude ?? null, radiusM: l?.geofenceRadiusM ?? 150, source: l?.coordinatesSource ?? null, placeId: l?.placeId ?? null }} mapsKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} height={480} guardDevices={guardDevices} locationId={l?.id ?? null} candidate={candidate ?? null} />
         {l && <p className="sm:col-span-2 text-[12px] text-ink-3 tnum">Config version {l.configVersion}{l.coordinatesUpdatedAt ? ` · fence last changed ${l.coordinatesUpdatedAt.toLocaleString("en-GB", { timeZone: "Africa/Harare" })}` : ""}.</p>}
       </FormSection>

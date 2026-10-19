@@ -12,6 +12,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { LinkButton, ButtonGroup } from "@/components/ui/button";
 import { AutoRefresh } from "@/components/auto-refresh";
 import { LiveMap, type LiveGuard, type LiveSite } from "@/components/map/live-map";
+import { EmptyState } from "@/components/workspace/panel";
 import { fmtDateTime, fmtTime } from "@/lib/time";
 import type { LocationEvent } from "@prisma/client";
 
@@ -60,11 +61,11 @@ export default async function LiveMapPage() {
   return (
     <div>
       <AutoRefresh seconds={30} />
-      <PageHeader title="Live map" description={`${guards.length} guard${guards.length === 1 ? "" : "s"} with a position on ${shifts.length} live shift${shifts.length === 1 ? "" : "s"} · ${outside} outside · ${stale} stale · ${noPoint.length} without a point. Every point is a dated fix with its accuracy, not a live stream. Refreshes every 30 s.`} actions={
+      <PageHeader title="Live map" description={`${guards.length} positioned on ${shifts.length} live shift${shifts.length === 1 ? "" : "s"} · ${outside} off site · ${stale} stale · ${noPoint.length} without a fix`} actions={
         <ButtonGroup><LinkButton href="/operations">Active operations</LinkButton><LinkButton href="/operations/exceptions">Location exceptions</LinkButton><LinkButton href="/alerts">Guard alerts</LinkButton></ButtonGroup>
       } />
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
-        <Card><CardBody>{sites.length === 0 && guards.length === 0 ? <p className="py-10 text-center text-[13px] text-ink-3">No live shift has a site with coordinates or a guard with a fix. Place sites on the map (Locations → Edit) and activate guard phones.</p> : <LiveMap sites={sites} guards={guards} />}</CardBody></Card>
+        <Card><CardBody>{sites.length === 0 && guards.length === 0 ? <EmptyState icon="map" title="Nothing to plot yet" detail="No live shift has a site centre, and no guard phone has reported a fix." action={<LinkButton href="/locations" variant="primary" size="sm">Set a site centre</LinkButton>} /> : <LiveMap sites={sites} guards={guards} />}</CardBody></Card>
         <div className="space-y-4">
           <Card>
             <CardHeader title="Guards on the map" />

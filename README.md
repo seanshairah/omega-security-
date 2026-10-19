@@ -45,6 +45,9 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 | [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) | Phase 1 audit: baseline, confirmed defects and root causes, risks, stage results |
 | [docs/ANDROID_ARCHITECTURE.md](docs/ANDROID_ARCHITECTURE.md) | the app after Phase 1: monitoring coordinator, sync coordinator, app state, status rows |
 | [docs/AUTO_SYNC.md](docs/AUTO_SYNC.md) | the automatic sync engine: outbox statuses, priorities, triggers, retries, diagnostics |
+| [docs/MAPBOX.md](docs/MAPBOX.md) | the map architecture, token restriction, cost and billing alerts, telemetry, and the raster fallback |
+| [docs/ICONS.md](docs/ICONS.md) | the icon system: why Material Symbols, how icons are generated, the concept map, accessibility rules |
+| [docs/UX_WRITING_REVIEW.md](docs/UX_WRITING_REVIEW.md) | the interface copy review, what changed and what was deliberately left dense |
 | [docs/GOOGLE_MAPS_CONFIGURATION.md](docs/GOOGLE_MAPS_CONFIGURATION.md) | the duty-site map picker, the Google Maps key, provenance and config versioning |
 | [docs/OFFLINE_MONITORING.md](docs/OFFLINE_MONITORING.md) | what keeps working without internet and how the record catches up |
 | [docs/DATABASE_CHANGES.md](docs/DATABASE_CHANGES.md) | every Phase 1 and 2 column, all additive |
@@ -81,7 +84,7 @@ npm run db:migration-status  # compare prisma/migrations with the configured dat
 
 ## Stack
 
-Next.js 15 (App Router, server actions), TypeScript, Tailwind CSS 4, Prisma 6, PostgreSQL 16 (Neon or self-hosted), Phosphor icons, Recharts.
+Next.js 15 (App Router, server actions), TypeScript, Tailwind CSS 4, Prisma 6, PostgreSQL 16 (Neon or self-hosted), Mapbox GL JS with a Leaflet fallback, Material Symbols icons, Recharts.
 
 ## Deploy on Vercel
 
