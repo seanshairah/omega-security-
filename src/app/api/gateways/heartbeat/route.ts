@@ -3,6 +3,7 @@ import { authenticateGateway, clientIp, rateLimit } from "@/lib/gateway/auth";
 import { heartbeat, guardDeviceConfig } from "@/lib/gateway/service";
 import { alertsForDevice } from "@/lib/gateway/alerts";
 import { pendingCommandsForDevice, commandPollSeconds } from "@/lib/gateway/location-requests";
+import { currentRelease, distributable } from "@/lib/app-release";
 
 /** POST /api/gateways/heartbeat  Bearer <deviceToken>  { appVersion, androidVersion, batteryLevel, networkType, timestamp } */
 export async function POST(req: Request) {
@@ -25,6 +26,14 @@ export async function POST(req: Request) {
   const alerts = device.mode === "GUARD" ? await alertsForDevice(device) : [];
   // Operations commands (location requests) ride on the heartbeat too; GET /api/gateways/commands polls them faster.
   const [commands, pollSeconds] = device.mode === "GUARD" ? await Promise.all([pendingCommandsForDevice(device), commandPollSeconds()]) : [[], null];
-  return NextResponse.json({ ok: true, commands, commandPollSeconds: pollSeconds, deviceId: device.id, deviceName: device.deviceName, phoneNumber: device.phoneNumber, status: device.status, mode: device.mode, guard: device.guard ? { id: device.guard.id, name: `${device.guard.firstName} ${device.guard.lastName}` } : null, location: device.location ? { id: device.location.id, name: device.location.name, client: device.location.client.name } : null, configVersion, alerts, config });
+  // There is no Play Store, so a phone only learns an update exists if the server tells it. The
+  // heartbeat already runs on its own schedule, so it costs no extra call. Withheld when the build
+  // is not distributable, so a phone is never pointed at a download that will be refused.
+  const rel = await currentRelease();
+  const dist = distributable(rel);
+  const app = dist.ok
+    ? { versionName: dist.release.versionName, versionCode: dist.release.versionCode, sha256: dist.release.sha256, downloadUrl: "/api/app/download" }
+    : null;
+  return NextResponse.json({ ok: true, app, commands, commandPollSeconds: pollSeconds, deviceId: device.id, deviceName: device.deviceName, phoneNumber: device.phoneNumber, status: device.status, mode: device.mode, guard: device.guard ? { id: device.guard.id, name: `${device.guard.firstName} ${device.guard.lastName}` } : null, location: device.location ? { id: device.location.id, name: device.location.name, client: device.location.client.name } : null, configVersion, alerts, config });
 }
 const s = (v: unknown) => (typeof v === "string" ? v : undefined);

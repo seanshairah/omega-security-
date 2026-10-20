@@ -8,9 +8,17 @@
  *   node scripts/dev/layout-e2e.mjs
  */
 import { chromium } from "playwright-core";
+
+/** QA_PASSWORD, which has no default: a real administrator's password used to live here. */
+function requirePassword() {
+  const p = process.env.QA_PASSWORD;
+  if (!p) throw new Error("Set QA_PASSWORD (the seeded demo password locally; never a production one).");
+  return p;
+}
+
 const BASE = process.env.APP_URL ?? "http://localhost:3000";
 const EMAIL = process.env.QA_EMAIL ?? "admin@omegasecurity.co.zw";
-const PASSWORD = process.env.QA_PASSWORD ?? "Zvesh@2000";
+const PASSWORD = requirePassword();
 let passed = 0, failed = 0;
 const check = (name, ok, detail = "") => { if (ok) { passed++; console.log(`  ✓ ${name}`); } else { failed++; console.log(`  ✗ ${name} ${detail}`); } };
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH ?? "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });

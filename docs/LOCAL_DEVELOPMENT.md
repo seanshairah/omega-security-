@@ -100,7 +100,8 @@ Release signing: create `android/keystore.properties` (ignored by git) with `AND
 | `scripts/dev/gateway-e2e.ts` | the 33-step scenario (activate → SMS arrival → calls → missed → unknown → offline replay → revoke → SMS still works); creates and removes tagged test data |
 | `scripts/dev/gateway-qa-data.ts [--clean]` | small data set for screenshots of the gateway pages |
 | `scripts/dev/client-updates-check.ts` | client site-status SMS check |
-| `scripts/dev/e2e.mjs`, `shot.mjs`, `shot-mobile.mjs`, `sweep.mjs` | browser QA (set `QA_EMAIL` / `QA_PASSWORD`) |
+| `scripts/dev/e2e.mjs`, `shot.mjs`, `shot-mobile.mjs`, `sweep.mjs` | browser QA. `QA_PASSWORD` is required and has no default — use the seeded demo password, never a production one |
+| `npm run android:layout` | measures each Android layout the way LinearLayout does and reports text given less room than its words need |
 | `scripts/dev/db-counts.ts` | row counts per table |
 | `scripts/purge-data.ts --yes` | remove all operational data and non-super-admin users |
 

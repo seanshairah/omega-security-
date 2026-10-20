@@ -2,6 +2,7 @@ package zw.co.omega.gateway.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -33,12 +34,18 @@ class ActivationActivity : AppCompatActivity() {
         b.activate.setOnClickListener { activate() }
     }
 
+    /** The error line is hidden when there is nothing to say, so the button never sits in a gap. */
+    private fun showError(msg: CharSequence?) {
+        b.error.text = msg ?: ""
+        b.error.visibility = if (msg.isNullOrBlank()) View.GONE else View.VISIBLE
+    }
+
     private fun activate() {
         val server = b.server.text.toString().trim().trimEnd('/')
         val code = b.code.text.toString().trim().uppercase()
-        if (!server.startsWith("http")) { b.error.text = getString(R.string.err_server); return }
-        if (code.length < 6) { b.error.text = getString(R.string.err_code); return }
-        b.error.text = ""
+        if (!server.startsWith("http")) { showError(getString(R.string.err_server)); return }
+        if (code.length < 6) { showError(getString(R.string.err_code)); return }
+        showError(null)
         b.activate.isEnabled = false
         b.activate.text = getString(R.string.activating)
         lifecycleScope.launch {
@@ -64,11 +71,11 @@ class ActivationActivity : AppCompatActivity() {
                 startActivity(Intent(this@ActivationActivity, if (prefs.isGuardMode && !prefs.onboardingDone) PermissionsActivity::class.java else MainActivity::class.java))
                 finish()
             } catch (e: ApiClient.ApiException) {
-                b.error.text = e.message
+                showError(e.message)
             } catch (e: Exception) {
                 val why = e.message.orEmpty()
-                b.error.text = if (why.isBlank()) getString(R.string.err_network)
-                    else getString(R.string.err_network) + "\n" + getString(R.string.err_detail, why)
+                showError(if (why.isBlank()) getString(R.string.err_network)
+                    else getString(R.string.err_network) + "\n" + getString(R.string.err_detail, why))
             } finally {
                 b.activate.isEnabled = true
                 b.activate.text = getString(R.string.activate_device)

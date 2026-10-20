@@ -32,8 +32,8 @@ android {
         applicationId = "zw.co.omega.gateway"
         minSdk = 24          // Android 7.0: old phones are the point of this app
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.6.0"
+        versionCode = 8
+        versionName = "1.7.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Default server pre-filled on the activation screen; the user can change it.
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"${System.getenv("GATEWAY_DEFAULT_SERVER_URL") ?: "https://omega-security-gamma.vercel.app"}\"")

@@ -14,6 +14,8 @@ import { fmtShort, ago } from "@/lib/time";
 import { formatPhone } from "@/lib/phone";
 import { LOCATION_STATE_META, freshness } from "@/lib/geofence";
 import { PermissionBadge, syncLabel } from "@/components/location/location-panel";
+import { currentRelease, distributable, isOutOfDate } from "@/lib/app-release";
+import { AppReleaseBanner } from "@/components/app-release-banner";
 
 export const metadata = { title: "Gateway devices" };
 
@@ -25,10 +27,16 @@ export default async function GatewaysPage() {
   ]);
   const rows = gateways.map((g) => ({ g, status: effectiveStatus(g, offlineMinutes), last: g.callLogs[0] }));
   const online = rows.filter((r) => r.status === "ONLINE").length;
+  // There is no Play Store, so the portal is the only place a phone can learn it is behind.
+  const release = await currentRelease();
+  const dist = distributable(release);
+  const outdated = rows.filter(({ g }) => isOutOfDate(g.appVersion, release)).length;
+
   return (
     <div>
       <AutoRefresh seconds={30} />
       <PageHeader title="Devices" description={`Operations gateway phones and guard phones running the Security Gateway app. ${online} of ${rows.length} online; offline after ${offlineMinutes} min without a heartbeat.`} actions={can.manageLocations(user) && <LinkButton href="/gateways/new" variant="primary">Register device</LinkButton>} />
+      {can.manageLocations(user) && <AppReleaseBanner release={release} dist={dist} outdated={outdated} />}
       <Card>
         <Rows
           table={
@@ -38,7 +46,7 @@ export default async function GatewaysPage() {
                 {rows.length === 0 && <Empty colSpan={12} title="No devices yet" body="Register one, install the Security Gateway app on an Android phone and enter the activation code." action={can.manageLocations(user) ? <LinkButton href="/gateways/new" variant="primary" size="sm">Register gateway</LinkButton> : undefined} />}
                 {rows.map(({ g, status, last }) => (
                   <tr key={g.id}>
-                    <td><Link href={`/gateways/${g.id}`} className="font-medium text-ink hover:underline">{g.deviceName}</Link><span className="block text-[12px] text-ink-3">{g.activationStatus === "PENDING" ? "Awaiting activation" : g.deviceModel ?? "—"}{g.appVersion ? ` · v${g.appVersion}` : ""}</span></td>
+                    <td><Link href={`/gateways/${g.id}`} className="font-medium text-ink hover:underline">{g.deviceName}</Link><span className="block text-[12px] text-ink-3">{g.activationStatus === "PENDING" ? "Awaiting activation" : g.deviceModel ?? "—"}{g.appVersion ? ` · v${g.appVersion}` : ""}</span>{isOutOfDate(g.appVersion, release) && <span className="mt-0.5 inline-flex items-center gap-1 rounded-[6px] bg-warn-soft px-1.5 py-0.5 text-[11px] font-medium text-[#8a5e05]">Update available</span>}</td>
                     <td>{g.mode === "GUARD" ? <span className="font-medium text-ink">Guard</span> : <span className="text-ink-2">Operations</span>}{g.guard && <Link href={`/guards/${g.guard.id}`} className="block text-[12px] text-ink-3 hover:underline">{g.guard.firstName} {g.guard.lastName}</Link>}</td>
                     <td className="tnum">{formatPhone(g.phoneNumber)}</td>
                     <td className="text-ink-2">{g.location ? <Link href={`/locations/${g.location.id}`} className="hover:underline">{g.location.name}</Link> : g.mode === "GUARD" ? "By shift" : "Head office"}</td>

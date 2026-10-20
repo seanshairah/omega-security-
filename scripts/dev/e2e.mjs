@@ -2,6 +2,14 @@
 const dbUrl = process.env.DATABASE_URL ?? "";
 if (!/localhost|127\.0\.0\.1/.test(dbUrl) && process.env.ALLOW_LIVE_DB !== "1") { console.error("Refusing to run against a non-local DATABASE_URL (the dev server's database). Set ALLOW_LIVE_DB=1 only for a database that holds no real data."); process.exit(2); }
 import { chromium } from "playwright-core";
+
+/** QA_PASSWORD, which has no default: a real administrator's password used to live here. */
+function requirePassword() {
+  const p = process.env.QA_PASSWORD;
+  if (!p) throw new Error("Set QA_PASSWORD (the seeded demo password locally; never a production one).");
+  return p;
+}
+
 const base = "http://localhost:3000";
 const browser = await chromium.launch({ executablePath: "/opt/pw-browsers/chromium", args: ["--no-sandbox"] });
 const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
@@ -14,7 +22,7 @@ const go = (p) => page.goto(base + p, { waitUntil: "networkidle", timeout: 12000
 const created = (section) => page.waitForURL((u) => new RegExp(`/${section}/(?!new$)[a-z0-9]+$`).test(u.pathname), { timeout: 90000 });
 const api = async (p) => (await (await page.request.get(base + p)).json());
 
-await step("login", async () => { await go("/login"); await page.fill('input[name=email]', (process.env.QA_EMAIL ?? "admin@omegasecurity.co.zw")); await page.fill('input[name=password]', (process.env.QA_PASSWORD ?? "Zvesh@2000")); await Promise.all([page.waitForURL("**/dashboard", { timeout: 120000 }), page.click('button[type=submit]')]); });
+await step("login", async () => { await go("/login"); await page.fill('input[name=email]', (process.env.QA_EMAIL ?? "admin@omegasecurity.co.zw")); await page.fill('input[name=password]', (requirePassword())); await Promise.all([page.waitForURL("**/dashboard", { timeout: 120000 }), page.click('button[type=submit]')]); });
 await step("wrong password shows error", async () => { const c = await (await browser.newContext()).newPage(); await c.goto(base + "/login"); await c.fill('input[name=email]', (process.env.QA_EMAIL ?? "admin@omegasecurity.co.zw")); await c.fill('input[name=password]', "nope"); await c.click('button[type=submit]'); await c.waitForURL("**/login?error=1", { timeout: 60000 }); await c.close(); });
 await step("dashboard range switch", async () => { await go("/dashboard?range=7d"); await page.waitForSelector(".recharts-line", { timeout: 60000 }); });
 await step("dashboard send message", async () => { await go("/dashboard"); await page.fill("textarea", `Test ${T}`); await page.click('button[aria-label="Send"]'); await page.waitForSelector("text=Sent.", { timeout: 60000 }); });
