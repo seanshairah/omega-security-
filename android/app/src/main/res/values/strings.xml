@@ -6,38 +6,28 @@
     <string name="server_label">Server</string>
     <string name="code_label">Activation code</string>
     <string name="code_hint">A8F42X</string>
-    <string name="activate_device">ACTIVATE DEVICE</string>
+    <string name="activate_device">Activate this phone</string>
     <string name="activating">Activating…</string>
     <string name="activation_help">Ask the administrator to register this phone under Gateway phones in the portal. They will give you a 6-character code.</string>
     <string name="err_server">Enter the server address, starting with https://</string>
     <string name="err_code">Enter the 6-character activation code.</string>
-    <string name="err_network">Could not reach the server. Check mobile data or Wi‑Fi. %1$s</string>
+    <string name="err_network">Could not reach the server. Check mobile data or Wi‑Fi, then try again.</string>
+    <!-- Shown small, under the message above, for whoever has to diagnose it. -->
+    <string name="err_detail">Details: %1$s</string>
     <string name="activated_as">Activated as %1$s</string>
 
     <!-- Dashboard -->
     <string name="status_online">ONLINE</string>
     <string name="status_offline">OFFLINE</string>
     <string name="status_rejected">REVOKED</string>
-    <string name="device_label">Device:</string>
-    <string name="location_label">Registered at:</string>
-    <string name="phone_label">Phone:</string>
-    <string name="last_sync_label">Last event sync:</string>
-    <string name="last_heartbeat_label">Last heartbeat:</string>
-    <string name="sync_label">Sync:</string>
-    <string name="battery_label">Battery:</string>
-    <string name="network_label">Network:</string>
     <string name="version_label">App version:</string>
-    <string name="last_call_label">Last Call:</string>
-    <string name="status_label">Status:</string>
+    <string name="last_call_label">Last call:</string>
     <string name="head_office">Head office</string>
     <string name="no_calls_yet">No calls yet</string>
-    <string name="net_mobile">Mobile Data</string>
+    <string name="net_mobile">Mobile data</string>
     <string name="net_wifi">Wi‑Fi</string>
     <string name="net_none">No connection</string>
     <string name="net_other">Other</string>
-    <string name="conn_connected">CONNECTED</string>
-    <string name="conn_queued">CONNECTED · %1$d event(s) waiting to send</string>
-    <string name="conn_no_internet">NO INTERNET · %1$d event(s) saved on the phone</string>
     <string name="conn_waiting">RECONNECTING · %1$s</string>
     <string name="conn_rejected">DEVICE REVOKED · ask the administrator</string>
     <string name="conn_no_permission">PHONE PERMISSION NEEDED · tap Grant permissions</string>
@@ -47,7 +37,6 @@
     <string name="battery_button">Allow running in background</string>
     <string name="sync_now">Sync now</string>
     <string name="check_location_now">Check location now</string>
-    <string name="open_settings">Settings</string>
     <string name="privacy_line">This app records only call metadata: number, time, duration and outcome. It never records audio.</string>
 
     <!-- Notification -->
@@ -70,32 +59,20 @@
     <string name="test_connection">Test connection</string>
     <string name="testing">Testing…</string>
     <string name="test_ok">Connected. The portal shows this phone as online.</string>
-    <string name="test_fail">Could not reach the server: %1$s</string>
-    <string name="test_rejected">Server refused this device: %1$s</string>
+    <string name="test_fail">Could not reach the server. Check mobile data or Wi‑Fi, then test again.</string>
+    <string name="test_rejected">The server refused this phone. Ask the administrator to re-activate it.</string>
     <string name="deactivate">Deactivate device</string>
     <string name="deactivate_title">Deactivate this phone?</string>
-    <string name="deactivate_body">The phone stops reporting calls and forgets its credentials. An administrator must also revoke or re-activate it in the portal.</string>
+    <string name="deactivate_body">The phone stops reporting calls and forgets how to sign in to the server. An administrator must also revoke or re-activate it in the portal.</string>
     <string name="back">Back</string>
 
     <!-- Guard mode -->
     <string name="mode_ops">Operations gateway phone</string>
-    <string name="mode_guard">Guard phone · %1$s</string>
-    <string name="shift_label">Shift:</string>
-    <string name="shift_none">NO SHIFT · location is not checked outside shifts</string>
-    <string name="shift_active">ON SHIFT · %1$s–%2$s</string>
-    <string name="shift_upcoming">UPCOMING · starts %1$s · GPS checks begin 10 min before</string>
-    <string name="last_check_label">Last location check:</string>
-    <string name="last_check">%1$s · %2$s · %3$s from site · %4$s</string>
     <string name="last_check_no_fix">%1$s · no usable fix</string>
     <string name="last_check_none">None yet</string>
-    <string name="location_perm_label">Location permission:</string>
-    <string name="perm_bg">Allowed all the time</string>
-    <string name="perm_fg">Only while using the app · monitoring will stop in the background</string>
-    <string name="perm_denied">Not allowed · no location monitoring</string>
     <string name="notif_mon_inside">on site</string>
     <string name="notif_mon_outside">outside site</string>
     <string name="notif_mon_unavailable">location unavailable</string>
-    <string name="notif_mon_offline">monitoring offline</string>
     <string name="notif_mon_waiting">waiting for shift</string>
     <string name="notif_mon_off">not on shift</string>
 
@@ -123,19 +100,9 @@
     <string name="perm_done">Start</string>
 
     <!-- Duty site and GPS (guard mode, Stage 1) -->
-    <string name="duty_site_label">Duty site:</string>
-    <string name="duty_site">%1$s · radius %2$d m</string>
     <string name="duty_site_override"> · shift-specific fence</string>
     <string name="duty_site_test"> · TEST coordinates</string>
-    <string name="duty_site_version"> · config v%1$s</string>
     <string name="duty_site_no_coordinates">Site has no coordinates yet · ask the administrator to place it on the map</string>
-    <string name="gps_label">GPS:</string>
-    <string name="gps_off">OFF · no shift being monitored</string>
-    <string name="gps_checking">CHECKING… · waiting for a GPS fix (up to 60 s)</string>
-    <string name="gps_inside">INSIDE SITE</string>
-    <string name="gps_verifying">OUTSIDE READING · confirming with a second check</string>
-    <string name="gps_outside">OUTSIDE SITE · reported</string>
-    <string name="gps_unknown">UNKNOWN · position could not be verified</string>
     <string name="gps_reason_not_checked">No check yet. Tap “Check location now”.</string>
     <string name="gps_reason_no_fix">No GPS fix. Move near a window or outdoors; GPS does not need data.</string>
     <string name="gps_reason_poor_accuracy">GPS accuracy %1$s is worse than the %2$d m limit, so the reading is not counted. This is not “outside”. Move to open sky and check again.</string>
@@ -145,19 +112,10 @@
     <string name="gps_reason_boundary">Reading %1$s is too close to the site boundary to decide. Not counted as outside.</string>
 
     <!-- Sync (independent of GPS) -->
-    <string name="sync_revoked">DEVICE REVOKED · nothing is sent</string>
-    <string name="sync_no_internet">NO INTERNET · %1$d event(s) saved on the phone, sent automatically later</string>
-    <string name="sync_queued">QUEUED · %1$d event(s) waiting · sent automatically</string>
-    <string name="sync_sending">SENDING · %1$d event(s)</string>
-    <string name="sync_retry">RETRYING · %1$d event(s) · %2$s</string>
-    <string name="sync_failures">UP TO DATE · some events were rejected by the server (see Settings)</string>
     <string name="sync_diag_label">Sync engine</string>
     <string name="sync_summary">State %1$s · queued %2$d · sending %3$d · retry %4$d · failed %5$d\nLast successful sync %6$s\nLast attempt %7$s\nNext retry %8$s\nLast error: %9$s</string>
     <string name="sync_history_label">Recent sync runs</string>
     <string name="sync_history_none">No sync runs yet</string>
-    <string name="sync_synced">UP TO DATE · last event sent %1$s</string>
-    <string name="sync_nothing_yet">UP TO DATE · no events to send yet</string>
-    <string name="sync_waiting">RECONNECTING · %1$s</string>
     <string name="notif_mon_checking">checking location</string>
     <string name="notif_mon_poor_accuracy">GPS accuracy too poor</string>
     <string name="notif_mon_location_off">location switched off</string>
@@ -165,9 +123,7 @@
 
     <!-- Guard communication and emergencies (Stage 5) -->
     <string name="alerts_title">Alerts &amp; status</string>
-    <string name="alerts_button">Alerts &amp; status</string>
     <string name="emergency_button">EMERGENCY</string>
-    <string name="emergency_hint">Sends your last known position to operations immediately. Saved on the phone first, so it is never lost.</string>
     <string name="emergency_confirm_title">Send EMERGENCY alert?</string>
     <string name="emergency_confirm_body">Operations will be alerted immediately with your last known position. Only use this for a real emergency.</string>
     <string name="emergency_confirm_send">SEND EMERGENCY</string>
@@ -197,7 +153,7 @@
     <string name="alert_no_ops_number">no number configured</string>
     <string name="emergency_online_call_title">Also call operations?</string>
     <string name="emergency_online_call_body">The alert is on its way. If you can talk safely, call the control room now: %1$s</string>
-    <string name="alert_dialer_missing">This phone has no app to place the call.</string>
+    <string name="alert_dialer_missing">This phone cannot place calls from the app. Dial the control room by hand: %1$s</string>
     <string name="alert_history_label">Sent from this phone</string>
     <string name="alert_history_none">Nothing sent yet.</string>
     <string name="alert_state_queued">Saved on the phone · waiting for internet</string>
@@ -206,19 +162,16 @@
     <string name="alert_state_resolved">Handled · %1$s%2$s</string>
     <string name="alert_state_failed">Rejected by the server %1$s · tell your supervisor</string>
     <string name="alert_privacy">Alerts carry your last known position and the message you type. Nothing else.</string>
-    <string name="unacked_alerts">%1$d alert(s) waiting for operations</string>
 
     <!-- Dashboard redesign (Stage 6) -->
     <string name="diagnostics">Diagnostics</string>
     <string name="alerts_more">More…</string>
     <string name="gps_card_label">GPS verification</string>
-    <string name="monitoring_card_label">Monitoring</string>
     <string name="mon_off_line">Off · no shift being monitored</string>
     <string name="mon_fg_only_line">Will stop when the screen is off · allow location all the time</string>
     <string name="mon_outside_line">Outside site · updating every %1$d min until you are back</string>
     <string name="mon_saver_line">On · battery low, checking every %1$d min</string>
     <string name="mon_on_line">On · checking every %1$d min, offline too</string>
-    <string name="pending_line">%1$d event(s) waiting to send · %2$d rejected</string>
     <string name="device_health_label">Device</string>
     <string name="device_line">%1$s · registered at %2$s · app %3$s</string>
     <string name="health_line">Battery %1$s%2$s · %3$s · %4$s</string>
@@ -227,7 +180,6 @@
     <string name="health_bg_restricted">background restricted · tap Allow running in background</string>
     <string name="comm_label">Sent to operations</string>
     <string name="comm_see_all">See all</string>
-    <string name="comm_none">Nothing sent yet. Use the buttons above to reach operations.</string>
     <string name="call_monitoring_label">Call monitoring</string>
     <string name="call_mon_active">ACTIVE · calls on this phone are reported to the control room</string>
     <string name="call_mon_no_permission">NOT MONITORING · phone permission needed</string>
@@ -262,10 +214,6 @@
     <string name="stat_status">Status</string>
     <string name="stat_from_site">%1$s from site (%2$s)</string>
     <string name="stat_limit">Limit %1$d m</string>
-    <string name="stat_verified">Verified</string>
-    <string name="stat_not_verified">Not verified</string>
-    <string name="stat_outside">Outside</string>
-    <string name="stat_off">Off</string>
     <string name="stat_perm_bg">Allowed all the time</string>
     <string name="stat_perm_fg">While using only</string>
     <string name="stat_perm_denied">Permission denied</string>
@@ -279,10 +227,6 @@
     <string name="sync_word_waiting">RECONNECTING</string>
     <string name="sync_detail_sent">last event sent %1$s</string>
     <string name="sync_detail_nothing">no events to send yet</string>
-    <string name="sync_detail_saved">%1$d event(s) saved on the phone · sent automatically later</string>
-    <string name="sync_detail_sending">%1$d event(s) on the way</string>
-    <string name="sync_detail_queued">%1$d event(s) waiting · sent automatically</string>
-    <string name="sync_detail_retry">%1$d event(s) retrying · %2$s</string>
     <string name="sync_detail_failures">some events were rejected by the server · see Diagnostics</string>
     <string name="sync_detail_revoked">nothing is sent · ask the administrator</string>
     <string name="sync_detail_waiting">%1$s</string>
@@ -298,8 +242,6 @@
     <string name="shift_upcoming_short">UPCOMING · starts %1$s</string>
     <string name="shift_upcoming_sub">GPS checks begin 10 minutes before the shift.</string>
     <string name="shift_active_short">ON SHIFT · %1$s – %2$s</string>
-    <string name="feedback_dismiss">OK</string>
-    <string name="quick_hint">Each message is saved on the phone first and sent to the control room at once.</string>
     <string name="call_mon_title_active">Monitoring calls</string>
     <string name="call_mon_title_off">Not monitoring</string>
     <string name="call_mon_title_partial">Partly monitoring</string>
@@ -308,4 +250,38 @@
     <string name="shift_label_short">Shift</string>
     <string name="duty_site_label_short">Duty site</string>
     <string name="sync_label_short">Sync</string>
+    <!-- Real plurals. These used to read "%1$d event(s)", which renders as "1 event(s)" and gives a
+         translator no way to inflect: Shona and Ndebele do not form number the way English does. -->
+    <plurals name="events_saved_on_phone">
+        <item quantity="one">%1$d event saved on the phone · sent automatically later</item>
+        <item quantity="other">%1$d events saved on the phone · sent automatically later</item>
+    </plurals>
+    <plurals name="events_sending">
+        <item quantity="one">%1$d event on the way</item>
+        <item quantity="other">%1$d events on the way</item>
+    </plurals>
+    <plurals name="events_queued">
+        <item quantity="one">%1$d event waiting · sent automatically</item>
+        <item quantity="other">%1$d events waiting · sent automatically</item>
+    </plurals>
+    <plurals name="events_retrying">
+        <item quantity="one">%1$d event retrying · %2$s</item>
+        <item quantity="other">%1$d events retrying · %2$s</item>
+    </plurals>
+    <plurals name="events_waiting_to_send">
+        <item quantity="one">%1$d event waiting to send</item>
+        <item quantity="other">%1$d events waiting to send</item>
+    </plurals>
+    <plurals name="events_rejected">
+        <item quantity="one">%1$d rejected</item>
+        <item quantity="other">%1$d rejected</item>
+    </plurals>
+    <plurals name="alerts_waiting">
+        <item quantity="one">%1$d alert waiting for operations</item>
+        <item quantity="other">%1$d alerts waiting for operations</item>
+    </plurals>
+    <plurals name="conn_no_internet_events">
+        <item quantity="one">NO INTERNET · %1$d event saved on the phone</item>
+        <item quantity="other">NO INTERNET · %1$d events saved on the phone</item>
+    </plurals>
 </resources>
