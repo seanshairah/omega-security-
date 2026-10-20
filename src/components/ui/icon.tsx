@@ -15,8 +15,20 @@ export type { IconName };
 export const ICON_SIZE = { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 } as const;
 export type IconSize = keyof typeof ICON_SIZE | number;
 
+/**
+ * An unprefixed display utility in the caller's className, e.g. `hidden` next to our
+ * `inline-block`. `cn` concatenates rather than resolving Tailwind conflicts, so both would land
+ * on the element and the stylesheet's order, not the caller, would decide which won — a chevron
+ * marked `hidden sm:block` still rendered on a phone. A responsive-only value such as `sm:block`
+ * is deliberately not matched: that caller still wants our default below the breakpoint.
+ */
+const CALLER_SETS_DISPLAY = /(^|\s)(hidden|block|inline|inline-block|flex|inline-flex|grid|inline-grid|contents)(\s|$)/;
+
 export function Icon({ name, size = "md", filled = false, className, label }: { name: IconName; size?: IconSize; filled?: boolean; className?: string; label?: string }) {
   const px = typeof size === "number" ? size : ICON_SIZE[size];
+  const base = CALLER_SETS_DISPLAY.test(className ?? "")
+    ? "shrink-0 fill-current align-[-0.125em]"
+    : "inline-block shrink-0 fill-current align-[-0.125em]";
   const d = ICON_PATHS[name][filled ? 1 : 0];
   return (
     <svg
@@ -27,7 +39,7 @@ export function Icon({ name, size = "md", filled = false, className, label }: { 
       role={label ? "img" : undefined}
       aria-label={label}
       focusable="false"
-      className={cn("inline-block shrink-0 fill-current align-[-0.125em]", className)}
+      className={cn(base, className)}
     >
       {label && <title>{label}</title>}
       <path d={d} />

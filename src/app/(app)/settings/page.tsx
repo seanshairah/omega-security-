@@ -82,8 +82,16 @@ export default async function SettingsPage() {
         <CardBody>
           {editable ? (
             <ActionForm action={updateSettings} submitLabel="Save settings" successMessage="Settings saved.">
+              {/* Thirty-odd fields in one form is about 12,000px on a phone. The form has to stay
+                  one form so Save submits every value together, so the groups get an index and
+                  anchors instead of being split across pages or tabs. */}
+              <nav aria-label="Settings sections" className="-mt-1 mb-1 flex flex-wrap gap-1.5 border-b border-dashed border-line pb-4">
+                {GROUPS.map((g) => (
+                  <a key={g.key} href={`#set-${g.key}`} className="inline-flex h-8 items-center rounded-[8px] border border-line bg-surface px-2.5 text-[12.5px] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink">{g.title}</a>
+                ))}
+              </nav>
               {GROUPS.map((g) => (
-                <div key={g.key} className="grid gap-4 border-t border-dashed border-line py-6 first:border-t-0 first:pt-0 md:grid-cols-[220px_1fr]">
+                <div key={g.key} id={`set-${g.key}`} className="scroll-mt-20 grid gap-4 border-t border-dashed border-line py-6 first:border-t-0 md:grid-cols-[220px_1fr]">
                   <div><h3 className="text-[14px] font-semibold text-ink">{g.title}</h3><p className="mt-1 text-[13px] text-ink-2">{g.description}</p></div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     {SETTING_DEFS.filter((d) => d.group === g.key).map((d) => (
