@@ -115,14 +115,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   const meta = STATUS_META[s.status];
                   return (
                     <li key={s.id}>
-                      <Link href={`/shifts/${s.id}`} className="flex items-center gap-4 py-3.5 hover:bg-surface-2/60 -mx-2 px-2 rounded-[10px]">
+                      <Link href={`/shifts/${s.id}`} className="flex items-center gap-3 py-3.5 hover:bg-surface-2/60 -mx-2 px-2 rounded-[10px] sm:gap-4">
                         <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-line", s.status === "CRITICAL" ? "bg-critical-soft text-critical" : "bg-surface text-ink-2")}><Icon name={icon(s.status)} size={18} filled /></span>
+                        {/* One fact per line. Both used to share two truncated lines, so on a phone
+                            the row read "Peter Ncube · Westgate Ma…" over "01:00–13:00 · …" — losing
+                            the site and the times, which is the whole reason to look at the row. */}
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[14px] font-medium text-ink">{s.guard.firstName} {s.guard.lastName} · {s.location.name}</p>
-                          <p className="truncate text-[13px] text-ink-2">{fmtTime(s.startAt)}–{fmtTime(s.endAt)} · {s.attendance?.arrivalConfirmedAt ? `arrived ${fmtTime(s.attendance.arrivalConfirmedAt)}` : "arrival not confirmed"}</p>
+                          <p className="truncate text-[14px] font-medium text-ink">{s.guard.firstName} {s.guard.lastName}</p>
+                          <p className="truncate text-[13px] text-ink-2">{s.location.name}</p>
+                          <p className="truncate text-[12.5px] text-ink-3 tnum">{fmtTime(s.startAt)}–{fmtTime(s.endAt)} · {s.attendance?.arrivalConfirmedAt ? `arrived ${fmtTime(s.attendance.arrivalConfirmedAt)}` : "arrival not confirmed"}</p>
                         </div>
                         <Status tone={meta.tone} pulse={s.status === "CRITICAL"}>{meta.label}</Status>
-                        <Icon name="chevron_right" size={14} className="text-ink-3" filled />
+                        {/* The whole row is the link; on a phone the chevron only costs width. */}
+                        <Icon name="chevron_right" size={14} className="hidden text-ink-3 sm:block" filled />
                       </Link>
                     </li>
                   );

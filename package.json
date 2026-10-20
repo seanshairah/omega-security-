@@ -35,7 +35,9 @@
     "test:check-in": "tsx scripts/dev/check-in-e2e.ts",
     "test:shift-edit": "tsx scripts/dev/shift-edit-e2e.ts",
     "test:map": "node scripts/dev/map-e2e.mjs",
-    "test:layout": "node scripts/dev/layout-e2e.mjs"
+    "test:layout": "node scripts/dev/layout-e2e.mjs",
+    "test:time": "TZ=UTC tsx --test tests/time.test.ts && TZ=America/New_York tsx --test tests/time.test.ts",
+    "db:retime": "tsx scripts/retime-wallclock.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

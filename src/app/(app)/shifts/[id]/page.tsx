@@ -117,7 +117,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
             )}
             <div className="border-t border-line px-5 py-4">
               <form action={async (fd) => { "use server"; const n = String(fd.get("note") ?? "").trim(); if (n) await addShiftNote(s.id, n); }} className="flex gap-2">
-                <input name="note" placeholder="Add a note to the timeline" className="h-9 flex-1 rounded-[8px] border border-line px-3 text-sm placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
+                <input name="note" placeholder="Add a note to the timeline" className="h-9 min-w-0 flex-1 rounded-[8px] border border-line px-3 text-sm placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
                 <button className="h-9 whitespace-nowrap rounded-[8px] border border-line bg-surface px-3 text-[13px] font-medium hover:bg-surface-2">Add note</button>
               </form>
             </div>

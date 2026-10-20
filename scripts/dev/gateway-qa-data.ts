@@ -42,8 +42,20 @@ async function main() {
   const client = await db.client.create({ data: { code: "QA", name: "ABC Logistics", contactPhone: "+263242300200" } });
   const wh = await db.location.create({ data: { code: "QA-01", name: "ABC Warehouse", clientId: client.id, address: "12 Plymouth Rd, Graniteside", supervisorId: admin.id, latitude: -17.8292, longitude: 31.0522, geofenceRadiusM: 150 } });
   const mall = await db.location.create({ data: { code: "QA-02", name: "City Mall", clientId: client.id, address: "Harare CBD", supervisorId: admin.id } });
-  const john = await db.guard.create({ data: { guardNo: "G-QA01", firstName: "John", lastName: "Moyo", phone: "+263771234567", nationalId: "QA-63-1", dateEmployed: new Date(), homeLocationId: wh.id, photoUrl: "/avatars/guard-1.svg" } });
-  await db.guard.create({ data: { guardNo: "G-QA02", firstName: "Peter", lastName: "Ncube", phone: "+263772345002", nationalId: "QA-63-2", dateEmployed: new Date(), homeLocationId: mall.id, photoUrl: "/avatars/guard-2.svg" } });
+  // Guard.phone is unique, and seed-demo already gives +263772345002 to its own Peter Ncube.
+  // Creating outright made this fixture fail with P2002 on any database that had been demo-seeded,
+  // which is every database the map and layout suites run against. Upsert by phone instead, so the
+  // two seeders compose: an existing guard is reused and updated, a missing one is created.
+  const john = await db.guard.upsert({
+    where: { phone: "+263771234567" },
+    update: { homeLocationId: wh.id },
+    create: { guardNo: "G-QA01", firstName: "John", lastName: "Moyo", phone: "+263771234567", nationalId: "QA-63-1", dateEmployed: new Date(), homeLocationId: wh.id, photoUrl: "/avatars/guard-1.svg" },
+  });
+  await db.guard.upsert({
+    where: { phone: "+263772345002" },
+    update: { homeLocationId: mall.id },
+    create: { guardNo: "G-QA02", firstName: "Peter", lastName: "Ncube", phone: "+263772345002", nationalId: "QA-63-2", dateEmployed: new Date(), homeLocationId: mall.id, photoUrl: "/avatars/guard-2.svg" },
+  });
   const actor = { userId: admin.id, name: admin.name };
   const g1 = await createGateway({ deviceName: "QA Control Room 01", phoneNumber: "+263772100100", locationId: wh.id, actor });
   const g2 = await createGateway({ deviceName: "QA City Mall Office", phoneNumber: "+263772100101", locationId: mall.id, actor });

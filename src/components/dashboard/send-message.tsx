@@ -23,12 +23,15 @@ export function SendMessage({ guards }: { guards: { id: string; name: string; st
       <p className="text-[13px] text-ink-2">Send a one-off SMS to a guard. It is logged and attributed to you.</p>
       <div className="mt-3 rounded-[12px] border border-line focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20">
         <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Type a message" rows={4} maxLength={320} className="w-full resize-none rounded-t-[12px] bg-transparent px-3.5 py-3 text-[14px] text-ink placeholder:text-ink-3 focus:outline-none" />
-        <div className="flex items-center justify-between gap-2 px-2 pb-2">
-          <Select value={guardId} onChange={(e) => setGuardId(e.target.value)} className="h-8 w-auto max-w-[220px] border-0 bg-surface-2 text-[13px]">
+        <div className="flex min-w-0 items-center justify-between gap-2 px-2 pb-2">
+          {/* `min-w-0` is load-bearing: a flex item defaults to `min-width: auto`, which floors it at
+              its content width. A <select> sizes to its longest <option> ("Tatenda Sibanda · Incident
+              reported"), that floor beat `max-w`, and the row pushed the page 35px wider than the phone. */}
+          <Select value={guardId} onChange={(e) => setGuardId(e.target.value)} className="h-8 w-auto min-w-0 max-w-[220px] border-0 bg-surface-2 text-[13px]">
             {guards.length === 0 && <option value="">No guards yet</option>}
             {guards.map((g) => <option key={g.id} value={g.id}>{g.name} · {g.status}</option>)}
           </Select>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <span className="text-[11px] text-ink-3 tnum">{body.length}/320</span>
             <button disabled={!body.trim() || !guardId || pending} onClick={() => start(async () => { const r = await sendManualSms({ guardId, body }); setResult(r.ok ? "Sent." : r.error ?? "Failed."); if (r.ok) setBody(""); })} className={cn("flex h-8 w-8 items-center justify-center rounded-[8px] bg-accent text-white hover:bg-accent-strong disabled:opacity-40")} aria-label="Send"><Icon name="send" size={15} filled /></button>
           </div>
