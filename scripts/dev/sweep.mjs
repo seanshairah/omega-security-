@@ -1,6 +1,14 @@
 // Screenshot every screen at several widths and report console/page errors.
 import { chromium } from "playwright-core";
 import fs from "node:fs";
+
+/** QA_PASSWORD, which has no default: a real administrator's password used to live here. */
+function requirePassword() {
+  const p = process.env.QA_PASSWORD;
+  if (!p) throw new Error("Set QA_PASSWORD (the seeded demo password locally; never a production one).");
+  return p;
+}
+
 const out = process.argv[2] || "/tmp/sweep";
 fs.mkdirSync(out, { recursive: true });
 const widths = { phone: [390, 844], tablet: [820, 1180], desktop: [1440, 900] };
@@ -12,7 +20,7 @@ page.on("pageerror", (e) => errors.push(`PAGEERROR ${page.url()} ${e.message.sli
 page.on("console", (m) => { if (m.type() === "error" && !/favicon|404/.test(m.text())) errors.push(`CONSOLE ${page.url()} ${m.text().slice(0, 200)}`); });
 await page.goto("http://localhost:3000/login");
 await page.fill('input[name=email]', (process.env.QA_EMAIL ?? "admin@omegasecurity.co.zw"));
-await page.fill('input[name=password]', (process.env.QA_PASSWORD ?? "Zvesh@2000"));
+await page.fill('input[name=password]', (requirePassword()));
 await Promise.all([page.waitForURL("**/dashboard", { timeout: 120000 }), page.click('button[type=submit]')]);
 const get = async (p) => (await (await page.request.get("http://localhost:3000" + p)).json());
 const shift = (await get("/api/shifts/active")).items[0];

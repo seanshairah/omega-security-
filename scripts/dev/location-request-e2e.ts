@@ -17,6 +17,14 @@ import { db } from "../../src/lib/db";
 import { createGateway } from "../../src/lib/gateway/service";
 import { expireStaleRequests } from "../../src/lib/gateway/location-requests";
 
+/** QA_PASSWORD, which has no default: a real administrator's password used to live here. */
+function requirePassword() {
+  const p = process.env.QA_PASSWORD;
+  if (!p) throw new Error("Set QA_PASSWORD (the seeded demo password locally; never a production one).");
+  return p;
+}
+
+
 const BASE = process.env.APP_URL ?? "http://localhost:3000";
 const SITE = { latitude: -17.8292, longitude: 31.0522, radius: 150 };
 const GUARD_PHONE = "+263779900791";
@@ -51,7 +59,7 @@ async function main() {
   await cleanup();
   const admin = await db.user.findFirstOrThrow({ where: { role: "SUPER_ADMIN", active: true } });
   const actor = { userId: admin.id, name: admin.name };
-  const login = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: process.env.QA_EMAIL ?? admin.email, password: process.env.QA_PASSWORD ?? "Zvesh@2000" }) });
+  const login = await fetch(`${BASE}/api/auth/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: process.env.QA_EMAIL ?? admin.email, password: requirePassword() }) });
   if (login.status !== 200) throw new Error(`admin login failed (${login.status}); set QA_EMAIL/QA_PASSWORD`);
   cookie = (login.headers.getSetCookie?.() ?? [login.headers.get("set-cookie") ?? ""]).map((c) => c.split(";")[0]).join("; ");
 
