@@ -139,7 +139,7 @@ export function validateLocationRequestResult(raw: Record<string, unknown>, even
  * only has to bind it to the request: same device, request still open, capture time plausible,
  * accuracy within the request's limit. A result for a terminal request is ignored (never overwrites).
  */
-export async function applyLocationRequestResult(device: GatewayDevice, ev: IncomingLocationRequestResult, now = new Date()): Promise<{ outcome: string }> {
+export async function applyLocationRequestResult(device: GatewayDevice, ev: IncomingLocationRequestResult, now = new Date(), opts: { clockVerified?: boolean } = {}): Promise<{ outcome: string }> {
   const r = await db.deviceLocationRequest.findUnique({ where: { id: ev.requestId } });
   if (!r) return { outcome: "ignored: unknown request" };
   if (r.gatewayDeviceId !== device.id) return { outcome: "rejected: request belongs to another device" };
@@ -181,10 +181,16 @@ export async function applyLocationRequestResult(device: GatewayDevice, ev: Inco
   const checkIn = await db.attendanceCheckIn.findUnique({ where: { locationRequestId: r.id } });
   if (checkIn) {
     const { applyFix, requestFix } = await import("@/lib/attendance/check-in-service");
+    // A request made because the guard rang in answers the call; one made because the shift was
+    // starting stands on its own and is judged against the shift's window instead.
+    const source = checkIn.callAt ? "CALL_GPS" as const : "AUTO_GPS" as const;
     if (data.status === "COMPLETED" && ev.latitude != null && ev.longitude != null) {
-      const res = await applyFix(checkIn.id, { latitude: ev.latitude, longitude: ev.longitude, accuracyM: ev.accuracyM ?? null, capturedAt: saneTimestamp(ev.capturedAt!, now), mock: Boolean(ev.mock), locationRequestId: r.id, source: "CALL_GPS" }, now);
+      const res = await applyFix(checkIn.id, { latitude: ev.latitude, longitude: ev.longitude, accuracyM: ev.accuracyM ?? null, capturedAt: saneTimestamp(ev.capturedAt!, now), mock: Boolean(ev.mock), locationRequestId: r.id, source, clockVerified: Boolean(opts.clockVerified) }, now);
       return { outcome: `${outcome} · check-in ${res.status}` };
     }
+    // An automatic request is asked again at the next scheduled moment, not straight away: a
+    // phone that just timed out on GPS would only burn the attempts it has.
+    if (source === "AUTO_GPS") return { outcome: `${outcome} · check-in: automatic request will be repeated at the next moment` };
     // A failed or unusable fix: try again within the attempt limit, otherwise the step escalates it.
     const shift = await db.shift.findUnique({ where: { id: checkIn.shiftId }, include: { guard: true, location: true, attendance: true, attendanceCheckIn: true, supervisor: true } });
     if (shift) {

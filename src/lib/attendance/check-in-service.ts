@@ -26,9 +26,10 @@ import { createLocationRequest, LocationRequestError } from "@/lib/gateway/locat
 import { recordEvent } from "@/lib/services/shifts";
 import { fmtTime } from "@/lib/time";
 import {
-  callQualifies, computeLateness, describeOutcome, escalationState, fixCorrelates, resolveGrace,
-  statusForVerifiedFix, trustedTimestamp, VERIFIED_STATUSES, type CheckInStatus,
+  autoFixBelongs, autoRequestDue, callQualifies, computeLateness, describeOutcome, escalatedStatus, escalationState, exceptionDue, fixCorrelates, resolveGrace,
+  statusForVerifiedFix, trustedTimestamp, VERIFIED_STATUSES, type CallPolicy, type CheckInStatus,
 } from "./check-in";
+import { getSettingNumber } from "@/lib/settings";
 
 export type CheckInConfig = {
   enabled: boolean;
@@ -41,6 +42,12 @@ export type CheckInConfig = {
   authorizedNumbers: string[];
   maxClockSkewMinutes: number;
   accuracyMaxM: number;
+  /** Ask the guard's phone for its position at shift start without waiting for a call. */
+  autoGps: boolean;
+  /** Minutes before the start that a fix already counts, and the first automatic request goes out. */
+  autoBeforeMinutes: number;
+  /** Whether a verified position is enough, or the company also requires the check-in call. */
+  callPolicy: CallPolicy;
 };
 
 export async function checkInConfig(): Promise<CheckInConfig> {
@@ -58,6 +65,9 @@ export async function checkInConfig(): Promise<CheckInConfig> {
     authorizedNumbers: raw ? raw.split(",").map((n) => n.trim()).filter(Boolean) : [],
     maxClockSkewMinutes: num("checkin.maxClockSkewMinutes", 10),
     accuracyMaxM: num("geofence.accuracyMaxM", 100),
+    autoGps: (s["checkin.autoGps"] ?? "true") === "true",
+    autoBeforeMinutes: num("checkin.autoBeforeMinutes", 10),
+    callPolicy: s["checkin.callRequired"] === "true" ? "REQUIRED" : "OPTIONAL",
   };
 }
 
@@ -85,6 +95,9 @@ export async function ensureExpectation(shift: ShiftForCheckIn, cfg: CheckInConf
       data: {
         shiftId: shift.id, guardId: shift.guardId, gatewayDeviceId: device?.id ?? null,
         status: "AWAITING", scheduledStartAt: shift.startAt, graceMinutes: grace.minutes,
+        // The policy as it stood when the shift was opened, so changing the setting later does not
+        // rewrite what yesterday's shifts were asked to do.
+        callRequired: cfg.callPolicy === "REQUIRED",
         // A guard without an Android device can never be GPS-verified; say so from the start.
         source: device ? "NONE" : "SMS_ONLY",
         exceptionReason: device ? null : "No activated Android guard phone: attendance cannot be verified by GPS.",
@@ -127,7 +140,26 @@ export async function handleCall(call: CallLog, device: GatewayDevice, now = new
     );
     return r.ok;
   });
-  if (!open.length) return "no qualifying shift for this call";
+  if (!open.length) {
+    // Presence may already be verified by GPS. The call is still the check-in call the policy may
+    // require, so it is recorded against that shift rather than turned away as a duplicate.
+    const verified = shifts.filter((s) => {
+      const r = s.attendanceCheckIn;
+      if (!r || !(VERIFIED_STATUSES.includes(r.status as CheckInStatus) || r.status === "MANUALLY_APPROVED") || r.callAt) return false;
+      return callQualifies(
+        { startedAt: call.startedAt, direction: call.direction, normalizedPhoneNumber: call.normalizedPhoneNumber, fromGuardDevice: true },
+        { id: s.id, startAt: s.startAt, endAt: s.endAt, cancelled: false, alreadyVerified: false }, window, cfg.authorizedNumbers,
+      ).ok;
+    });
+    if (verified.length === 1) {
+      const s = verified[0];
+      await db.attendanceCheckIn.update({ where: { id: s.attendanceCheckIn!.id }, data: { callLogId: call.id, callAt: call.startedAt } });
+      await db.callLog.update({ where: { id: call.id }, data: { shiftId: s.id, note: call.note ?? "Shift check-in call" } });
+      await recordEvent(s.id, s.guardId, "CALL_INCOMING", { at: call.startedAt, source: "APP", note: `Check-in call recorded at ${fmtTime(call.startedAt)}. Presence was already verified by GPS.` });
+      return "call recorded: presence already verified";
+    }
+    return "no qualifying shift for this call";
+  }
 
   if (open.length > 1) {
     // Overlapping rota: a person decides which shift this was, rather than the system guessing.
@@ -187,7 +219,12 @@ export type IncomingFix = {
   mock: boolean;
   locationRequestId?: string | null;
   locationEventId?: string | null;
-  source: "CALL_GPS" | "MONITORING";
+  source: "CALL_GPS" | "MONITORING" | "AUTO_GPS";
+  /**
+   * The capture time is already on the server's clock, corrected by the offset measured in the
+   * same upload. Then an old timestamp means a delayed upload, not a clock set back.
+   */
+  clockVerified?: boolean;
 };
 
 /**
@@ -201,9 +238,12 @@ export type IncomingFix = {
 export async function applyFix(checkInId: string, fix: IncomingFix, receivedAt = new Date()): Promise<{ status: CheckInStatus; outcome: string }> {
   const cfg = await checkInConfig();
   const row = await db.attendanceCheckIn.findUniqueOrThrow({ where: { id: checkInId }, include: { shift: { include: SHIFT_FOR_CHECKIN } } });
-  if (VERIFIED_STATUSES.includes(row.status as CheckInStatus) || row.status === "MANUALLY_APPROVED" || row.status === "MANUALLY_REJECTED") {
-    return { status: row.status as CheckInStatus, outcome: "already settled" };
-  }
+  if (row.status === "MANUALLY_APPROVED" || row.status === "MANUALLY_REJECTED") return { status: row.status as CheckInStatus, outcome: "already settled" };
+  // Already verified: only an inside fix captured EARLIER can change anything, by moving the
+  // arrival back. Phones sync out of order after an outage, and the first evidence of presence is
+  // the arrival, not the first one that happened to reach the server.
+  const alreadyVerified = VERIFIED_STATUSES.includes(row.status as CheckInStatus);
+  if (alreadyVerified && (!row.verifiedArrivalAt || fix.capturedAt >= row.verifiedArrivalAt || fix.mock)) return { status: row.status as CheckInStatus, outcome: "already settled" };
   const shift = row.shift;
 
   if (fix.mock) {
@@ -212,16 +252,25 @@ export async function applyFix(checkInId: string, fix: IncomingFix, receivedAt =
     return { status: "MANUAL_REVIEW", outcome: "mock location" };
   }
 
-  const t = trustedTimestamp(fix.capturedAt, receivedAt, cfg.maxClockSkewMinutes);
+  const t = fix.clockVerified ? { at: fix.capturedAt, adjusted: false as const, reason: undefined } : trustedTimestamp(fix.capturedAt, receivedAt, cfg.maxClockSkewMinutes);
   const capturedAt = t.at;
 
   // A fix must belong to this arrival: too early, too late or too stale and it is not evidence.
-  if (row.callAt) {
-    const corr = fixCorrelates(row.callAt, capturedAt, receivedAt, { maxMinutesAfterCall: cfg.correlationMinutes, maxMinutesBeforeCall: 5, maxFixAgeMinutes: cfg.correlationMinutes + 5 });
-    if (!corr.ok) {
-      await db.attendanceCheckIn.update({ where: { id: row.id }, data: { exceptionReason: `Fix not used: ${corr.reason}.` } });
-      return { status: row.status as CheckInStatus, outcome: `fix rejected: ${corr.reason}` };
-    }
+  // A fix answering the call is held to the call's time; one the phone took on its own, or that
+  // the server asked for at the start, to the shift's own window, so last night's position or one
+  // from the drive in an hour early never counts.
+  const corr = fix.source === "CALL_GPS" && row.callAt
+    ? fixCorrelates(row.callAt, capturedAt, receivedAt, { maxMinutesAfterCall: cfg.correlationMinutes, maxMinutesBeforeCall: 5, maxFixAgeMinutes: cfg.correlationMinutes + 5 })
+    : autoFixBelongs(shift.startAt, shift.endAt, capturedAt, { beforeMinutes: cfg.autoBeforeMinutes });
+  if (!corr.ok) {
+    if (!alreadyVerified) await db.attendanceCheckIn.update({ where: { id: row.id }, data: { exceptionReason: `Fix not used: ${corr.reason}.` } });
+    return { status: row.status as CheckInStatus, outcome: `fix rejected: ${corr.reason}` };
+  }
+  // Out of order: a vaguer or outside fix older than the evidence already held changes nothing.
+  if (!alreadyVerified && row.gpsCapturedAt && capturedAt < row.gpsCapturedAt) {
+    const peek = effectiveGeofence(shift, shift.location);
+    const inside = peek && classifyFix({ latitude: fix.latitude, longitude: fix.longitude, accuracyM: fix.accuracyM }, { latitude: peek.fence.latitude, longitude: peek.fence.longitude, radiusM: peek.fence.radiusM }, cfg.accuracyMaxM).state === "INSIDE";
+    if (!inside) return { status: row.status as CheckInStatus, outcome: "older than the evidence already held" };
   }
 
   const fence = effectiveGeofence(shift, shift.location);
@@ -235,6 +284,11 @@ export async function applyFix(checkInId: string, fix: IncomingFix, receivedAt =
   const lateness = computeLateness(shift.startAt, capturedAt, grace.minutes);
   const status = statusForVerifiedFix(cls.state as LocationState, cls.reason, lateness);
   const verified = VERIFIED_STATUSES.includes(status);
+  if (alreadyVerified && !verified) return { status: row.status as CheckInStatus, outcome: "already settled" };
+  // Outside, or too vague, before the grace period is over: a guard still on the way. Recorded as
+  // evidence, but nobody is alerted and the attendance record is left alone until there has been
+  // time to arrive.
+  const exceptionNow = exceptionDue(shift.startAt, receivedAt, grace.minutes);
 
   // One transaction so the check-in row and the attendance record can never disagree.
   await db.$transaction(async (tx) => {
@@ -269,6 +323,8 @@ export async function applyFix(checkInId: string, fix: IncomingFix, receivedAt =
       if (shift.status === "SCHEDULED" || shift.status === "AWAITING_ARRIVAL" || shift.status === "LATE" || shift.status === "NOT_CONFIRMED") {
         await tx.shift.update({ where: { id: shift.id }, data: { status: "ON_DUTY", pendingPrompt: "NONE" } });
       }
+    } else if (!exceptionNow) {
+      // Too early to call it: leave the attendance record as it was.
     } else if (status === "OUTSIDE_AREA") {
       await tx.attendance.update({ where: { shiftId: shift.id }, data: { locationVerification: "EXCEPTION" } });
     } else {
@@ -277,11 +333,20 @@ export async function applyFix(checkInId: string, fix: IncomingFix, receivedAt =
   });
 
   const line = describeOutcome(status, lateness);
-  await recordEvent(shift.id, shift.guardId, verified ? "LOCATION_VERIFIED" : "LOCATION_EXCEPTION", {
-    at: capturedAt, source: "APP",
-    note: `Check-in: ${line}. ${Math.round(cls.distanceM)} m from ${shift.location.name}${fix.accuracyM != null ? ` · ±${Math.round(fix.accuracyM)} m` : ""}.`,
-  });
-  if (!verified) await raiseException(row.id, shift, line);
+  const how = fix.source === "CALL_GPS" ? "after the check-in call" : fix.source === "AUTO_GPS" ? "requested at shift start" : "from the phone's own monitoring";
+  // An earlier fix correcting a verified arrival, or evidence before the grace period ends, is noted
+  // quietly; only a decision earns a timeline line of its own.
+  if (verified || exceptionNow) {
+    await recordEvent(shift.id, shift.guardId, verified ? "LOCATION_VERIFIED" : "LOCATION_EXCEPTION", {
+      at: capturedAt, source: "APP",
+      note: `${alreadyVerified ? "Arrival moved earlier" : "Check-in"}: ${line}, ${how}. ${Math.round(cls.distanceM)} m from ${shift.location.name}${fix.accuracyM != null ? ` · ±${Math.round(fix.accuracyM)} m` : ""}.`,
+    });
+  }
+  if (!verified && exceptionNow) await raiseException(row.id, shift, line);
+  if (verified && !alreadyVerified) {
+    const { onCheckInVerified } = await import("@/lib/client-notifications/rules");
+    await onCheckInVerified(row.id).catch(() => undefined);
+  }
   return { status, outcome: line };
 }
 
@@ -308,8 +373,8 @@ async function raiseException(checkInId: string, shift: ShiftForCheckIn, line: s
  * Engine step: open expectations for shifts about to start, and escalate the ones that have run out
  * of time. Idempotent — `escalatedAt` and `notifiedAt` stop repeat work.
  */
-export async function runCheckInStep(now = new Date()): Promise<{ opened: number; escalated: number; errors: string[] }> {
-  const out = { opened: 0, escalated: 0, errors: [] as string[] };
+export async function runCheckInStep(now = new Date()): Promise<{ opened: number; escalated: number; autoRequested: number; callsOutstanding: number; errors: string[] }> {
+  const out = { opened: 0, escalated: 0, autoRequested: 0, callsOutstanding: 0, errors: [] as string[] };
   const cfg = await checkInConfig();
   if (!cfg.enabled) return out;
 
@@ -322,35 +387,131 @@ export async function runCheckInStep(now = new Date()): Promise<{ opened: number
     try { if (await ensureExpectation(s, cfg, now)) out.opened++; } catch (e) { out.errors.push(`expectation ${s.id}: ${(e as Error).message}`); }
   }
 
+  // Ask the guard's phone where it is, without waiting for a call: ten minutes before the start,
+  // at the start, and at the end of the grace period. The phone's own monitoring usually answers
+  // first; these requests cover a phone whose monitoring is not running or has drifted.
+  if (cfg.autoGps) {
+    const pending = await db.attendanceCheckIn.findMany({
+      where: { status: { in: ["AWAITING", "GPS_PENDING", "OUTSIDE_AREA", "LOCATION_UNCERTAIN", "LOCATION_UNAVAILABLE"] }, escalatedAt: null, source: { not: "SMS_ONLY" }, scheduledStartAt: { lte: new Date(now.getTime() + cfg.autoBeforeMinutes * 60_000) } },
+      include: { shift: { include: SHIFT_FOR_CHECKIN } }, take: 200,
+    });
+    for (const row of pending) {
+      const grace = graceFor(row.shift, cfg);
+      if (!autoRequestDue(row.scheduledStartAt, now, row.autoRequestedAt, { beforeMinutes: cfg.autoBeforeMinutes, graceMinutes: grace.minutes })) continue;
+      try { if (await requestAutoFix(row.id, row.shift, now)) out.autoRequested++; } catch (e) { out.errors.push(`auto gps ${row.id}: ${(e as Error).message}`); }
+    }
+  }
+
   // A guard without an Android phone is never escalated by this feature: their attendance is
   // decided by the SMS arrival flow, which has its own reminder and escalation. Raising them here
   // as "missed" would be a second, contradictory verdict on the same shift.
   const open = await db.attendanceCheckIn.findMany({
-    where: { status: { in: ["AWAITING", "CALL_RECEIVED", "GPS_PENDING", "LOCATION_UNAVAILABLE", "LOCATION_UNCERTAIN"] }, escalatedAt: null, source: { not: "SMS_ONLY" } },
-    include: { shift: { include: SHIFT_FOR_CHECKIN } }, take: 200,
+    where: { status: { in: ["AWAITING", "CALL_RECEIVED", "GPS_PENDING", "LOCATION_UNAVAILABLE", "LOCATION_UNCERTAIN", "OUTSIDE_AREA"] }, escalatedAt: null, source: { not: "SMS_ONLY" } },
+    include: { shift: { include: SHIFT_FOR_CHECKIN }, gatewayDevice: true }, take: 200,
   });
+  const offlineMinutes = (await getSettingNumber("gateway.offlineMinutes")) || 5;
   for (const row of open) {
     const grace = graceFor(row.shift, cfg);
     const phase = escalationState(row.scheduledStartAt, now, { graceMinutes: grace.minutes, escalationMinutes: cfg.escalationMinutes });
     if (phase.phase !== "ESCALATE") continue;
     try {
-      await db.attendanceCheckIn.update({ where: { id: row.id }, data: { status: "MISSED", escalatedAt: now, exceptionReason: row.exceptionReason ?? `No verified arrival within ${grace.minutes + cfg.escalationMinutes} minutes of the scheduled start.` } });
-      await recordEvent(row.shiftId, row.guardId, "LOCATION_OVERDUE", { at: now, note: `Check-in missed: no verified arrival ${phase.minutesAfterStart} min after the scheduled start.` });
+      const device = row.gatewayDevice ?? (await db.gatewayDevice.findFirst({ where: { guardId: row.guardId, mode: "GUARD" }, orderBy: { lastSeenAt: "desc" } }));
+      const online = Boolean(device?.lastSeenAt && now.getTime() - device.lastSeenAt.getTime() <= offlineMinutes * 60_000);
+      const next = escalatedStatus(row.status as CheckInStatus, online);
+      const who = `${row.shift.guard.firstName} ${row.shift.guard.lastName}`;
+      const reason =
+        next === "MISSED" ? `No usable position within ${grace.minutes + cfg.escalationMinutes} minutes of the scheduled start, though the phone was online.`
+        : next === "DEVICE_OFFLINE" ? `${device?.deviceName ?? "The guard's phone"} has not reported since ${device?.lastSeenAt ? fmtTime(device.lastSeenAt) : "before the shift"}. This is not the same as absent: call the guard.`
+        : row.exceptionReason;
+      await db.attendanceCheckIn.update({ where: { id: row.id }, data: { status: next, escalatedAt: now, exceptionReason: reason ?? row.exceptionReason } });
+      await recordEvent(row.shiftId, row.guardId, "LOCATION_OVERDUE", { at: now, note: `Check-in not verified ${phase.minutesAfterStart} min after the start: ${CHECK_IN_TITLE[next] ?? next.toLowerCase().replace(/_/g, " ")}.` });
       if (!row.notifiedAt) {
         await db.attendanceCheckIn.update({ where: { id: row.id }, data: { notifiedAt: now } });
         await notify({
-          type: "GUARD_NOT_REPORTED", severity: "CRITICAL",
-          title: `Check-in missed · ${row.shift.guard.firstName} ${row.shift.guard.lastName}`,
-          body: `${row.shift.location.name}, shift from ${fmtTime(row.scheduledStartAt)}. No verified arrival after ${phase.minutesAfterStart} min. Call ${row.shift.guard.phone}.`,
+          type: "GUARD_NOT_REPORTED", severity: next === "MISSED" || next === "OUTSIDE_AREA" ? "CRITICAL" : "WARNING",
+          title: `${CHECK_IN_TITLE[next] ?? "Check-in not verified"} · ${who}`,
+          body: `${row.shift.location.name}, shift from ${fmtTime(row.scheduledStartAt)}. ${reason ?? ""} Call ${row.shift.guard.phone}.`.replace(/\s+/g, " "),
           guardId: row.guardId, shiftId: row.shiftId, url: "/attendance/check-ins",
         });
       }
+      const { onCheckInEscalated } = await import("@/lib/client-notifications/rules");
+      await onCheckInEscalated(row.id, next).catch(() => undefined);
       out.escalated++;
     } catch (e) {
       out.errors.push(`escalate ${row.id}: ${(e as Error).message}`);
     }
   }
+
+  // Presence verified, but the company also requires the call and it has not come. A smaller
+  // problem than absence, and reported as exactly that, once.
+  const callDue = await db.attendanceCheckIn.findMany({
+    where: { callRequired: true, callAt: null, callOutstandingNotifiedAt: null, status: { in: ["VERIFIED_ON_TIME", "VERIFIED_WITHIN_GRACE", "VERIFIED_LATE", "MANUALLY_APPROVED"] } },
+    include: { shift: { include: SHIFT_FOR_CHECKIN } }, take: 200,
+  });
+  for (const row of callDue) {
+    const grace = graceFor(row.shift, cfg);
+    if (escalationState(row.scheduledStartAt, now, { graceMinutes: grace.minutes, escalationMinutes: cfg.escalationMinutes }).phase !== "ESCALATE") continue;
+    await db.attendanceCheckIn.update({ where: { id: row.id }, data: { callOutstandingNotifiedAt: now } });
+    await notify({
+      type: "CHECK_IN_CALL_OUTSTANDING", severity: "WARNING",
+      title: `Check-in call outstanding · ${row.shift.guard.firstName} ${row.shift.guard.lastName}`,
+      body: `${row.shift.location.name}: the phone was verified on site${row.verifiedArrivalAt ? ` at ${fmtTime(row.verifiedArrivalAt)}` : ""}, but the required check-in call has not been made.`,
+      guardId: row.guardId, shiftId: row.shiftId, url: "/attendance/check-ins",
+    });
+    out.callsOutstanding++;
+  }
   return out;
+}
+
+const CHECK_IN_TITLE: Partial<Record<CheckInStatus, string>> = {
+  MISSED: "Check-in missed",
+  DEVICE_OFFLINE: "Guard phone offline at shift start",
+  OUTSIDE_AREA: "Outside the assigned site at shift start",
+  LOCATION_UNCERTAIN: "Location uncertain at shift start",
+  LOCATION_UNAVAILABLE: "No usable position at shift start",
+};
+
+/**
+ * Ask the guard's phone for a fix because the shift is starting, not because anyone rang. Never
+ * burns the check-in into an exception on its own: a refused or failed request is retried at the
+ * next scheduled moment, and escalation decides what the shift becomes.
+ */
+export async function requestAutoFix(checkInId: string, shift: ShiftForCheckIn, now = new Date()): Promise<boolean> {
+  const cfg = await checkInConfig();
+  const row = await db.attendanceCheckIn.findUniqueOrThrow({ where: { id: checkInId } });
+  try {
+    const { request } = await createLocationRequest({ guardId: shift.guardId, actor: { userId: null, name: "system (shift start)" }, purpose: "CHECKIN", locationId: shift.locationId, maxAccuracyM: cfg.accuracyMaxM }, now);
+    // The request id is unique per check-in; a request reused from another purpose stays its own.
+    const linked = await db.attendanceCheckIn.findUnique({ where: { locationRequestId: request.id } });
+    await db.attendanceCheckIn.update({
+      where: { id: row.id },
+      data: {
+        autoRequestedAt: now, gatewayDeviceId: request.gatewayDeviceId,
+        ...(linked && linked.id !== row.id ? {} : { locationRequestId: request.id }),
+        ...(row.status === "AWAITING" ? { status: "GPS_PENDING" as const } : {}),
+      },
+    });
+    return true;
+  } catch (e) {
+    const msg = e instanceof LocationRequestError ? e.message : (e as Error).message;
+    await db.attendanceCheckIn.update({ where: { id: row.id }, data: { autoRequestedAt: now, exceptionReason: `Automatic position request not sent: ${msg}` } });
+    return false;
+  }
+}
+
+/**
+ * A fix the phone took on its own (shift monitoring, a call-time fix) reached the server. If its
+ * shift has a check-in that is not yet settled, it is evidence.
+ */
+export async function applyMonitoringFix(input: { shiftId: string; latitude: number; longitude: number; accuracyM: number | null; capturedAt: Date; mock: boolean; locationEventId: string; clockVerified?: boolean }, receivedAt = new Date()): Promise<string> {
+  const cfg = await checkInConfig();
+  if (!cfg.enabled || !cfg.autoGps) return "automatic check-in off";
+  const shift = await db.shift.findUnique({ where: { id: input.shiftId }, include: SHIFT_FOR_CHECKIN });
+  if (!shift) return "no shift";
+  const row = await ensureExpectation(shift, cfg, receivedAt);
+  if (!row || row.source === "SMS_ONLY") return "no check-in for this shift";
+  const res = await applyFix(row.id, { latitude: input.latitude, longitude: input.longitude, accuracyM: input.accuracyM, capturedAt: input.capturedAt, mock: input.mock, locationEventId: input.locationEventId, source: "MONITORING", clockVerified: input.clockVerified }, receivedAt);
+  return `check-in ${res.status}: ${res.outcome}`;
 }
 
 /**

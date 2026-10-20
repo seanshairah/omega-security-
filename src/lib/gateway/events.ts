@@ -66,14 +66,28 @@ export async function matchGuardByPhone(normalized: string) {
   return guards[0];
 }
 
-export async function processGatewayEvents(device: GatewayDevice, rawEvents: unknown[], opts: { simulated?: boolean; ip?: string | null } = {}): Promise<EventAck[]> {
+/** Within this, an offset is network latency, not a wrong clock, and timestamps are left alone. */
+const CLOCK_TOLERANCE_MS = 30_000;
+
+/**
+ * Move a phone's timestamps onto the server's clock using the offset measured from the batch's
+ * `sentAt`. Only `timestamp` and `capturedAt` are times the phone stamped; nothing else moves.
+ */
+function onServerClock<T extends object>(ev: T, offsetMs: number | undefined): T {
+  if (offsetMs === undefined || Math.abs(offsetMs) < CLOCK_TOLERANCE_MS) return ev;
+  const move = (v: unknown) => { const t = typeof v === "string" || v instanceof Date ? new Date(v).getTime() : NaN; return Number.isFinite(t) ? new Date(t + offsetMs).toISOString() : v; };
+  const e = ev as Record<string, unknown>;
+  return { ...e, timestamp: move(e.timestamp), ...("capturedAt" in e && e.capturedAt ? { capturedAt: move(e.capturedAt) } : {}), meta: { ...((e.meta as object) ?? {}), clockOffsetSeconds: Math.round(offsetMs / 1000) } } as T;
+}
+
+export async function processGatewayEvents(device: GatewayDevice, rawEvents: unknown[], opts: { simulated?: boolean; ip?: string | null; clockOffsetMs?: number } = {}): Promise<EventAck[]> {
   const acks: EventAck[] = [];
   const ordered = rawEvents.map((r) => ({ r, v: validateEvent(r) }));
   // Replay in time order so a drained offline queue still reduces correctly.
   ordered.sort((a, b) => (a.v.ok && b.v.ok ? new Date(a.v.event.timestamp).getTime() - new Date(b.v.event.timestamp).getTime() : 0));
   for (const { v } of ordered) {
     if (!v.ok) { acks.push({ eventId: v.eventId ?? "", status: "rejected", error: v.error }); continue; }
-    acks.push(await processOne(device, v.event, opts));
+    acks.push(await processOne(device, onServerClock(v.event, opts.clockOffsetMs), { ...opts, clockVerified: opts.clockOffsetMs !== undefined }));
   }
   return acks;
 }
@@ -86,7 +100,7 @@ async function applyStatusEvent(device: GatewayDevice, ev: IncomingGatewayEvent)
   return `status: ${s("monitoringState") ?? "—"} · location ${s("locationPermission") ?? "—"}`;
 }
 
-async function processOne(device: GatewayDevice, ev: AnyIncomingEvent, opts: { simulated?: boolean; ip?: string | null }): Promise<EventAck> {
+async function processOne(device: GatewayDevice, ev: AnyIncomingEvent, opts: { simulated?: boolean; ip?: string | null; clockVerified?: boolean }): Promise<EventAck> {
   const now = new Date();
   const at = saneTimestamp(ev.timestamp, now);
   // 1. raw record; the unique eventId is the deduplication key
@@ -103,11 +117,11 @@ async function processOne(device: GatewayDevice, ev: AnyIncomingEvent, opts: { s
   let callLogId: string | undefined;
   try {
     if (ev.kind === "location") {
-      outcome = (await applyLocationEvent(device, ev, { simulated: opts.simulated })).outcome;
+      outcome = (await applyLocationEvent(device, ev, { simulated: opts.simulated, clockVerified: opts.clockVerified })).outcome;
     } else if (ev.kind === "alert") {
       outcome = (await applyAlertEvent(device, ev, { simulated: opts.simulated })).outcome;
     } else if (ev.kind === "location_request") {
-      outcome = (await applyLocationRequestResult(device, ev)).outcome;
+      outcome = (await applyLocationRequestResult(device, ev, new Date(), { clockVerified: opts.clockVerified })).outcome;
     } else if (ev.kind === "status") {
       outcome = await applyStatusEvent(device, ev);
     } else if (ev.eventType === "DEVICE_ONLINE" || ev.eventType === "DEVICE_OFFLINE") {

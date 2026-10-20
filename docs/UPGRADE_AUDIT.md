@@ -17,7 +17,7 @@ and 17:53Z the same evening. Each finding names where it lives and what it chang
 | # | Area | Finding | Where |
 |---|---|---|---|
 | C1 | Attendance | A check-in only starts when the guard calls. Monitoring fixes never reach it: the `MONITORING` source exists in the schema and nothing writes it. | `check-in-service.ts`, `location-events.ts` |
-| C2 | Attendance | A fix taken before the start time is matched to a shift only if the phone names the shift. The server falls back to `findLiveShiftForGuard`, which only finds a shift already under way, so a 21:52 fix for a 22:00 shift is lost. | `location-events.ts` |
+| C2 | Attendance | A fix taken before the start is stored against the upcoming shift (the phone names it, and `findLiveShiftForGuard` looks two hours ahead), but like C1 it never reaches the check-in. | `location-events.ts` |
 | C3 | Attendance | A call and a GPS fix share one status. There is no way to say "GPS verified, required call still outstanding". | `AttendanceCheckIn.status` |
 | C4 | Attendance | Escalation turns every unresolved row into `MISSED`, including "the phone is offline" and "GPS was too vague". The brief requires those to stay distinct. | `runCheckInStep` |
 | C5 | Commands | Only guard-mode phones receive commands. An operations gateway has no command channel at all. | `pendingCommandsForDevice`, `GatewayService` |

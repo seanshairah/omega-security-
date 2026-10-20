@@ -19,7 +19,13 @@ export async function POST(req: Request) {
   if (events.length === 0) return NextResponse.json({ error: "No events" }, { status: 400 });
   if (events.length > 200) return NextResponse.json({ error: "At most 200 events per request" }, { status: 400 });
   const ip = clientIp(req);
+  // The phone's clock at the moment it sent this batch. Read against our own clock in the same
+  // request, it measures the phone's offset, so a fix captured at 21:58 and uploaded at 22:30 after
+  // an outage keeps its 21:58, and a phone whose clock is wrong is corrected rather than believed.
+  const sentAtMs = body && typeof body === "object" && !Array.isArray(body) ? Date.parse(String((body as { sentAt?: unknown }).sentAt ?? "")) : NaN;
+  const offsetMs = Number.isFinite(sentAtMs) ? Date.now() - sentAtMs : NaN;
+  const clockOffsetMs = Number.isFinite(offsetMs) && Math.abs(offsetMs) < 7 * 24 * 3_600_000 ? offsetMs : undefined;
   await db.gatewayDevice.update({ where: { id: auth.device.id }, data: { lastSeenAt: new Date(), lastIp: ip, ...(auth.device.status === "OFFLINE" ? { status: "ONLINE" } : {}) } });
-  const acks = await processGatewayEvents(auth.device, events, { ip });
+  const acks = await processGatewayEvents(auth.device, events, { ip, clockOffsetMs });
   return NextResponse.json({ ok: true, acks });
 }

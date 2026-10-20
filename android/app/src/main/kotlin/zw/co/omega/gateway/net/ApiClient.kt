@@ -75,7 +75,9 @@ class ApiClient(private val baseUrl: String, private val token: String? = null) 
     fun sendEvents(events: List<GatewayEvent>): List<Ack> {
         val arr = JSONArray()
         events.forEach { arr.put(it.toJson()) }
-        val r = post("/api/gateways/events", JSONObject().put("events", arr))
+        // The phone's clock as it sends: the server measures the offset from it, so a fix queued
+        // during an outage keeps its real time and a wrong clock is corrected rather than trusted.
+        val r = post("/api/gateways/events", JSONObject().put("events", arr).put("sentAt", GatewayEvent.iso(System.currentTimeMillis())))
         val acks = r.optJSONArray("acks") ?: JSONArray()
         return (0 until acks.length()).map { i -> val a = acks.getJSONObject(i); Ack(a.optString("eventId"), a.optString("status"), a.optString("error").ifBlank { null }) }
     }

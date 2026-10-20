@@ -57,7 +57,7 @@ export function validateLocationEvent(raw: Record<string, unknown>, eventId: str
 }
 
 /** Store one location event. Returns a one-line outcome for the raw event log. */
-export async function applyLocationEvent(device: GatewayDevice, ev: IncomingLocationEvent, opts: { simulated?: boolean } = {}): Promise<{ outcome: string; locationEventId: string }> {
+export async function applyLocationEvent(device: GatewayDevice, ev: IncomingLocationEvent, opts: { simulated?: boolean; clockVerified?: boolean } = {}): Promise<{ outcome: string; locationEventId: string }> {
   const now = new Date();
   const at = saneTimestamp(ev.timestamp, now);
   if (device.mode !== "GUARD" || !device.guardId) {
@@ -124,6 +124,12 @@ export async function applyLocationEvent(device: GatewayDevice, ev: IncomingLoca
     if (m && !(ev.eventType === "LOCATION_CHECK" && state === "INSIDE" && (await recentInsideCheck(shift.id, at)))) await recordEvent(shift.id, guard.id, m.type, { at, source: "APP", note: m.note });
     // Correlate with the SMS arrival confirmation when the first usable fix of the shift arrives.
     if (state !== "UNKNOWN" || ev.eventType === "LOCATION_UNAVAILABLE") await verifyArrival(shift.id, guard.id, state, at, distanceM, site?.name ?? "the site");
+    // The same fix is shift-start attendance evidence: a guard whose phone is inside the site at
+    // 21:58 has arrived, whether or not they have rung in yet.
+    if (ev.latitude != null && ev.longitude != null && ev.eventType !== "LOCATION_UNAVAILABLE") {
+      const { applyMonitoringFix } = await import("@/lib/attendance/check-in-service");
+      await applyMonitoringFix({ shiftId: shift.id, latitude: ev.latitude, longitude: ev.longitude, accuracyM: ev.accuracyM ?? null, capturedAt: at, mock: Boolean(ev.mock), locationEventId: row.id, clockVerified: Boolean(opts.clockVerified) }, now).catch(() => undefined);
+    }
   }
 
   // Alerts. Exits and returns are one notification each; outside updates are silent (the engine escalates).

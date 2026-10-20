@@ -299,7 +299,8 @@ async function main() {
     const shift = await makeShift(ctx, guard.id, start);
     await runCheckInStep(fixAt(1));
     const before = await row(shift.id);
-    check("a shift about to start is awaiting check-in", before.status === "AWAITING", before.status);
+    // Since automatic shift-start GPS: nobody has to ring in for the phone to be asked where it is.
+    check("a shift that has just started has asked the phone for its position, without a call", before.status === "GPS_PENDING" && before.autoRequestedAt !== null && before.callAt === null, before.status);
     const res = await runCheckInStep(fixAt(25)); // grace 5 + escalation 15 = 20 min
     const r = await row(shift.id);
     check("an unverified check-in becomes missed after the escalation window", r.status === "MISSED" && res.escalated >= 1, `${r.status} escalated=${res.escalated}`);

@@ -17,16 +17,16 @@ export type CheckInStatus =
   | "AWAITING" | "CALL_RECEIVED" | "GPS_PENDING"
   | "VERIFIED_ON_TIME" | "VERIFIED_WITHIN_GRACE" | "VERIFIED_LATE"
   | "OUTSIDE_AREA" | "LOCATION_UNCERTAIN" | "LOCATION_UNAVAILABLE" | "SITE_NOT_CONFIGURED"
-  | "MISSED" | "MANUAL_REVIEW" | "MANUALLY_APPROVED" | "MANUALLY_REJECTED";
+  | "MISSED" | "MANUAL_REVIEW" | "MANUALLY_APPROVED" | "MANUALLY_REJECTED" | "DEVICE_OFFLINE";
 
 export const VERIFIED_STATUSES: CheckInStatus[] = ["VERIFIED_ON_TIME", "VERIFIED_WITHIN_GRACE", "VERIFIED_LATE"];
 /** Statuses a supervisor has to look at. */
-export const EXCEPTION_STATUSES: CheckInStatus[] = ["OUTSIDE_AREA", "LOCATION_UNCERTAIN", "LOCATION_UNAVAILABLE", "SITE_NOT_CONFIGURED", "MISSED", "MANUAL_REVIEW"];
+export const EXCEPTION_STATUSES: CheckInStatus[] = ["OUTSIDE_AREA", "LOCATION_UNCERTAIN", "LOCATION_UNAVAILABLE", "SITE_NOT_CONFIGURED", "MISSED", "MANUAL_REVIEW", "DEVICE_OFFLINE"];
 /** Nothing more will arrive on its own. */
 export const SETTLED_STATUSES: CheckInStatus[] = [...VERIFIED_STATUSES, "MANUALLY_APPROVED", "MANUALLY_REJECTED", "MISSED"];
 
 export const CHECK_IN_META: Record<CheckInStatus, { label: string; tone: "ok" | "warn" | "critical" | "info" | "neutral" | "muted"; icon: string; detail: string }> = {
-  AWAITING:             { label: "Awaiting check-in",   tone: "neutral",  icon: "pending",          detail: "The shift expects a check-in call." },
+  AWAITING:             { label: "Location pending",    tone: "neutral",  icon: "pending",          detail: "No fresh position from the guard's phone yet." },
   CALL_RECEIVED:        { label: "Call received",       tone: "info",     icon: "phone_callback",   detail: "A qualifying call arrived. Presence is not yet verified." },
   GPS_PENDING:          { label: "GPS pending",         tone: "info",     icon: "my_location",      detail: "A fresh fix has been requested from the guard's phone." },
   VERIFIED_ON_TIME:     { label: "Verified on time",    tone: "ok",       icon: "verified_user",    detail: "GPS placed the guard on site at or before the start." },
@@ -40,6 +40,7 @@ export const CHECK_IN_META: Record<CheckInStatus, { label: string; tone: "ok" | 
   MANUAL_REVIEW:        { label: "Manual review",       tone: "warn",     icon: "visibility",       detail: "A supervisor must resolve this exception." },
   MANUALLY_APPROVED:    { label: "Approved by hand",    tone: "ok",       icon: "badge",            detail: "A supervisor accepted attendance. Not GPS-verified." },
   MANUALLY_REJECTED:    { label: "Rejected by hand",    tone: "critical", icon: "cancel",           detail: "A supervisor rejected this attendance." },
+  DEVICE_OFFLINE:       { label: "Phone offline",       tone: "warn",     icon: "signal_disconnected", detail: "The guard's phone stopped reporting before it sent a usable fix. Not the same as absent." },
 };
 
 // ------------------------------------------------------------------ grace and lateness
@@ -212,4 +213,100 @@ export function describeOutcome(status: CheckInStatus, lateness: { minutesAfterS
   if (status === "VERIFIED_LATE" && lateness) return `Late — ${lateness.lateMinutes} min beyond grace (${lateness.minutesAfterStart} min after shift start)`;
   if (status === "VERIFIED_WITHIN_GRACE" && lateness && lateness.minutesAfterStart > 0) return `Verified within grace (${lateness.minutesAfterStart} min after shift start)`;
   return meta.label;
+}
+
+// ------------------------------------------------------------------ automatic shift-start GPS
+//
+// A guard should not have to ring in before anyone can tell whether they are on site. The phone
+// already measures its position from ten minutes before the shift; these rules decide when the
+// server also asks it directly, which of its fixes count, and what an unresolved shift becomes.
+
+export type AutoPolicy = {
+  /** Minutes before the start that a fix already counts as arrival evidence. */
+  beforeMinutes: number;
+  graceMinutes: number;
+};
+
+/**
+ * The moments the server asks the guard's phone for a fresh fix without a call: ten minutes before
+ * the start, at the start, and at the end of the grace period. Each moment is asked once; a fix
+ * that arrives verified makes the rest unnecessary, which the caller checks.
+ */
+export function autoRequestPoints(startAt: Date, p: AutoPolicy): Date[] {
+  return [
+    new Date(startAt.getTime() - p.beforeMinutes * 60_000),
+    startAt,
+    new Date(startAt.getTime() + p.graceMinutes * 60_000),
+  ];
+}
+
+export function autoRequestDue(startAt: Date, now: Date, lastAutoAt: Date | null, p: AutoPolicy): boolean {
+  const due = autoRequestPoints(startAt, p).filter((t) => t.getTime() <= now.getTime());
+  if (!due.length) return false;
+  const latest = due[due.length - 1];
+  return !lastAutoAt || lastAutoAt.getTime() < latest.getTime();
+}
+
+/**
+ * Whether a fix the phone took on its own (monitoring, or an automatic request) can be arrival
+ * evidence for this shift. It must be captured inside the shift's own window: a position from the
+ * previous night's shift, or from the drive in an hour early, says nothing about this arrival.
+ */
+export function autoFixBelongs(startAt: Date, endAt: Date, capturedAt: Date, p: Pick<AutoPolicy, "beforeMinutes">): QualifyResult {
+  const opens = startAt.getTime() - p.beforeMinutes * 60_000;
+  if (capturedAt.getTime() < opens) return { ok: false, reason: `the fix was captured ${Math.round((startAt.getTime() - capturedAt.getTime()) / 60_000)} min before the shift, before the check-in window opens` };
+  if (capturedAt.getTime() > endAt.getTime()) return { ok: false, reason: "the fix was captured after the shift ended" };
+  return { ok: true };
+}
+
+/**
+ * Before the grace period is over, a fix outside the site is a guard still on the way, not an
+ * exception: it is recorded, but nobody is alerted until there has been time to arrive.
+ */
+export function exceptionDue(startAt: Date, at: Date, graceMinutes: number): boolean {
+  return at.getTime() >= startAt.getTime() + graceMinutes * 60_000;
+}
+
+/**
+ * What an unresolved check-in becomes when its time runs out. The distinctions are the point:
+ * "the phone was offline", "GPS was too vague" and "the guard was elsewhere" lead to different
+ * phone calls, so only a shift with no evidence at all from an online phone becomes MISSED.
+ */
+export function escalatedStatus(current: CheckInStatus, deviceOnline: boolean): CheckInStatus {
+  if (current === "AWAITING" || current === "CALL_RECEIVED" || current === "GPS_PENDING") return deviceOnline ? "MISSED" : "DEVICE_OFFLINE";
+  return current;
+}
+
+// ------------------------------------------------------------------ presence and the call, kept apart
+
+export type CallPolicy = "OPTIONAL" | "REQUIRED";
+
+export type Compliance = {
+  /** What GPS (or a supervisor) established about presence. */
+  presence: "VERIFIED" | "MANUAL" | "PENDING" | "EXCEPTION" | "NOT_APPLICABLE";
+  /** Whether the attendance policy wanted a call, and whether it came. */
+  call: "NOT_REQUIRED" | "OUTSTANDING" | "COMPLETED";
+  /** The two together: what the control room should read first. */
+  overall: "COMPLIANT" | "CALL_OUTSTANDING" | "PRESENCE_NOT_VERIFIED" | "PENDING" | "SMS_ATTENDANCE";
+};
+
+/**
+ * A phone verified inside the site at 22:00 is a fact, whether or not the guard has rung in. If
+ * the company also requires the call, the missing call is a separate, smaller problem: the shift
+ * reads "call outstanding", not "absent". A verified fix proves where the phone was, not who held it.
+ */
+export function complianceFor(row: { status: CheckInStatus; source: string; callRequired: boolean; callAt: Date | null }): Compliance {
+  if (row.source === "SMS_ONLY") return { presence: "NOT_APPLICABLE", call: row.callAt ? "COMPLETED" : row.callRequired ? "OUTSTANDING" : "NOT_REQUIRED", overall: "SMS_ATTENDANCE" };
+  const presence: Compliance["presence"] =
+    VERIFIED_STATUSES.includes(row.status) ? "VERIFIED"
+    : row.status === "MANUALLY_APPROVED" ? "MANUAL"
+    : row.status === "AWAITING" || row.status === "CALL_RECEIVED" || row.status === "GPS_PENDING" ? "PENDING"
+    : "EXCEPTION";
+  const call: Compliance["call"] = row.callAt ? "COMPLETED" : row.callRequired ? "OUTSTANDING" : "NOT_REQUIRED";
+  const overall: Compliance["overall"] =
+    presence === "PENDING" ? "PENDING"
+    : presence === "EXCEPTION" ? "PRESENCE_NOT_VERIFIED"
+    : call === "OUTSTANDING" ? "CALL_OUTSTANDING"
+    : "COMPLIANT";
+  return { presence, call, overall };
 }

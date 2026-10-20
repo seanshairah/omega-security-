@@ -89,8 +89,8 @@ class LocationMonitor(private val context: Context) {
         if (fix != null) { prefs.lastFixLat = fix.latitude; prefs.lastFixLng = fix.longitude; prefs.lastFixAccuracy = fix.accuracy; prefs.lastFixAt = obs.at; prefs.lastFixState = obs.state.name; prefs.lastFixDistanceM = (obs.distanceM ?: -1.0).toFloat() }
         prefs.monitoringState = if (!DeviceInfo.isOnline(context) && state.phase == Phase.MONITORING) "OFFLINE_MONITORING" else state.phase.name
         val battery = DeviceInfo.batteryLevel(context)
-        val wait = adjustForBattery(r.nextCheckSeconds, battery, state.phase)
-        prefs.batterySaver = wait != r.nextCheckSeconds
+        val wait = alignToShiftStart(adjustForBattery(r.nextCheckSeconds, battery, state.phase), now, cfg.startAtMs)
+        prefs.batterySaver = wait > r.nextCheckSeconds
         return Result(state.phase, wait, fix, c, produced, hasConfig = true)
     }
 
@@ -194,5 +194,20 @@ class LocationMonitor(private val context: Context) {
 
     private fun isMock(l: Location): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) l.isMock else @Suppress("DEPRECATION") l.isFromMockProvider
 
-    companion object { private const val TAG = "LocationMonitor" }
+
+    companion object {
+        private const val TAG = "LocationMonitor"
+
+        /**
+         * Before the shift, the next check lands on the start time itself rather than wherever the
+         * interval falls. The server judges attendance from the first fix inside the site, and the
+         * one taken at the start is the one that settles "on time" for a guard who arrived late in
+         * the ten-minute run-up.
+         */
+        fun alignToShiftStart(waitSeconds: Int, nowMs: Long, startAtMs: Long): Int {
+            if (nowMs >= startAtMs) return waitSeconds
+            val untilStart = ((startAtMs - nowMs) / 1000).toInt()
+            return if (untilStart in 1 until waitSeconds) untilStart.coerceAtLeast(30) else waitSeconds
+        }
+    }
 }

@@ -23,6 +23,10 @@ import { randomUUID } from "node:crypto";
 import { db } from "../../src/lib/db";
 import { processIncomingMessage } from "../../src/lib/sms/pipeline";
 import { createGateway } from "../../src/lib/gateway/service";
+import { saveSettings } from "../../src/lib/settings";
+
+// The server caches settings for 15 s; a test that changes one waits that out before relying on it.
+const settle = () => new Promise((r) => setTimeout(r, 16_000));
 
 const BASE = process.env.APP_URL ?? "http://localhost:3000";
 const SITE = { latitude: -17.8292, longitude: 31.0522, radius: 150 };
@@ -35,7 +39,7 @@ const fix = (m: number, acc = 12) => ({ latitude: SITE.latitude + off(m), longit
 const shuffle = <T,>(a: T[]) => { const b = [...a]; for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
 
 async function cleanup() {
-  const guards = await db.guard.findMany({ where: { guardNo: { in: ["G-E2EI1", "G-E2EI2"] } }, select: { id: true } });
+  const guards = await db.guard.findMany({ where: { guardNo: { in: ["G-E2EI1", "G-E2EI2", "G-E2EI3"] } }, select: { id: true } });
   const gIds = guards.map((g) => g.id);
   const shifts = await db.shift.findMany({ where: { guardId: { in: gIds } }, select: { id: true } });
   const sIds = shifts.map((s) => s.id);
@@ -85,10 +89,14 @@ async function main() {
     check("feature-phone guard has no GPS rows and no app alerts", (await db.locationEvent.count({ where: { guardId: peter.id } })) === 0 && (await db.guardAlert.count({ where: { guardId: peter.id } })) === 0);
 
     console.log("2 + 3. SMS and GPS on the same guard: attendance confirmed once");
+    // With automatic GPS attendance switched off, the original rule holds exactly: SMS confirms
+    // arrival and GPS only corroborates it. Section 3b covers the rule with it switched on.
+    await saveSettings({ "checkin.autoGps": "false" });
+    await settle();
     const ev = (eventType: string, f: Record<string, unknown>, at: Date, extra: Record<string, unknown> = {}) => ({ eventId: `e2e-int-${randomUUID()}`, eventType, timestamp: at.toISOString(), shiftId: js.id, siteId: site.id, geofenceRadiusM: SITE.radius, ...f, ...extra });
     await post("/api/gateways/events", { events: [ev("SHIFT_STARTED", fix(20), subMinutes(now, 10))] }, gt);
     let att = await db.attendance.findUniqueOrThrow({ where: { shiftId: js.id } });
-    check("a GPS fix alone never confirms arrival", att.status === "PENDING" && att.arrivalConfirmedAt == null);
+    check("with automatic GPS attendance off, a GPS fix alone never confirms arrival", att.status === "PENDING" && att.arrivalConfirmedAt == null);
     const y1 = await processIncomingMessage({ from: JOHN, body: "YES", provider: "simulated" });
     att = await db.attendance.findUniqueOrThrow({ where: { shiftId: js.id } });
     const firstConfirm = att.arrivalConfirmedAt;
@@ -97,6 +105,25 @@ async function main() {
     await post("/api/gateways/events", { events: [ev("LOCATION_CHECK", fix(25), new Date())] }, gt);
     att = await db.attendance.findUniqueOrThrow({ where: { shiftId: js.id } });
     check("a second YES and another fix do not re-confirm arrival", att.arrivalConfirmedAt?.getTime() === firstConfirm?.getTime() && (await db.shiftCheckIn.count({ where: { shiftId: js.id, type: "ARRIVAL_CONFIRMED" } })) === 1);
+
+    console.log("3b. Automatic GPS attendance on: an Android guard's fix at the start is presence, with no SMS and no call");
+    await saveSettings({ "checkin.autoGps": "true" });
+    await settle();
+    const MARY = "+263779900803";
+    const mary = await db.guard.create({ data: { guardNo: "G-E2EI3", firstName: "Mary", lastName: "Integration", phone: MARY, nationalId: "E2EI-3", dateEmployed: new Date(), homeLocationId: site.id, deviceKind: "ANDROID_GUARD" } });
+    const mdev = await createGateway({ deviceName: "E2E-INT Mary's phone", phoneNumber: MARY, mode: "GUARD", guardId: mary.id, actor });
+    const mt = (await post("/api/gateways/activate", { activationCode: mdev.activationCode, appVersion: "1.8.0", locationPermission: "background", callPermission: "granted" })).json.deviceToken as string;
+    const mStart = subMinutes(new Date(), 2);
+    const ms = await db.shift.create({ data: { guardId: mary.id, locationId: site.id, supervisorId: admin.id, startAt: mStart, endAt: addHours(mStart, 12), durationMinutes: 720, status: "AWAITING_ARRIVAL", pendingPrompt: "ARRIVAL", arrivalSmsSentAt: mStart, attendance: { create: {} } } });
+    const mFixAt = new Date();
+    await post("/api/gateways/events", { sentAt: new Date().toISOString(), events: [{ eventId: `e2e-int-${randomUUID()}`, eventType: "LOCATION_CHECK", timestamp: mFixAt.toISOString(), shiftId: ms.id, siteId: site.id, geofenceRadiusM: SITE.radius, ...fix(20) }] }, mt);
+    const mAtt = await db.attendance.findUniqueOrThrow({ where: { shiftId: ms.id } });
+    const mRow = await db.attendanceCheckIn.findUnique({ where: { shiftId: ms.id } });
+    check("the fix inside the site confirms presence on its own, within grace", mRow?.status === "VERIFIED_WITHIN_GRACE" && mRow.callAt === null && mAtt.locationVerification === "VERIFIED" && mAtt.arrivalConfirmedAt != null, `${mRow?.status} ${mAtt.locationVerification}`);
+    const mConfirm = mAtt.arrivalConfirmedAt;
+    const yM = await processIncomingMessage({ from: MARY, body: "YES", provider: "simulated" });
+    const mAtt2 = await db.attendance.findUniqueOrThrow({ where: { shiftId: ms.id } });
+    check("a YES that arrives afterwards is logged, and does not re-confirm or move the arrival", mAtt2.arrivalConfirmedAt?.getTime() === mConfirm?.getTime() && (await db.shiftCheckIn.count({ where: { shiftId: ms.id, type: "ARRIVAL_CONFIRMED" } })) === 0, JSON.stringify(yM));
 
     console.log("2. App and SMS status messages share one workflow without duplicating each other");
     await db.shift.update({ where: { id: js.id }, data: { pendingPrompt: "WELFARE", welfareSmsSentAt: new Date() } });
