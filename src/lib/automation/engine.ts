@@ -35,13 +35,14 @@ export type TickReport = {
   locationEscalated: number;
   checkInsOpened: number;
   checkInsEscalated: number;
+  arrivalRetried: number;
   errors: string[];
 };
 
 let running = false;
 
 export async function runAutomationTick(now = new Date()): Promise<TickReport> {
-  const report: TickReport = { at: now.toISOString(), recurrencesCreated: 0, arrivalSent: 0, remindersSent: 0, escalated: 0, welfareSent: 0, welfareMissed: 0, handoverNotices: 0, completionSent: 0, completionTimedOut: 0, missed: 0, gatewaysOffline: 0, locationOverdue: 0, locationEscalated: 0, checkInsOpened: 0, checkInsEscalated: 0, errors: [] };
+  const report: TickReport = { at: now.toISOString(), recurrencesCreated: 0, arrivalSent: 0, remindersSent: 0, escalated: 0, welfareSent: 0, welfareMissed: 0, handoverNotices: 0, completionSent: 0, completionTimedOut: 0, missed: 0, gatewaysOffline: 0, locationOverdue: 0, locationEscalated: 0, checkInsOpened: 0, checkInsEscalated: 0, arrivalRetried: 0, errors: [] };
   if (running) {
     report.errors.push("tick already running");
     return report;
@@ -88,6 +89,15 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
       } catch (e) {
         report.errors.push(`arrival ${s.id}: ${(e as Error).message}`);
       }
+    }
+
+    // 2b. arrival texts the provider refused. The shift already counts as prompted (the reminder
+    // timing runs from the first attempt), but a guard who never received the question cannot be
+    // expected to answer it, so the text is sent again: at most three sends, five minutes apart.
+    try {
+      report.arrivalRetried = await retryFailedArrivals(now);
+    } catch (e) {
+      report.errors.push(`arrival retry: ${(e as Error).message}`);
     }
 
     // 3. arrival reminder
@@ -231,6 +241,8 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
     } catch (e) {
       report.errors.push(`location ${(e as Error).message}`);
     }
+    // 12b. tell the control room, once an hour, when the SMS provider is refusing messages
+    try { await alertOnFailingSms(now); } catch (e) { report.errors.push(`sms alert ${(e as Error).message}`); }
     // 13. location requests to guard phones past their deadline become EXPIRED (never left pending for ever)
     try { await expireStaleRequests(now); } catch (e) { report.errors.push(`location requests ${(e as Error).message}`); }
   } finally {
@@ -243,7 +255,57 @@ let timer: NodeJS.Timeout | null = null;
 export function startInProcessScheduler(intervalMs = 60_000) {
   if (timer) return;
   console.log(`[automation] in-process scheduler started, every ${intervalMs / 1000}s`);
-  const tick = () => runAutomationTick().then((r) => { if (r.errors.length) console.error("[automation]", r.errors); }).catch((e) => console.error("[automation] tick failed", e));
+  // Through the shared lease, so this timer and a cron or heartbeat run never overlap.
+  const tick = () => import("./scheduler")
+    .then((m) => m.runScheduledTick("in-process"))
+    .then((r) => { if (r.ran && r.report.errors.length) console.error("[automation]", r.report.errors); })
+    .catch((e) => console.error("[automation] tick failed", e));
   timer = setInterval(tick, intervalMs);
   setTimeout(tick, 5_000);
+}
+
+export const ARRIVAL_MAX_SENDS = 3;
+const ARRIVAL_RETRY_MINUTES = 5;
+
+/** Re-send an arrival text whose last attempt failed. Returns how many were re-sent. */
+export async function retryFailedArrivals(now = new Date()): Promise<number> {
+  const shifts = await db.shift.findMany({
+    where: { status: "AWAITING_ARRIVAL", pendingPrompt: "ARRIVAL", arrivalReminderSentAt: null, endAt: { gt: now }, attendance: { arrivalConfirmedAt: null } },
+    include: shiftInclude, take: 200,
+  });
+  let resent = 0;
+  for (const s of shifts) {
+    const sends = await db.smsMessage.findMany({ where: { shiftId: s.id, direction: "OUTBOUND", type: "ARRIVAL" }, orderBy: { createdAt: "desc" }, take: ARRIVAL_MAX_SENDS + 1 });
+    const last = sends[0];
+    if (!last || last.status !== "FAILED") continue;
+    if (sends.length >= ARRIVAL_MAX_SENDS) continue;
+    if (now.getTime() - last.createdAt.getTime() < ARRIVAL_RETRY_MINUTES * 60_000) continue;
+    const msg = await sendTemplated(s, "ARRIVAL", "ARRIVAL");
+    await recordEvent(s.id, s.guardId, "ARRIVAL_SMS_SENT", { at: now, note: `Arrival check sent again (attempt ${sends.length + 1} of ${ARRIVAL_MAX_SENDS}): the previous text was refused${last.error ? ` (${last.error})` : ""}.${msg.status === "FAILED" ? " This attempt failed too." : ""}`, smsMessageId: msg.id });
+    resent++;
+  }
+  return resent;
+}
+
+/**
+ * One CRITICAL notification an hour while outbound texts are failing. Without it, an empty SMS
+ * account looks exactly like guards who are not replying: the portal shows shifts awaiting arrival
+ * and nobody learns the question was never delivered.
+ */
+export async function alertOnFailingSms(now = new Date()): Promise<boolean> {
+  const since = new Date(now.getTime() - 15 * 60_000);
+  const failed = await db.smsMessage.findFirst({ where: { direction: "OUTBOUND", status: "FAILED", createdAt: { gte: since } }, orderBy: { createdAt: "desc" } });
+  if (!failed) return false;
+  // The newest failure may carry no reason; the provider's words are what tell someone what to fix.
+  const explained = (await db.smsMessage.findFirst({ where: { direction: "OUTBOUND", status: "FAILED", createdAt: { gte: since }, error: { not: null } }, orderBy: { createdAt: "desc" } })) ?? failed;
+  const recent = await db.notification.findFirst({ where: { type: "SMS_FAILING", createdAt: { gte: new Date(now.getTime() - 60 * 60_000) } } });
+  if (recent) return false;
+  const count = await db.smsMessage.count({ where: { direction: "OUTBOUND", status: "FAILED", createdAt: { gte: since } } });
+  await notify({
+    type: "SMS_FAILING", severity: "CRITICAL",
+    title: "Text messages are not being sent",
+    body: `${count} outbound ${count === 1 ? "text has" : "texts have"} failed in the last 15 minutes. Latest reason: ${explained.error ?? "none given"}. Guards are not receiving arrival, welfare or completion checks until this is fixed.`,
+    url: "/sms",
+  });
+  return true;
 }

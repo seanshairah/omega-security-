@@ -67,7 +67,7 @@ export async function regenerateActivationCode(id: string, actor: { userId: stri
   return updated;
 }
 
-export type DeviceInfo = { appVersion?: string; androidVersion?: string; deviceModel?: string; batteryLevel?: number; networkType?: string; locationPermission?: string; callPermission?: string; monitoringState?: string; mockLocation?: boolean; lastLocation?: { latitude: number; longitude: number; accuracyM?: number; at?: string; state?: string }; configVersion?: string;
+export type DeviceInfo = { appVersion?: string; androidVersion?: string; deviceModel?: string; batteryLevel?: number; networkType?: string; locationPermission?: string; callPermission?: string; placeCallPermission?: string; monitoringState?: string; mockLocation?: boolean; lastLocation?: { latitude: number; longitude: number; accuracyM?: number; at?: string; state?: string }; configVersion?: string;
   // Stage 1/3 diagnostics (all optional; older app versions do not send them)
   shiftState?: string; gpsState?: string; gpsReason?: string | null; syncState?: string; queuedEvents?: number; failedEvents?: number; oldestPendingSeconds?: number | null; lastEventSyncAt?: string | null; lastSyncAttemptAt?: string | null; lastSyncError?: string | null; lastSyncTrigger?: string | null; secureStorage?: boolean; buildType?: string };
 
@@ -104,6 +104,7 @@ function deviceInfoData(info: DeviceInfo) {
     ...(info.networkType ? { networkType: String(info.networkType).slice(0, 20) } : {}),
     ...(info.locationPermission ? { locationPermission: String(info.locationPermission).slice(0, 30) } : {}),
     ...(info.callPermission ? { callPermission: String(info.callPermission).slice(0, 30) } : {}),
+    ...(info.placeCallPermission ? { placeCallPermission: String(info.placeCallPermission).slice(0, 30) } : {}),
     ...(info.monitoringState ? { monitoringState: String(info.monitoringState).slice(0, 30) } : {}),
     ...(info.mockLocation === true ? { mockLocationSeen: true } : {}),
   };

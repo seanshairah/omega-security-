@@ -36,6 +36,10 @@ export type NotifyInput = {
     | "STATUS_UPDATE"
     | "SHIFT_OK"
     | "SHIFT_HANDOVER"
+    | "SMS_FAILING"
+    | "CHECK_IN_CALL_OUTSTANDING"
+    | "CLIENT_NOTIFICATION_APPROVAL"
+    | "CALL_REQUEST_FAILED"
     | "GENERAL";
   severity?: NotificationSeverity;
   title: string;
