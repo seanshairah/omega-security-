@@ -1,0 +1,118 @@
+# Distributing the Android app
+
+There is no Play Store. Guards install the app from this portal and update from it. That makes two
+things true that a Play listing would otherwise handle:
+
+- **The signing key is the app's identity.** It is what stops someone else's build installing over
+  yours, and it is permanent — change it later and every handset needs uninstall-and-reinstall.
+- **Nothing updates by itself.** A phone only learns a newer build exists because the server tells
+  it on the heartbeat.
+
+## Publishing a release
+
+```
+npm run android:release      # build the signed APK
+npm run apk:manifest         # describe it for the portal
+git add artifacts/android/ && git commit && git push
+```
+
+`scripts/dev/apk-manifest.mjs` writes `artifacts/android/release.json`: version name and code,
+applicationId, minSdk, size, sha256, and **the signing certificate**. The deployment host has no
+Android SDK, so these facts are extracted at build time and committed next to the APK.
+`next.config.ts` traces both files into the serverless bundle.
+
+## The portal refuses a debug-signed build
+
+The Android debug key ships with the SDK. Anyone can sign an APK with it, and a phone that accepted
+one would accept the next — so `/api/app/download` returns `409` rather than the bytes, and the
+devices page says why instead of looking as though no build exists.
+
+```
+Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
+```
+
+`ALLOW_DEBUG_SIGNED_APK=true` opens the gate for a test handset. It must be exactly `true`, and it
+is never right in production.
+
+## Creating the keystore
+
+Once, on a machine you control. **Keep it somewhere it cannot be lost** — losing it means every
+guard's phone needs the app uninstalled and reinstalled, because Android will refuse an update
+signed with a different key.
+
+```
+keytool -genkeypair -v \
+  -keystore omega-release.jks \
+  -alias omega \
+  -keyalg RSA -keysize 4096 -validity 10000 \
+  -dname "CN=Omega Protection Services, O=Omega Protection Services, L=Harare, C=ZW"
+```
+
+Then, in `android/local.properties` (never committed) or as environment variables:
+
+```
+ANDROID_KEYSTORE_PATH=/secure/path/omega-release.jks
+ANDROID_KEYSTORE_PASSWORD=…
+ANDROID_KEY_ALIAS=omega
+ANDROID_KEY_PASSWORD=…
+```
+
+`android/app/build.gradle.kts` picks these up automatically. Without them the release build falls
+back to the debug key and logs a warning.
+
+Verify what you built before shipping it:
+
+```
+$ANDROID_SDK_ROOT/build-tools/*/apksigner verify --print-certs \
+  artifacts/android/security-gateway-release.apk
+```
+
+## Installing on a phone
+
+1. Sign in to the portal on the phone, open **Devices**, tap **Download APK**.
+2. Android asks to allow installs from the browser — this is per-source, so it is asked once.
+3. Install, open the app, enter the activation code from **Devices → Register device**.
+
+### The test build must be uninstalled first
+
+The debug build has `applicationIdSuffix = ".debug"`, so `zw.co.omega.gateway.debug` is a
+*different app* from `zw.co.omega.gateway`. Installing the release will not replace it; both will
+run and both will report. Uninstall the debug build before installing the release.
+
+It also carries `android:debuggable="true"` and allows cleartext HTTP, so its stored credentials can
+be read over USB. It does not belong on a guard's phone.
+
+## Updates
+
+Every heartbeat response carries the current release:
+
+```json
+{ "app": { "versionName": "1.7.0", "versionCode": 8, "sha256": "…", "downloadUrl": "/api/app/download" } }
+```
+
+It is omitted entirely when the build is not distributable, so a phone is never pointed at a
+download that will be refused.
+
+The devices page marks any phone whose reported `appVersion` differs from the published release, and
+the banner counts them. Phones report their version on every heartbeat, so the list is current
+without anyone asking.
+
+## Endpoints
+
+| | |
+|---|---|
+| `GET /api/app/version` | What is published, and whether it can be handed out. Admin session or device token. |
+| `GET /api/app/download` | The APK. Same auth. `409` when the build is not distributable. `no-store`, since the URL is stable across versions. |
+
+Both refuse unauthenticated callers: the APK carries the activation flow and should not be a public
+download.
+
+## Checks
+
+```
+npm test                                  # includes tests/app-release.test.ts
+node scripts/dev/app-release-e2e.mjs      # refusals and the portal's wording
+```
+
+The e2e asserts the refusals rather than the happy path, because the refusals are what protect the
+fleet: an unauthenticated download, a debug-signed build, and APK bytes leaking on a refusal.

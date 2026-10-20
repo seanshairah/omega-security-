@@ -7,6 +7,14 @@ const nextConfig: NextConfig = {
   // Self-contained server bundle for the Docker image (copied from .next/standalone); harmless on Vercel.
   output: "standalone",
   reactStrictMode: true,
+  // There is no Play Store: guards install and update from /api/app/download, so the APK and the
+  // manifest describing it have to travel with the serverless bundle. Only files a route imports
+  // are traced automatically, and these are read at runtime by path.
+  outputFileTracingIncludes: {
+    "/api/app/download": ["./artifacts/android/security-gateway-release.apk", "./artifacts/android/release.json"],
+    "/api/app/version": ["./artifacts/android/release.json"],
+    "/api/gateways/heartbeat": ["./artifacts/android/release.json"],
+  },
   serverExternalPackages: ["@prisma/client", "@prisma/adapter-neon", "@neondatabase/serverless", "ws", "https-proxy-agent", "bcryptjs", "web-push"],
   // Security headers for every response. HSTS only in production (local http must keep working).
   async headers() {

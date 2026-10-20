@@ -1,0 +1,12 @@
+{
+  "file": "security-gateway-release.apk",
+  "applicationId": "zw.co.omega.gateway",
+  "versionName": "1.6.0",
+  "versionCode": 7,
+  "minSdk": 24,
+  "sizeBytes": 1943781,
+  "sha256": "586399fc2b2ddc49601b55e40c2be561d2459c62830cff4a027b75608324bb73",
+  "signer": "C=US, O=Android, CN=Android Debug",
+  "debugSigned": true,
+  "builtAt": "2026-10-20T07:54:40.623Z"
+}
