@@ -12,7 +12,7 @@
             </LinearLayout>
         </LinearLayout>
 
-        <Button android:id="@+id/emergency" style="@style/Button.Emergency" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="@string/emergency_button" app:icon="@drawable/ic_warning" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/emergency" style="@style/Button.Emergency" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:text="@string/emergency_button" app:icon="@drawable/ic_warning" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:paddingStart="4dp" android:paddingEnd="4dp" android:text="@string/emergency_long_hint" android:textColor="@color/ink2" android:textSize="13sp" />
         <TextView android:id="@+id/feedback" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:background="@drawable/bg_banner_green" android:padding="14dp" android:textColor="@color/ink" android:textSize="14sp" android:visibility="gone" />
 

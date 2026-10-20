@@ -1,37 +1,62 @@
-# Android UI (v1.7)
+# Android UI (v1.8)
 
-Visual language: off-white background, white 16 dp-radius cards with a soft shadow, one icon per card in a tinted circle (green verified · amber unknown/waiting · red emergency/outside · grey off), bold headline per card, a two-column stat box in the GPS and sync cards, a full-width red EMERGENCY button with a warning icon, quick actions as full-width 64 dp rows, filled green primary buttons and outlined secondary ones, all ≥ 48 dp tall. Material Components (Views/XML); no new UI framework. Every control is mapped to its real handler in `ANDROID_UI_AUDIT.md`.
+Material 3 (Views/XML, `Theme.Material3.Light.NoActionBar`), light only: off-white ground, white
+cards with a hairline outline and 16 dp corners, sentence-case buttons, status chips (a soft tinted
+pill with a dot and one or two words), Material Symbols icons. Every target a finger has to hit is
+at least 48 dp. Every control calls the handler it called in v1.7 (see `ANDROID_UI_AUDIT.md`).
 
-One APK, two dashboards chosen by the device's mode. Both are a single scrolling column of cards; each card states one fact so that *device offline*, *GPS unknown*, *outside site*, *queued* and *acknowledged* can never be read as each other.
+One APK, two home screens chosen by the device's mode. The drawing lives in `ui/HomeScreen.kt` and
+works from a `HomeFacts` value that MainActivity reads from the phone, so the same code can be fed
+made-up facts for screenshots (below).
 
-## Guard mode
+## Home, guard mode (top to bottom)
 
-| Card | Shows | Actions |
+| Area | Shows | Actions |
 |---|---|---|
-| **Connection** | ONLINE / OFFLINE / REVOKED, network type, guard name, the app-state line (connected, no internet with n saved, permission needed, device revoked) | Grant permissions / Allow running in background appear only when needed; **Diagnostics** opens Settings |
-| **Quick actions** | the red **EMERGENCY** button; Need assistance · Shift going well · More… as full-width rows; "n alert(s) waiting for operations" while any is unacknowledged | EMERGENCY, Need assistance and Shift going well are sent **from the dashboard** through the shared `AlertFlow` (confirmation for emergency, message dialog for assistance); a feedback banner under the button says delivered / saved on the phone, with or without a position; More… opens the Alerts screen |
-| **Shift** | ON SHIFT HH:MM–HH:MM / UPCOMING / NO SHIFT; **Duty site** with radius, shift-specific fence, TEST-coordinates warning, config version | — |
-| **GPS verification** | icon + headline (Inside the site / Outside reading · confirming / Outside the site / Location not verified / Checking location… / Not on shift) with the reason underneath; a stat box with LAST CHECK (time, distance, ±accuracy) and ACCURACY (±m vs the limit) in two columns, and STATUS (Verified / Not verified / Outside / Off, plus the location permission) on its own full-width line (poor accuracy with the measured ±m vs the limit, no fix, location off, permission, site has no coordinates, boundary); **Monitoring**: on every n min (offline too) / outside updating every n min / battery saver / will stop with the screen off; **Last check** with time, verdict, distance and ±accuracy to one decimal; location permission line | **Check location now** (joins a running check, never cancels it) |
-| **Sync** | UP TO DATE / SENDING / QUEUED / NO INTERNET n saved / RETRYING / rejected events; pending and rejected counts; last event sync and last heartbeat in a two-column stat box below | **Sync now** (outbox + heartbeat; never touches GPS) |
-| **Sent to operations** | the last four alerts, status messages and calls with their delivery / acknowledgement state | **See all** → Alerts screen |
-| **Device** | name, phone, registration site ("registered at", distinct from the duty site), app version; battery with saver flag, background allowed/restricted, model | — |
+| **Header** (fixed) | guard name; "Guard phone · Mobile data"; a chip: Online / No internet / Reconnecting / Action needed / Revoked | settings icon → Diagnostics |
+| **Attention** (only when needed) | one banner: revoked, permission missing, offline with n events saved, battery saving | Grant permissions / Allow running in background, only when they apply |
+| **Shift** (the primary area) | chip On shift / Next shift / No shift; the hours in 30 sp; "Ends tomorrow at 06:00" or "Today · location checks begin 10 minutes before"; duty site with radius, shift-specific fence or TEST coordinates; a row with the phone's last reading: inside the site at HH:MM / checking / outside · confirming / outside · operations told / not verified yet | — |
+| **Primary actions** | EMERGENCY (76 dp, red); Need assistance · Shift going well · More… as 56 dp rows; "n alerts waiting for operations" | sent through `AlertFlow`, as before |
+| **Location** | headline and reason; one line: last check, distance from the site, ±accuracy and the limit; how often it checks | Check location now |
+| **Sent to operations** | the last three alerts and requests with their delivery or acknowledgement | See all → Alerts screen |
+| **Sync footer** (fixed) | Up to date / Waiting to send / Saved on the phone / Retrying / Device revoked, with when the last event went and when the server last answered | Sync now (outbox and heartbeat; never touches GPS) |
 
-## Operations gateway mode
+The presence row is worded as **the phone's reading**, never as the attendance verdict. The server
+decides attendance (automatic GPS check-in, see `AUTOMATIC_ATTENDANCE.md`) and the portal shows it.
 
-| Card | Shows | Actions |
-|---|---|---|
-| **Connection** | as above, with "Operations gateway phone" | — |
-| **Call monitoring** | ACTIVE / NOT MONITORING (permission) / PARTIAL (no call log); last call; the last six call events with delivery state (saved on phone / delivered HH:MM / rejected) | — |
-| **Sync** | as above | **Sync now** |
-| **Device** | as above | — |
+## Home, operations gateway mode
+
+Header and attention as above; a call-monitoring card (Monitoring calls / Partly monitoring / Not
+monitoring, why, and the last call); recent call events with delivery state; a note that a call the
+portal asks for opens a screen to confirm and starts only when the operator taps Call; sync footer.
+
+## Diagnostics
+
+Device (name, phone, registration site, app version, battery, background allowance, model; moved
+here from the home screen), connection, server, device id, heartbeat, queue, last error, versions,
+sync engine with the last 15 runs, Test connection, Deactivate.
+
+## Edge to edge
+
+Android 15 draws every app edge to edge, and the app targets SDK 35. Every screen pads itself with
+`ui/Insets.kt`: the home screen takes the status bar on its root and the navigation bar on the sync
+footer, so the footer's white runs behind the gesture bar; the other screens take both on the root.
+
+## Screenshots without a phone
+
+    cd android && ./gradlew -Pscreenshots :app:recordPaparazziDebug
+
+renders `src/screenshotTest` with Paparazzi (layoutlib on the JVM) into `app/src/test/snapshots/images`:
+the guard home on shift, outside, next shift, permission needed; at 393 dp, at 320 dp (offline with
+events queued, and the whole screen top to bottom), and at 1.3× text; operations mode; and the other
+screens unbound. The plugin is applied only with `-Pscreenshots`, so normal builds do not change.
+
+These are renders, not a device: no GPS, no service, no real insets, no OEM font. The redesign has
+**not been checked on a physical phone**; see the device checklist in `RELEASE_READINESS.md`.
 
 ## Alerts screen (guard mode)
 
 EMERGENCY (72 dp, red, confirmation dialog) · Need assistance · Report incident · Security alert · Running late · Shift going well · Status update · Shift handover · Call operations · a feedback line after each send (sent with/without position, or SAVED ON THE PHONE · NOT yet received) · the full history with states · privacy line.
-
-## Settings (Diagnostics)
-
-Server, device id, connection, heartbeat interval, queue, last error, app and Android versions; **Sync engine** block (state, counts, last sync, last attempt and trigger, next retry, last error, last 15 runs); Test connection; Deactivate.
 
 ## Design rules kept
 

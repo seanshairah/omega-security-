@@ -27,6 +27,7 @@ class SettingsActivity : AppCompatActivity() {
         prefs = Prefs(this)
         b = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Insets.applySystemBars(b.root)
         b.back.setOnClickListener { finish() }
         b.test.setOnClickListener { testConnection() }
         b.deactivate.setOnClickListener { confirmDeactivate() }
@@ -37,6 +38,12 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() { super.onResume(); render() }
 
     private fun render() {
+        val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+        val bat = DeviceInfo.batteryLevel(this)
+        val bgAllowed = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && pm.isIgnoringBatteryOptimizations(packageName)
+        b.deviceName.text = prefs.deviceName.ifBlank { "—" }
+        b.deviceLine.text = getString(R.string.device_line, prefs.phoneNumber.ifBlank { "—" }, prefs.locationName.ifBlank { getString(R.string.head_office) }, DeviceInfo.appVersion())
+        b.healthLine.text = getString(R.string.health_line, if (bat >= 0) "$bat%" else "—", if (prefs.batterySaver) getString(R.string.health_saver) else "", if (bgAllowed) getString(R.string.health_bg_ok) else getString(R.string.health_bg_restricted), DeviceInfo.model())
         b.serverUrl.text = prefs.serverUrl
         b.deviceId.text = prefs.deviceId ?: "—"
         b.appVersion.text = DeviceInfo.appVersion()

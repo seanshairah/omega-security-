@@ -34,6 +34,7 @@ class PermissionsActivity : AppCompatActivity() {
         prefs = Prefs(this)
         b = ActivityPermissionsBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Insets.applySystemBars(b.root)
         b.location.setOnClickListener { launcher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) }
         b.background.setOnClickListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))

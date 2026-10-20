@@ -34,6 +34,7 @@ class AlertsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityAlertsBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Insets.applySystemBars(b.root)
         b.back.setOnClickListener { finish() }
         b.emergency.setOnClickListener { guard(it) { AlertFlow.confirmEmergency(this, fb) } }
         b.assistance.setOnClickListener { guard(it) { AlertFlow.askMessage(this, AlertSender.Type.NEED_ASSISTANCE, R.string.alert_assistance, R.string.alert_msg_hint_optional, false, fb) } }

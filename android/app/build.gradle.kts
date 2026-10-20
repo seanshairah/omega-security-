@@ -5,6 +5,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// ./gradlew -Pscreenshots :app:recordPaparazziDebug renders the screens in src/screenshotTest to
+// app/src/test/snapshots. It is a review aid, not a device test: layoutlib is not a phone.
+val screenshots = project.hasProperty("screenshots")
+if (screenshots) apply(plugin = "app.cash.paparazzi")
+
 // Release signing: set ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 // (environment or android/keystore.properties). Without them the release APK is signed with the debug key so it
 // still installs for testing, and the build prints a warning.
@@ -32,8 +37,8 @@ android {
         applicationId = "zw.co.omega.gateway"
         minSdk = 24          // Android 7.0: old phones are the point of this app
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.7.0"
+        versionCode = 9
+        versionName = "1.8.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Default server pre-filled on the activation screen; the user can change it.
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"${System.getenv("GATEWAY_DEFAULT_SERVER_URL") ?: "https://omega-security-gamma.vercel.app"}\"")
@@ -76,7 +81,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { buildConfig = true; viewBinding = true }
     sourceSets["main"].java.srcDirs("src/main/kotlin")
-    sourceSets["test"].java.srcDirs("src/test/kotlin")
+    sourceSets["test"].java.srcDirs(listOfNotNull("src/test/kotlin", if (screenshots) "src/screenshotTest/kotlin" else null))
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 

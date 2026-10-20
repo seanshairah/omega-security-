@@ -297,7 +297,7 @@ function inspectText(node, a, avail, ctx) {
 /** Interactive elements a finger has to land on, measured against Android's 48 dp. */
 function touchTargets(node, ctx) {
   const a = attributes(node);
-  if (node.tag === "Button" || node.tag === "ImageButton" || a.clickable === "true") {
+  if (node.tag === "Button" || node.tag === "com.google.android.material.button.MaterialButton" || node.tag === "ImageButton" || a.clickable === "true") {
     const h = a.layout_height === "wrap_content" ? dp(a.minHeight, 0) : dp(a.layout_height, 0);
     const id = (a.id ?? "").replace(/^@\+?id\//, "");
     if (h > 0 && h < TOUCH_MIN) {

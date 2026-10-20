@@ -26,6 +26,6 @@
     <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
 
     <TextView android:id="@+id/callExpires" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="@color/ink3" android:textSize="13sp" />
-    <Button android:id="@+id/callNow" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" app:icon="@drawable/ic_phone" app:iconGravity="textStart" app:iconTint="@color/surface" />
-    <Button android:id="@+id/callDecline" style="@style/Button.Text" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:minHeight="48dp" android:text="@string/call_decline" />
+    <com.google.android.material.button.MaterialButton android:id="@+id/callNow" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" app:icon="@drawable/ic_phone" app:iconGravity="textStart" app:iconTint="@color/surface" />
+    <com.google.android.material.button.MaterialButton android:id="@+id/callDecline" style="@style/Button.Text" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:minHeight="48dp" android:text="@string/call_decline" />
 </LinearLayout>

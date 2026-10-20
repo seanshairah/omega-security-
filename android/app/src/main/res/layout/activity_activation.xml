@@ -15,7 +15,7 @@
                 <EditText android:id="@+id/code" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:inputType="textCapCharacters|textNoSuggestions" android:maxLength="8" android:textSize="28sp" android:letterSpacing="0.3" android:hint="@string/code_hint" android:autofillHints="" />
                 <!-- Hidden until there is something to say, so the button does not sit in a gap. -->
                 <TextView android:id="@+id/error" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:textColor="@color/critical" android:textSize="13.5sp" android:visibility="gone" />
-                <Button android:id="@+id/activate" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/activate_device" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/activate" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/activate_device" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

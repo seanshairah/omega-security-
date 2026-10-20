@@ -6,6 +6,7 @@
     <color name="surface2">#F4F5F2</color>
     <color name="surface3">#F0F2EE</color>
     <color name="line">#E3E6DF</color>
+    <color name="line_strong">#C9CEC4</color>
     <color name="accent">#2E7D32</color>
     <color name="accent_strong">#1B5E20</color>
     <color name="accent_soft">#E6F2E8</color>
