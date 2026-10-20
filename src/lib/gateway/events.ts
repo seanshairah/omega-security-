@@ -156,6 +156,7 @@ async function applyCallEvent(device: GatewayDevice, ev: IncomingGatewayEvent, a
   if (after === before) return { outcome: `no change (${existing.status})`, callLogId: existing.id };
   const updated = await db.callLog.update({ where: { id: existing.id }, data: { status: after.status, startedAt: after.startedAt, answeredAt: after.answeredAt, endedAt: after.endedAt, durationSeconds: after.durationSeconds } });
   await afterTransition(device, updated, before.status, at);
+  if (device.mode === "OPERATIONS_GATEWAY") { const { correlateCallRequest } = await import("./call-requests"); await correlateCallRequest(updated); }
   return { outcome: `${before.status} → ${after.status}`, callLogId: updated.id };
 }
 
@@ -201,6 +202,8 @@ async function createCall(device: GatewayDevice, ev: IncomingGatewayEvent, at: D
   }
   // A single event can already be terminal (for example a CALL_MISSED arriving first).
   await afterTransition(device, call, "RINGING", at, true);
+  // An outgoing call from an operations phone may be the one the portal asked it to make.
+  if (device.mode === "OPERATIONS_GATEWAY") { const { correlateCallRequest } = await import("./call-requests"); await correlateCallRequest(call); }
   return { outcome: `created ${call.status}${guard ? ` · ${guard.firstName} ${guard.lastName}` : " · unknown caller"}${shift ? " · on live shift" : ""}${checkIn}`, callLogId: call.id };
 }
 

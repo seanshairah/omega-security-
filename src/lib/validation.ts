@@ -58,6 +58,12 @@ export const locationSchema = z.object({
   notifyClientArrival: flag,
   notifyClientWelfare: flag,
   notifyClientCompletion: flag,
+  notifyClientLate: flag,
+  notifyClientAbsent: flag,
+  notifyClientOutside: flag,
+  notifyClientEmergency: flag,
+  clientUpdateEmail: opt(z.string().email("Enter a valid email address")),
+  defaultGatewayId: opt(z.string()),
 }).superRefine((d, ctx) => {
   const e = coordinatePairError(d.latitude, d.longitude);
   if (e) ctx.addIssue({ code: "custom", message: e, path: ["latitude"] });

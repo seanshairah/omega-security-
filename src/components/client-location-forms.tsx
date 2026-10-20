@@ -29,7 +29,7 @@ export function ClientForm({ action, client, submitLabel }: { action: A; client?
 
 const SITE_TYPES = ["Shopping mall", "Warehouse", "Mine", "Construction site", "School", "Office building", "Residential property", "Factory", "Farm", "Other"];
 
-export function LocationForm({ action, location, clients, supervisors, submitLabel, defaultClientId, guardDevices, candidate }: { action: A; location?: Location | null; clients: Client[]; supervisors: User[]; submitLabel: string; defaultClientId?: string; guardDevices?: PickerGuardDevice[]; candidate?: PickerCandidate | null }) {
+export function LocationForm({ action, location, clients, supervisors, submitLabel, defaultClientId, guardDevices, candidate, gateways = [] }: { action: A; location?: Location | null; clients: Client[]; supervisors: User[]; submitLabel: string; defaultClientId?: string; guardDevices?: PickerGuardDevice[]; candidate?: PickerCandidate | null; gateways?: { id: string; deviceName: string }[] }) {
   const l = location;
   return (
     <ActionForm action={action} submitLabel={submitLabel}>
@@ -66,6 +66,19 @@ export function LocationForm({ action, location, clients, supervisors, submitLab
         <Checkbox name="notifyClientArrival" label="Guard has arrived" hint="When the guard confirms arrival." defaultChecked={l?.notifyClientArrival ?? true} />
         <Checkbox name="notifyClientWelfare" label="Everything going well" hint="When the mid-shift welfare check comes back fine." defaultChecked={l?.notifyClientWelfare ?? true} />
         <Checkbox name="notifyClientCompletion" label="Shift ended" hint="When the shift is completed or closed." defaultChecked={l?.notifyClientCompletion ?? true} />
+        <Checkbox name="notifyClientLate" label="Guard running late" hint="After the supervisor has been told, if the guard is still not verified on site." defaultChecked={l?.notifyClientLate ?? false} />
+        <Checkbox name="notifyClientAbsent" label="Guard absent or check-in missed" hint="When the check-in escalates with no evidence the guard is on site." defaultChecked={l?.notifyClientAbsent ?? false} />
+        <Checkbox name="notifyClientOutside" label="Guard outside the site (draft for approval)" hint="Never sent on its own: a supervisor reviews and approves the message first." defaultChecked={l?.notifyClientOutside ?? false} />
+        <Checkbox name="notifyClientEmergency" label="Emergency (draft for approval)" hint="Internal escalation first; the client message waits for a supervisor's approval." defaultChecked={l?.notifyClientEmergency ?? false} />
+        <Field label="Client update email" hint="Optional. Used when an update is sent by email instead of SMS." className="sm:col-span-2"><Input name="clientUpdateEmail" type="email" defaultValue={l?.clientUpdateEmail ?? ""} placeholder="security@client.co.zw" /></Field>
+      </FormSection>
+      <FormSection title="Calling guards from the portal" description="The operations phone that rings guards at this site when someone presses Call guard. Any other eligible phone can still be chosen at the time.">
+        <Field label="Default gateway phone" className="sm:col-span-2">
+          <Select name="defaultGatewayId" defaultValue={l?.defaultGatewayId ?? ""}>
+            <option value="">No default: use a phone registered at this site, else any available one</option>
+            {gateways.map((g) => <option key={g.id} value={g.id}>{g.deviceName}</option>)}
+          </Select>
+        </Field>
       </FormSection>
     </ActionForm>
   );

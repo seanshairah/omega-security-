@@ -245,6 +245,8 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
     try { await alertOnFailingSms(now); } catch (e) { report.errors.push(`sms alert ${(e as Error).message}`); }
     // 13. location requests to guard phones past their deadline become EXPIRED (never left pending for ever)
     try { await expireStaleRequests(now); } catch (e) { report.errors.push(`location requests ${(e as Error).message}`); }
+    // 14. call requests nobody acted on lapse; a "dialling" with no call record is reported as failed
+    try { const { expireCallRequests } = await import("@/lib/gateway/call-requests"); await expireCallRequests(now); } catch (e) { report.errors.push(`call requests ${(e as Error).message}`); }
   } finally {
     running = false;
   }

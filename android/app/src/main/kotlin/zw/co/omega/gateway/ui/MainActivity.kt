@@ -92,7 +92,8 @@ class MainActivity : AppCompatActivity() {
     /** Guard mode: the explanatory onboarding screen. Operations mode: the system dialog. */
     private fun openPermissions() {
         if (prefs.isGuardMode) { startActivity(Intent(this, PermissionsActivity::class.java)); return }
-        val wanted = mutableListOf(Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG)
+        // CALL_PHONE: so a call the portal asks for dials with one tap instead of opening the dialler.
+        val wanted = mutableListOf(Manifest.permission.READ_PHONE_STATE, Manifest.permission.READ_CALL_LOG, Manifest.permission.CALL_PHONE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) wanted += Manifest.permission.POST_NOTIFICATIONS
         val missing = wanted.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
         if (missing.isNotEmpty()) permissionLauncher.launch(missing.toTypedArray())

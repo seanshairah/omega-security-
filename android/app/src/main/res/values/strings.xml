@@ -285,4 +285,18 @@
         <item quantity="one">NO INTERNET · %1$d event saved on the phone</item>
         <item quantity="other">NO INTERNET · %1$d events saved on the phone</item>
     </plurals>
+
+    <!-- Calls the portal asks an operations phone to place -->
+    <string name="call_request_label">Operations asks you to call</string>
+    <string name="call_request_title">Call %1$s</string>
+    <string name="call_request_text">Operations asked this phone to call. Tap to see who.</string>
+    <string name="call_request_no_reason">No reason given.</string>
+    <string name="call_request_by">Requested by %1$s</string>
+    <string name="call_request_by_ops">Requested from the operations portal</string>
+    <string name="call_request_expires">Expires in %1$d s</string>
+    <string name="call_request_expired">This request has expired. Nothing was dialled.</string>
+    <string name="call_now">Call now</string>
+    <string name="call_open_dialler">Open the dialler</string>
+    <string name="call_decline">Not now</string>
+    <string name="call_permission_note">This phone is not allowed to place calls itself, so the dialler opens with the number ready. Press Call there. Allow "Phone calls" in Settings to dial with one tap.</string>
 </resources>

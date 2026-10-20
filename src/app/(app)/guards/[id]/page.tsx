@@ -22,6 +22,7 @@ import { GuardWorkspace } from "@/components/guards/guard-workspace";
 import { guardSnapshot } from "@/lib/services/guard-snapshot";
 import { guardActivity } from "@/lib/guard-activity";
 import { audit } from "@/lib/audit";
+import { CallGuardButton } from "@/components/calls/call-guard";
 
 export const metadata = { title: "Guard" };
 
@@ -55,8 +56,11 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
     tab === "history" ? db.auditLog.findMany({ where: { entity: "Guard", entityId: id }, orderBy: { createdAt: "desc" }, take: 40 }) : [],
   ]);
 
-  const actions = can.manageGuards(user) ? (
+  // Calling is open to every role that can see the guard; the rest of the row is for admins.
+  const actions = (
     <ButtonGroup>
+      {g.active && <CallGuardButton guardId={g.id} guardName={name} size="sm" />}
+      {can.manageGuards(user) && <>
       <LinkButton href={`/messages/new?guardId=${g.id}`} size="sm">Message</LinkButton>
       {g.watched
         ? <ConfirmButton size="sm" label="Stop watching" title={`Stop watching ${name}?`} body="Their events return to normal priority and they leave the Monitoring page." confirmLabel="Stop watching" action={async () => { "use server"; await setGuardWatched(g.id, false); }} />
@@ -66,8 +70,9 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
       {g.active
         ? <ConfirmButton size="sm" label="Deactivate" variant="danger" title={`Deactivate ${name}?`} body="The guard is archived, not deleted. Future scheduled shifts are cancelled; history is kept." confirmLabel="Deactivate" action={async () => { "use server"; await setGuardActive(g.id, false); }} />
         : <ConfirmButton size="sm" label="Reactivate" title={`Reactivate ${name}?`} body="The guard becomes available for scheduling again." confirmLabel="Reactivate" action={async () => { "use server"; await setGuardActive(g.id, true); }} />}
+      </>}
     </ButtonGroup>
-  ) : null;
+  );
 
   const profile = {
     photoUrl: g.photoUrl, email: g.email, nationalId: g.nationalId, supervisor: g.supervisor?.name ?? null, homeLocation: g.homeLocation ? { id: g.homeLocation.id, name: g.homeLocation.name } : null, address: g.address,

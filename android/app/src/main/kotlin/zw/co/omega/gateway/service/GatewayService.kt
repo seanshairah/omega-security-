@@ -1,5 +1,7 @@
 package zw.co.omega.gateway.service
 
+import zw.co.omega.gateway.model.DeviceCommand
+
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
@@ -55,6 +57,7 @@ class GatewayService : Service() {
     private lateinit var prefs: Prefs
     private lateinit var engine: SyncEngine
     private lateinit var locationRequests: LocationRequestHandler
+    private lateinit var callRequests: CallRequestHandler
     private var phoneReceiver: BroadcastReceiver? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
@@ -65,7 +68,11 @@ class GatewayService : Service() {
         prefs = Prefs(this)
         engine = SyncEngine(this)
         locationRequests = LocationRequestHandler(this, scope, monitor)
-        engine.commandSink = { cmds -> locationRequests.handle(cmds) }
+        callRequests = CallRequestHandler(this, scope)
+        engine.commandSink = { cmds ->
+            locationRequests.handle(cmds.filter { it.type == DeviceCommand.REQUEST_LOCATION })
+            callRequests.handle(cmds.filter { it.type == DeviceCommand.PLACE_CALL })
+        }
         CommandWakeSource.attach { scope.launch { engine.pollCommands() } }
         coordinator = MonitoringCoordinator(
             scope = scope,
@@ -133,10 +140,11 @@ class GatewayService : Service() {
             while (true) {
                 val left = until - System.currentTimeMillis()
                 if (left <= 0) break
-                val poll = if (prefs.isGuardMode && r is SyncEngine.Outcome.Done && pollFailures < 3) prefs.commandPollSeconds * 1000L else left
+                // Both modes poll: a guard phone for location requests, an operations phone for calls.
+                val poll = if (r is SyncEngine.Outcome.Done && pollFailures < 3) prefs.commandPollSeconds * 1000L else left
                 delay(minOf(poll, left))
                 if (until - System.currentTimeMillis() <= 0) break
-                if (prefs.isGuardMode && r is SyncEngine.Outcome.Done) { if (engine.pollCommands()) pollFailures = 0 else pollFailures++ }
+                if (r is SyncEngine.Outcome.Done) { if (engine.pollCommands()) pollFailures = 0 else pollFailures++ }
             }
         }
     }

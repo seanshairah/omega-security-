@@ -33,7 +33,7 @@ class ApiClient(private val baseUrl: String, private val token: String? = null) 
     fun commands(): JSONObject = get("/api/gateways/commands")
 
     /** POST /api/gateways/commands/{id}/ack — "the GPS has started". The result itself travels as an event. */
-    fun ackCommand(id: String, status: String): JSONObject = post("/api/gateways/commands/${java.net.URLEncoder.encode(id, "UTF-8")}/ack", JSONObject().put("status", status))
+    fun ackCommand(id: String, status: String, detail: String? = null): JSONObject = post("/api/gateways/commands/${java.net.URLEncoder.encode(id, "UTF-8")}/ack", JSONObject().put("status", status).apply { detail?.let { put("detail", it) } })
 
     /** GET /api/gateways/config — guard, shift, site, policy. */
     fun config(): JSONObject = get("/api/gateways/config")

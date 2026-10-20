@@ -96,7 +96,8 @@ class SyncEngine(private val context: Context) {
      * rejected so the caller can back off. Never touches the outbox: event sync is independent.
      */
     fun pollCommands(): Boolean {
-        if (!prefs.isActivated || !prefs.isGuardMode || !DeviceInfo.isOnline(context) || prefs.authRejected) return false
+        // Both modes: a guard phone receives location requests, an operations phone call requests.
+        if (!prefs.isActivated || !DeviceInfo.isOnline(context) || prefs.authRejected) return false
         return try {
             val r = ApiClient(prefs.serverUrl, prefs.deviceToken).commands()
             prefs.commandPollSeconds = r.optInt("commandPollSeconds", prefs.commandPollSeconds)

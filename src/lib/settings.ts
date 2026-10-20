@@ -22,6 +22,7 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "general.controlRoomPhone", label: "Control room phone", description: "Quoted in client messages so the client knows who to call.", group: "general", default: "+263 772 100 100", type: "text" },
   // Android call gateway
   { key: "gateway.heartbeatSeconds", label: "Heartbeat interval", description: "Seconds between heartbeats from each gateway phone. Sent to the phone on activation and on every heartbeat.", group: "gateway", default: "120", type: "number" },
+  { key: "calls.requestTtlSeconds", label: "Call request timeout", description: "Seconds the control-room operator has to confirm a call requested from the portal before the request lapses. 30–600.", group: "gateway", default: "120", type: "number" },
   { key: "gateway.commandPollSeconds", label: "Command poll interval", description: "Seconds between a guard phone's checks for operations commands (location requests) while online. 15–300. Shorter means faster answers and more battery/data.", group: "gateway", default: "30", type: "number" },
   { key: "gateway.offlineMinutes", label: "Offline threshold", description: "Minutes without a heartbeat before a gateway is shown as offline and a warning is raised.", group: "gateway", default: "5", type: "number" },
   { key: "gateway.callRetentionDays", label: "Call retention", description: "Days to keep call records. Older records are removed by the automation engine. 0 keeps everything.", group: "gateway", default: "365", type: "number" },

@@ -4,6 +4,7 @@ import { requireUser, can } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { CATEGORY_LABEL, sevTone, statusTone } from "@/lib/services/incidents";
 import { PageHeader, Meta } from "@/components/ui/page";
+import { CallGuardButton } from "@/components/calls/call-guard";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Status } from "@/components/ui/status";
 import { Avatar } from "@/components/ui/avatar";
@@ -42,6 +43,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
     <div>
       <PageHeader title={`${i.incidentNo} · ${CATEGORY_LABEL[i.category]}`} description={`${i.location.name} · ${fmtDateTime(i.occurredAt)} · reported ${i.source === "SMS" ? "by SMS" : i.source === "EMERGENCY" ? "by EMERGENCY SMS" : "by an administrator"}`} actions={can.manageIncidents(user) && (
         <ButtonGroup>
+          {i.guard && i.guard.active && <CallGuardButton guardId={i.guard.id} guardName={`${i.guard.firstName} ${i.guard.lastName}`} shiftId={i.shiftId} incidentId={i.id} />}
           {i.status === "OPEN" && <form action={async () => { "use server"; await acknowledgeIncident(i.id); }}><Button type="submit">Acknowledge</Button></form>}
           {i.status === "RESOLVED" && can.manageGuards(user) && <ConfirmButton size="md" label="Close" title="Close this incident?" body="Closed incidents are final. They stay in reports." confirmLabel="Close" action={async () => { "use server"; await closeIncident(i.id); }} />}
           {i.shiftId && <Link href={`/shifts/${i.shiftId}`} className="inline-flex h-9 items-center px-3.5 text-sm font-medium hover:bg-surface-2">Open shift</Link>}

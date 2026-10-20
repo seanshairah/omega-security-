@@ -4,6 +4,7 @@ import { requireUser, can } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { shiftInclude, STATUS_META, CLOSED_STATUSES } from "@/lib/services/shifts";
 import { PageHeader, Meta } from "@/components/ui/page";
+import { CallGuardButton } from "@/components/calls/call-guard";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Timeline } from "@/components/timeline";
 import { ShiftStatusLabel } from "@/components/shift-status";
@@ -70,13 +71,14 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   return (
     <div>
       <PageHeader title={`${guardName} · ${s.location.name}`} description={`${fmtDate(s.startAt)} · ${fmtTime(s.startAt)}–${fmtTime(s.endAt)} · ${fmtDuration(s.durationMinutes)}`} actions={
-        can.manageShifts(user) && (live || del.canDelete) && (
+        (live || (can.manageShifts(user) && del.canDelete)) && (
           <ButtonGroup>
-            {live && edit.canEdit && <LinkButton href={`/shifts/${s.id}/edit`} size="md">Edit</LinkButton>}
-            {live && !s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Confirm arrival manually" title="Confirm arrival manually?" body={`Record ${guardName} as on post now, for example after a phone call.`} withNote="How was this confirmed?" confirmLabel="Confirm arrival" action={async (note) => { "use server"; await manualArrival(s.id, note); }} />}
-            {live && s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Mark completed" title="Mark this shift completed?" body="Use when the guard confirmed by phone or radio rather than SMS." withNote="Note" confirmLabel="Mark completed" action={async (note) => { "use server"; await manualComplete(s.id, note); }} />}
-            {live && <ConfirmButton size="md" label="Cancel shift" variant="danger" title="Cancel this shift?" body="The guard will no longer receive checks for it. This is recorded on the timeline." withNote="Reason" confirmLabel="Cancel shift" action={async (note) => { "use server"; await cancelShift(s.id, note); }} />}
-            {del.canDelete && <ConfirmButton size="md" label="Delete" variant="danger" title="Delete this shift?" body={DELETE_EXPLAINER} confirmLabel="Delete permanently" action={async () => { "use server"; await deleteShift(s.id); }} />}
+            {live && <CallGuardButton guardId={s.guardId} guardName={guardName} shiftId={s.id} />}
+            {can.manageShifts(user) && live && edit.canEdit && <LinkButton href={`/shifts/${s.id}/edit`} size="md">Edit</LinkButton>}
+            {can.manageShifts(user) && live && !s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Confirm arrival manually" title="Confirm arrival manually?" body={`Record ${guardName} as on post now, for example after a phone call.`} withNote="How was this confirmed?" confirmLabel="Confirm arrival" action={async (note) => { "use server"; await manualArrival(s.id, note); }} />}
+            {can.manageShifts(user) && live && s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Mark completed" title="Mark this shift completed?" body="Use when the guard confirmed by phone or radio rather than SMS." withNote="Note" confirmLabel="Mark completed" action={async (note) => { "use server"; await manualComplete(s.id, note); }} />}
+            {can.manageShifts(user) && live && <ConfirmButton size="md" label="Cancel shift" variant="danger" title="Cancel this shift?" body="The guard will no longer receive checks for it. This is recorded on the timeline." withNote="Reason" confirmLabel="Cancel shift" action={async (note) => { "use server"; await cancelShift(s.id, note); }} />}
+            {can.manageShifts(user) && del.canDelete && <ConfirmButton size="md" label="Delete" variant="danger" title="Delete this shift?" body={DELETE_EXPLAINER} confirmLabel="Delete permanently" action={async () => { "use server"; await deleteShift(s.id); }} />}
           </ButtonGroup>
         )
       } />

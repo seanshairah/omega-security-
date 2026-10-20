@@ -16,6 +16,10 @@ class GatewayApp : Application() {
                 description = "Keeps the Security Gateway running in the background"
                 setShowBadge(false)
             })
+            // Calls the control room asked this phone to make: loud, because someone is waiting.
+            nm.createNotificationChannel(NotificationChannel(CHANNEL_CALLS, "Calls to make", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Calls the operations portal asks this phone to place"
+            })
         }
         // If the phone is activated, make sure the service is up whenever the process starts.
         if (Prefs(this).isActivated) GatewayService.start(this)
@@ -23,5 +27,6 @@ class GatewayApp : Application() {
 
     companion object {
         const val CHANNEL_STATUS = "gateway_status"
+        const val CHANNEL_CALLS = "call_requests"
     }
 }

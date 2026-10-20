@@ -2,7 +2,7 @@ import { after, NextResponse } from "next/server";
 import { authenticateGateway, clientIp, rateLimit } from "@/lib/gateway/auth";
 import { heartbeat, guardDeviceConfig } from "@/lib/gateway/service";
 import { alertsForDevice } from "@/lib/gateway/alerts";
-import { pendingCommandsForDevice, commandPollSeconds } from "@/lib/gateway/location-requests";
+import { commandsForDevice, commandPollSeconds } from "@/lib/gateway/location-requests";
 import { currentRelease, distributable } from "@/lib/app-release";
 import { maybeTickFromHeartbeat } from "@/lib/automation/scheduler";
 
@@ -31,8 +31,9 @@ export async function POST(req: Request) {
   const configVersion = device.mode === "GUARD" ? (await guardDeviceConfig(device)).configVersion : null;
   // Acknowledgements for the alerts this guard sent recently travel back on the heartbeat.
   const alerts = device.mode === "GUARD" ? await alertsForDevice(device) : [];
-  // Operations commands (location requests) ride on the heartbeat too; GET /api/gateways/commands polls them faster.
-  const [commands, pollSeconds] = device.mode === "GUARD" ? await Promise.all([pendingCommandsForDevice(device), commandPollSeconds()]) : [[], null];
+  // Commands ride on the heartbeat too (location requests for a guard phone, call requests for an
+  // operations phone); GET /api/gateways/commands polls them faster.
+  const [commands, pollSeconds] = await Promise.all([commandsForDevice(device), commandPollSeconds()]);
   // There is no Play Store, so a phone only learns an update exists if the server tells it. The
   // heartbeat already runs on its own schedule, so it costs no extra call. Withheld when the build
   // is not distributable, so a phone is never pointed at a download that will be refused.

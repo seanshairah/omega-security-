@@ -234,3 +234,13 @@ export async function recentRequestsForGuard(guardId: string, take = 10, now = n
   await expireStaleRequests(now);
   return db.deviceLocationRequest.findMany({ where: { guardId }, orderBy: { requestedAt: "desc" }, take, include: { requestedBy: { select: { name: true } } } });
 }
+
+/**
+ * Everything a phone should act on: location requests for a guard phone, call requests for an
+ * operations gateway. One list, one poll, whatever the phone's mode.
+ */
+export async function commandsForDevice(device: Pick<GatewayDevice, "id" | "mode">, now = new Date()) {
+  if (device.mode === "GUARD") return pendingCommandsForDevice(device, now);
+  const { callCommandsForDevice } = await import("./call-requests");
+  return callCommandsForDevice(device, now);
+}

@@ -6,6 +6,9 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" android:maxSdkVersion="28" />
+    <!-- Operations phone: dial a call the portal asked for, after the operator taps Call. Never silently. -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- GPS verification during shifts (guard devices). Background location is requested separately on Android 10+. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -45,6 +48,7 @@
         <activity android:name=".ui.PermissionsActivity" android:exported="false" />
         <activity android:name=".ui.SettingsActivity" android:exported="false" android:parentActivityName=".ui.MainActivity" />
         <activity android:name=".ui.AlertsActivity" android:exported="false" android:parentActivityName=".ui.MainActivity" />
+        <activity android:name=".ui.CallConfirmActivity" android:exported="false" android:launchMode="singleTop" android:showWhenLocked="true" android:turnScreenOn="true" android:excludeFromRecents="true" />
 
         <service
             android:name=".service.GatewayService"

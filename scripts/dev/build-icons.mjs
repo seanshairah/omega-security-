@@ -19,8 +19,8 @@ const NAMES = {
   operations: ["sensors", "verified_user", "gpp_maybe", "shield", "report", "warning", "error", "info", "help", "check", "check_circle", "cancel", "flag", "e911_emergency", "medical_services", "visibility", "campaign", "security"],
   location: ["location_on", "location_off", "wrong_location", "where_to_vote", "my_location", "location_searching", "directions_run", "map", "satellite_alt", "layers", "fit_screen", "route", "radar", "pin_drop", "distance", "near_me", "share_location", "travel_explore"],
   time: ["schedule", "calendar_today", "event_available", "event_busy", "timer", "hourglass_top", "pending"],
-  comms: ["call", "phone_in_talk", "phone_callback", "phone_forwarded", "phone_missed", "call_end", "sms", "chat", "forum", "mail", "send", "notifications", "notifications_active", "notifications_off", "dialpad"],
-  device: ["mobile", "devices", "cell_tower", "signal_cellular_alt", "signal_cellular_off", "wifi_off", "battery_full", "battery_5_bar", "battery_3_bar", "battery_1_bar", "battery_alert", "bolt", "cloud_off", "cloud_done", "sync", "refresh"],
+  comms: ["call", "phone_in_talk", "phone_callback", "phone_forwarded", "phone_missed", "call_end", "sms", "chat", "forum", "mail", "send", "notifications", "notifications_active", "notifications_off", "dialpad", "schedule_send", "touch_app", "timer_off", "contact_phone", "outgoing_mail", "mark_email_read", "drafts", "approval", "support_agent"],
+  device: ["mobile", "devices", "cell_tower", "signal_cellular_alt", "signal_cellular_off", "wifi_off", "signal_disconnected", "mobile_arrow_down", "battery_full", "battery_5_bar", "battery_3_bar", "battery_1_bar", "battery_alert", "bolt", "cloud_off", "cloud_done", "sync", "refresh"],
   data: ["bar_chart", "trending_up", "trending_down", "north_east", "south_west", "assignment", "article", "sticky_note_2", "swap_horiz", "content_copy", "download", "edit", "delete", "play_arrow", "fast_forward"],
 };
 
