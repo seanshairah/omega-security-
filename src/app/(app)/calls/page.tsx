@@ -32,7 +32,7 @@ export default async function CallsPage({ searchParams }: { searchParams: Promis
       <AutoRefresh seconds={10} />
       <PageHeader title="Calls" description={`Calls to the gateway phones. Last 30 days: ${metrics.total} calls, ${metrics.missed} missed, ${metrics.unknown} from unknown numbers.`} actions={<a href="/reports/calls" className="inline-flex h-9 items-center rounded-[8px] border border-line bg-surface px-3.5 text-sm font-medium hover:bg-surface-2">Call report</a>} />
       <Card className="mb-4">
-        <CardHeader title="Live" description="Ringing and in-progress calls, then missed calls from the last 24 hours that nobody has handled. Refreshes every 10 seconds." />
+        <CardHeader title="Live" description="Calls in progress, then unhandled missed calls from the last 24 hours." />
         <div className="p-4 pt-0"><LiveCallCards live={live} missed={missed.filter((m) => !live.some((l) => l.id === m.id))} /></div>
       </Card>
       <Segments className="mb-4" items={[{ href: "/calls", label: "All", active: view === "all" }, { href: "/calls?view=missed", label: "Missed", count: counts[0], active: view === "missed", tone: "critical" }, { href: "/calls?view=unknown", label: "Unknown callers", count: counts[1], active: view === "unknown", tone: "warn" }]} />

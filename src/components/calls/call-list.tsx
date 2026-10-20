@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PhoneIncomingIcon, PhoneOutgoingIcon } from "@phosphor-icons/react/dist/ssr";
+import { Icon } from "@/components/ui/icon";
 import type { CallWithRelations } from "@/lib/gateway/calls";
 import { CALL_STATUS_META, fmtCallDuration } from "@/lib/gateway/call-state";
 import { Table, THead, TBody, Empty } from "@/components/ui/table";
@@ -33,7 +33,7 @@ export function CallList({ calls, showGuard = true, showGateway = true, emptyTit
                 <td className="tnum"><Link href={`/calls/${c.id}`} className="font-medium text-ink hover:underline">{fmtDate(c.startedAt)}</Link><span className="block text-[12px] text-ink-3">{fmtTime(c.startedAt)}</span></td>
                 {showGuard && <td><span className="flex items-center gap-2">{c.guard && <Avatar src={c.guard.photoUrl} name={c.guard.firstName} size={24} />}<CallerName c={c} /></span></td>}
                 <td className="tnum text-ink-2">{formatPhone(c.normalizedPhoneNumber)}</td>
-                <td className="text-ink-2"><span className="inline-flex items-center gap-1">{c.direction === "INCOMING" ? <PhoneIncomingIcon size={14} weight="fill" /> : <PhoneOutgoingIcon size={14} weight="fill" />}{c.direction === "INCOMING" ? "Incoming" : "Outgoing"}</span></td>
+                <td className="text-ink-2"><span className="inline-flex items-center gap-1">{c.direction === "INCOMING" ? <Icon name="phone_callback" size={14} filled /> : <Icon name="phone_forwarded" size={14} filled />}{c.direction === "INCOMING" ? "Incoming" : "Outgoing"}</span></td>
                 <td><CallStatusBadge c={c} /></td>
                 <td className="tnum">{c.status === "ENDED" ? fmtCallDuration(c.durationSeconds) : "—"}</td>
                 <td className="text-ink-2">{c.location ? <Link href={`/locations/${c.location.id}`} className="hover:underline">{c.location.name}</Link> : "—"}</td>

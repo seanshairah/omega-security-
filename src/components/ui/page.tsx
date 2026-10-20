@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { Icon } from "@/components/ui/icon";
 
 export function PageHeader({ title, description, actions, className }: { title: string; description?: string; actions?: React.ReactNode; className?: string }) {
   return (
@@ -35,5 +36,23 @@ export function Segments({ items, className }: { items: { href: string; label: s
         </a>
       ))}
     </div>
+  );
+}
+
+/**
+ * Progressive disclosure for operational detail. The screen carries the short label; the rules
+ * behind it (how a fix is measured, what a reason code means) live one click away, next to the
+ * control they describe, instead of in a paragraph every operator reads once and then skips.
+ */
+export function Explainer({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
+  return (
+    <details className={cn("group rounded-[8px] border border-line bg-surface-2/60 text-[12.5px]", className)}>
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 px-2.5 py-1.5 font-medium text-ink-2 hover:text-ink">
+        <Icon name="info" size="sm" className="text-ink-3" />
+        {title}
+        <Icon name="keyboard_arrow_down" size="sm" className="ml-auto text-ink-3 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="space-y-1.5 border-t border-line px-2.5 py-2 text-ink-2">{children}</div>
+    </details>
   );
 }

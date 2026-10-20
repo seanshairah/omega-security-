@@ -22,7 +22,7 @@ async function session(opts) {
   await page.goto(`${BASE}/login`);
   await page.fill("input[name=email]", EMAIL); await page.fill("input[name=password]", PASSWORD);
   await page.click("button[type=submit]"); await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30000 });
-  await page.goto(`${BASE}/locations/new`); await page.waitForSelector("[data-testid=browser-location]", { timeout: 60000 }); await page.waitForSelector(".leaflet-container", { timeout: 60000 }); // Leaflet mounts only after hydration, so handlers are live
+  await page.goto(`${BASE}/locations/new`); await page.waitForSelector("[data-testid=browser-location]", { timeout: 60000 }); await page.waitForSelector(".leaflet-container, canvas.mapboxgl-canvas", { timeout: 60000 }); // Leaflet mounts only after hydration, so handlers are live
   return { ctx, page };
 }
 
@@ -74,7 +74,7 @@ try {
     await ctx.addInitScript(() => { Object.defineProperty(window, "isSecureContext", { get: () => false }); });
     const page = await ctx.newPage();
     await page.goto(`${BASE}/login`); await page.fill("input[name=email]", EMAIL); await page.fill("input[name=password]", PASSWORD); await page.click("button[type=submit]"); await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 30000 });
-    await page.goto(`${BASE}/locations/new`); await page.waitForSelector("[data-testid=browser-location]", { timeout: 60000 }); await page.waitForSelector(".leaflet-container", { timeout: 60000 }); // Leaflet mounts only after hydration, so handlers are live
+    await page.goto(`${BASE}/locations/new`); await page.waitForSelector("[data-testid=browser-location]", { timeout: 60000 }); await page.waitForSelector(".leaflet-container, canvas.mapboxgl-canvas", { timeout: 60000 }); // Leaflet mounts only after hydration, so handlers are live
     await page.waitForFunction(() => /Blocked: not a secure page/.test(document.querySelector("[data-testid=browser-location]")?.textContent ?? ""), null, { timeout: 15000 });
     const msg = await page.textContent("[data-testid=browser-location-message]");
     check("insecure-context guidance names https and localhost and the LAN example", /https/.test(msg) && /localhost:3000/.test(msg) && /172\.20\.10\.3:3000/.test(msg), msg);

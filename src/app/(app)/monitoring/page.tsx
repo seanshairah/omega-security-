@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { EyeIcon, CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
+import { Icon } from "@/components/ui/icon";
 import { requireUser, can } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { shiftInclude, LIVE_STATUSES, STATUS_META } from "@/lib/services/shifts";
@@ -34,9 +34,9 @@ export default async function MonitoringPage() {
   return (
     <div>
       <AutoRefresh seconds={30} />
-      <PageHeader title="Monitoring" description="Guards you are watching closely. Every event for them is highlighted, pushed to your devices, and shown here live. Refreshes every 30 seconds." actions={can.sendSms(user) && guards.length > 0 && <LinkButton href="/messages/new" variant="primary">Message watched guards</LinkButton>} />
+      <PageHeader title="Monitoring" description="Every event for these guards is highlighted here and pushed to your devices." actions={can.sendSms(user) && guards.length > 0 && <LinkButton href="/messages/new" variant="primary">Message watched guards</LinkButton>} />
       {guards.length === 0 ? (
-        <Card><CardBody className="flex flex-col items-center py-14 text-center"><span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-ink-3"><EyeIcon size={20} weight="fill" /></span><p className="text-[14px] font-medium text-ink">Nobody is being watched</p><p className="mt-1 max-w-md text-[13px] text-ink-2">Open a guard and choose Watch to pin them here. Use it for a new recruit, a guard on a warning, or a sensitive site.</p><LinkButton href="/guards" className="mt-4" size="sm">Go to guards</LinkButton></CardBody></Card>
+        <Card><CardBody className="flex flex-col items-center py-14 text-center"><span className="mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-ink-3"><Icon name="visibility" size={20} filled /></span><p className="text-[14px] font-medium text-ink">Nobody is being watched</p><p className="mt-1 max-w-md text-[13px] text-ink-2">Open a guard and choose Watch to pin them here. Use it for a new recruit, a guard on a warning, or a sensitive site.</p><LinkButton href="/guards" className="mt-4" size="sm">Go to guards</LinkButton></CardBody></Card>
       ) : (
         <div className="grid gap-4 xl:grid-cols-2">
           {guards.map((g) => {
@@ -74,7 +74,7 @@ export default async function MonitoringPage() {
                   </div>
 
                   <div className="mt-4">
-                    <div className="mb-2 flex items-center justify-between"><span className={cn("text-[11px] font-semibold uppercase tracking-[0.06em]", tone === "critical" ? "text-critical" : "text-ink-3")}>Recent activity</span>{shift && <Link href={`/shifts/${shift.id}`} className="inline-flex items-center gap-1 text-[12px] font-medium text-accent-strong hover:underline">Full timeline <CaretRightIcon size={11} weight="bold" /></Link>}</div>
+                    <div className="mb-2 flex items-center justify-between"><span className={cn("text-[11px] font-semibold uppercase tracking-[0.06em]", tone === "critical" ? "text-critical" : "text-ink-3")}>Recent activity</span>{shift && <Link href={`/shifts/${shift.id}`} className="inline-flex items-center gap-1 text-[12px] font-medium text-accent-strong hover:underline">Full timeline <Icon name="chevron_right" size={11} filled /></Link>}</div>
                     <Timeline events={ev} showDates />
                   </div>
                 </CardBody>

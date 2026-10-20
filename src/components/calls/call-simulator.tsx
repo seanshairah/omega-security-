@@ -38,7 +38,7 @@ export function CallSimulator({ gateways, guards }: { gateways: Gateway[]; guard
 
   return (
     <Card>
-      <CardHeader title="Call gateway simulator" description="Pretend a phone number is calling the gateway phone. Events go through the same intake as the Android app, including deduplication and guard matching." />
+      <CardHeader title="Call gateway simulator" description="Pretend a number is calling the gateway phone. Events go through the same intake as the real app." />
       <CardBody>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field label="Gateway"><Select value={gatewayId} onChange={(e) => setGatewayId(e.target.value)}>{gateways.map((g) => <option key={g.id} value={g.id}>{g.deviceName}{g.location ? ` · ${g.location}` : ""} · {g.status.toLowerCase()}</option>)}</Select></Field>

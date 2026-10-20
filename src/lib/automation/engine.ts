@@ -12,6 +12,7 @@ import { notify } from "@/lib/notifications";
 import { sendTemplated } from "@/lib/sms/outbound";
 import { sendClientUpdate } from "@/lib/sms/client-updates";
 import { materialiseRecurrences, recordEvent, shiftInclude, LIVE_STATUSES, ON_SITE_STATUSES } from "@/lib/services/shifts";
+import { runCheckInStep } from "@/lib/attendance/check-in-service";
 import { fmtTime } from "@/lib/time";
 import { gatewayMaintenance } from "@/lib/gateway/service";
 import { locationMaintenance } from "@/lib/gateway/location-events";
@@ -32,13 +33,15 @@ export type TickReport = {
   gatewaysOffline: number;
   locationOverdue: number;
   locationEscalated: number;
+  checkInsOpened: number;
+  checkInsEscalated: number;
   errors: string[];
 };
 
 let running = false;
 
 export async function runAutomationTick(now = new Date()): Promise<TickReport> {
-  const report: TickReport = { at: now.toISOString(), recurrencesCreated: 0, arrivalSent: 0, remindersSent: 0, escalated: 0, welfareSent: 0, welfareMissed: 0, handoverNotices: 0, completionSent: 0, completionTimedOut: 0, missed: 0, gatewaysOffline: 0, locationOverdue: 0, locationEscalated: 0, errors: [] };
+  const report: TickReport = { at: now.toISOString(), recurrencesCreated: 0, arrivalSent: 0, remindersSent: 0, escalated: 0, welfareSent: 0, welfareMissed: 0, handoverNotices: 0, completionSent: 0, completionTimedOut: 0, missed: 0, gatewaysOffline: 0, locationOverdue: 0, locationEscalated: 0, checkInsOpened: 0, checkInsEscalated: 0, errors: [] };
   if (running) {
     report.errors.push("tick already running");
     return report;
@@ -61,6 +64,16 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
       report.recurrencesCreated = await materialiseRecurrences(horizon, now);
     } catch (e) {
       report.errors.push(`recurrence: ${(e as Error).message}`);
+    }
+
+    // 1b. call check-in: open expectations for shifts about to start, escalate the ones out of time
+    try {
+      const r = await runCheckInStep(now);
+      report.checkInsOpened = r.opened;
+      report.checkInsEscalated = r.escalated;
+      report.errors.push(...r.errors);
+    } catch (e) {
+      report.errors.push(`check-in: ${(e as Error).message}`);
     }
 
     // 2. arrival check

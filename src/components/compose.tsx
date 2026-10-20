@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { PaperPlaneRightIcon, ChatTextIcon, WhatsappLogoIcon, EnvelopeSimpleIcon } from "@phosphor-icons/react";
+import { Icon } from "@/components/ui/icon";
 import type { MessageChannel } from "@prisma/client";
 import { sendMessages, type Audience } from "@/actions/messages";
 import type { SendOutcome } from "@/lib/messaging";
@@ -49,7 +49,7 @@ export function Compose({ guards, locations, channels, initialGuardId }: Props) 
     setResults(r.results ?? []);
   });
 
-  const icon = { SMS: ChatTextIcon, WHATSAPP: WhatsappLogoIcon, EMAIL: EnvelopeSimpleIcon } as const;
+  const icon = { SMS: "sms", WHATSAPP: "forum", EMAIL: "mail" } as const;
 
   return (
     <div className="grid gap-4 xl:grid-cols-[380px_1fr]">
@@ -91,7 +91,7 @@ export function Compose({ guards, locations, channels, initialGuardId }: Props) 
         <Card>
           <CardHeader title="Message" action={
             <div className="inline-flex rounded-[var(--radius-control)] border border-line bg-surface p-0.5">
-              {channels.map((c) => { const I = icon[c.channel]; return <button key={c.channel} onClick={() => setChannel(c.channel)} className={cn("inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2.5 text-[12.5px] font-medium", channel === c.channel ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink")}><I size={14} weight="fill" />{c.channel === "SMS" ? "SMS" : c.channel === "WHATSAPP" ? "WhatsApp" : "Email"}</button>; })}
+              {channels.map((c) => { const I = icon[c.channel]; return <button key={c.channel} onClick={() => setChannel(c.channel)} className={cn("inline-flex h-7 items-center gap-1.5 rounded-[6px] px-2.5 text-[12.5px] font-medium", channel === c.channel ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink")}><Icon name={I} size={14} filled />{c.channel === "SMS" ? "SMS" : c.channel === "WHATSAPP" ? "WhatsApp" : "Email"}</button>; })}
             </div>
           } />
           <CardBody className="space-y-3">
@@ -100,7 +100,7 @@ export function Compose({ guards, locations, channels, initialGuardId }: Props) 
             <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={channel === "EMAIL" ? 10 : 6} maxLength={channel === "SMS" ? 480 : 4000} placeholder={channel === "SMS" ? "Keep it short. Guards reply with the keywords you give them." : "Type your message"} className="w-full resize-y rounded-[10px] border border-line px-3.5 py-3 text-[14px] text-ink placeholder:text-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20" />
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-[12px] text-ink-3 tnum">{body.length} characters{channel === "SMS" ? ` · ${segments} SMS segment${segments === 1 ? "" : "s"} each` : ""}</span>
-              <Button variant="primary" disabled={!canSend} onClick={send}><PaperPlaneRightIcon size={14} weight="fill" /> {pending ? "Sending…" : `Send ${channel === "SMS" ? "SMS" : channel === "WHATSAPP" ? "WhatsApp" : "email"}`}</Button>
+              <Button variant="primary" disabled={!canSend} onClick={send}><Icon name="send" size={14} filled /> {pending ? "Sending…" : `Send ${channel === "SMS" ? "SMS" : channel === "WHATSAPP" ? "WhatsApp" : "email"}`}</Button>
             </div>
             <div className="flex flex-wrap gap-2 border-t border-dashed border-line pt-3">
               {QUICK.map((qm) => <button key={qm.label} onClick={() => setBody(qm.body)} className="h-8 rounded-[8px] border border-line bg-surface px-3 text-[12.5px] font-medium text-ink hover:bg-surface-2">{qm.label}</button>)}

@@ -28,7 +28,9 @@ Import the repository (framework Next.js; `vercel.json` pins the install and bui
 | `TIMEZONE` | `Africa/Harare` |
 | `NEXT_PUBLIC_APP_URL` | `https://<your-domain>` (shown on the gateway activation card; must match what the phones use) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | browser push (optional) |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | browser key for the duty-site map picker, restricted to the portal's domain (optional; OpenStreetMap is used without it). See GOOGLE_MAPS_CONFIGURATION.md |
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | public `pk.*` token for every portal map. URL-restrict it in the Mapbox account and set a billing alert. See MAPBOX.md |
+| `NEXT_PUBLIC_MAPBOX_STYLE` | optional custom Mapbox style URL |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | browser key for the duty-site map picker, restricted to the portal's domain (optional; only used when no Mapbox token is set). See GOOGLE_MAPS_CONFIGURATION.md |
 
 No new secret is required for the call gateway: devices authenticate with tokens issued at activation and stored hashed in the database.
 
@@ -51,6 +53,12 @@ Settings → GPS and geofencing: check interval (10 min), exit verification dela
 Build a release APK with a real keystore (see LOCAL_DEVELOPMENT.md) and set the production server as the default: `GATEWAY_DEFAULT_SERVER_URL=https://<your-domain> npm run android:release`. Distribute `artifacts/android/security-gateway-release.apk` and follow ANDROID_INSTALLATION.md on each phone. Register each phone under Gateway phones and activate it with its code.
 
 ## 6. Production security checklist
+
+- The server refuses to start in production when `AUTH_SECRET` is unset or the example default (set 32+ random characters; shorter values warn). Vercel preview deployments also run with `NODE_ENV=production`, so set it for the Preview environment too. Other example defaults are logged as `[config]` warnings and counted in `/api/health` → `config.configIssues`.
+- Security headers (HSTS, X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy) are set by `next.config.ts` for every response.
+- Sign-in is throttled (10 failures per 15 minutes per address and per account, audited as `LOGIN_THROTTLED`).
+- The simulator page and `/api/gateways/simulate` are off in production unless `SMS_PROVIDER=simulated` or `SIMULATOR_ENABLED=true`.
+- Full release procedure: `docs/RELEASE_RUNBOOK.md`.
 
 - HTTPS only (Vercel provides it; the app refuses plain HTTP).
 - Rotate `AUTH_SECRET`, `AUTOMATION_SECRET`, `CRON_SECRET` from the defaults; never commit `.env`.

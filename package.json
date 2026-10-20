@@ -4,7 +4,8 @@
   "private": true,
   "description": "Omega Protection Services operations portal: guard workforce and shift management over two-way SMS",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3000",
+    "predev": "prisma generate",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
@@ -27,14 +28,20 @@
     "android:sync": "node scripts/android.mjs sync",
     "android:build": "node scripts/android.mjs build",
     "android:debug": "node scripts/android.mjs debug",
-    "android:release": "node scripts/android.mjs release"
+    "android:release": "node scripts/android.mjs release",
+    "db:check": "tsx scripts/dev/prisma-check.ts",
+    "db:check:db": "tsx scripts/dev/prisma-check.ts --db",
+    "icons:build": "node scripts/dev/build-icons.mjs",
+    "test:check-in": "tsx scripts/dev/check-in-e2e.ts",
+    "test:shift-edit": "tsx scripts/dev/shift-edit-e2e.ts",
+    "test:map": "node scripts/dev/map-e2e.mjs",
+    "test:layout": "node scripts/dev/layout-e2e.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
-    "@phosphor-icons/react": "^2.1.10",
     "@prisma/adapter-neon": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.3",
@@ -43,6 +50,7 @@
     "https-proxy-agent": "^9.1.0",
     "jose": "^6.2.12",
     "leaflet": "^1.9.4",
+    "mapbox-gl": "3.33.0",
     "next": "^15.5.27",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -52,6 +60,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@material-symbols/svg-400": "0.48.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/google.maps": "^3.66.7",
     "@types/leaflet": "^1.9.12",

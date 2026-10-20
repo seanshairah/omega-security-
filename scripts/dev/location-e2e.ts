@@ -193,7 +193,7 @@ async function main() {
     console.log("Existing SMS still works");
     await db.shift.update({ where: { id: peterShift.id }, data: { pendingPrompt: "WELFARE", welfareSmsSentAt: new Date() } });
     await db.welfareCheck.create({ data: { shiftId: peterShift.id, sentAt: new Date(), response: "PENDING" } });
-    const w = await processIncomingMessage({ from: "+263772345002", body: "1", provider: "simulated" });
+    const w = await processIncomingMessage({ from: PETER_PHONE, body: "1", provider: "simulated" }); // the suite's own feature-phone guard, never a demo-seed number
     check("welfare reply processed by the existing pipeline (Test 15)", w.interpreted === "WELL");
     check("outbound SMS rows intact", (await db.smsMessage.count({ where: { direction: "OUTBOUND", status: "SENT", shiftId: { in: [shift.id, peterShift.id] } } })) >= 3);
   } finally {

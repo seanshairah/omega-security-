@@ -37,7 +37,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
   return (
     <div>
       <AutoRefresh seconds={20} />
-      <PageHeader title="Guard alerts" description="Sent from guard phones through the app. An alert sent without internet arrives when the phone reconnects and is marked synced late; its time is when the guard pressed the button." actions={
+      <PageHeader title="Guard alerts" description="Sent from the guard app. An alert raised offline arrives on reconnection, marked synced late; the time shown is when the guard pressed the button." actions={
         <div className="inline-flex rounded-[var(--radius-control)] border border-line bg-surface p-0.5">
           {([["open", "Open"], ["all", "Last 7 days"]] as const).map(([k, l]) => <Link key={k} href={`/alerts?view=${k}`} className={cn("h-8 rounded-[6px] px-3 text-[13px] font-medium leading-8", view === k ? "bg-surface-2 text-ink" : "text-ink-2 hover:text-ink")}>{l}</Link>)}
         </div>

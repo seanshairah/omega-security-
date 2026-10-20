@@ -6,7 +6,7 @@ import { addDays } from "date-fns";
 import { db } from "@/lib/db";
 import { shiftSchema, shiftGeofenceSchema, recurrenceSchema, formToObject, firstIssue } from "@/lib/validation";
 import { combineDateTime } from "@/lib/time";
-import { createShift as createShiftRecord, cancelShift as cancelShiftRecord, materialiseRecurrences, recordEvent } from "@/lib/services/shifts";
+import { createShift as createShiftRecord, cancelShift as cancelShiftRecord, updateShift as updateShiftRecord, deleteShift as deleteShiftRecord, materialiseRecurrences, recordEvent } from "@/lib/services/shifts";
 import { getSettingNumber } from "@/lib/settings";
 import { actor, auditAs, fail, type ActionState } from "./_helpers";
 
@@ -27,6 +27,40 @@ export async function createShift(_: ActionState, fd: FormData): Promise<ActionS
   }
   revalidatePath("/shifts");
   redirect(`/shifts/${id}`);
+}
+
+/**
+ * Edit an open shift. The service decides what may change; this only parses the form and reports
+ * the refusal back to the operator rather than throwing a server error at them.
+ */
+export async function updateShift(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
+  try {
+    const user = await actor("ADMIN");
+    const r = shiftSchema.safeParse(formToObject(fd));
+    if (!r.success) return { error: firstIssue(r.error) };
+    const d = r.data;
+    const startAt = combineDateTime(d.date, d.startTime);
+    let endAt = combineDateTime(d.date, d.endTime);
+    if (endAt <= startAt) endAt = addDays(endAt, 1); // overnight
+    await updateShiftRecord(id, {
+      guardId: d.guardId, locationId: d.locationId, supervisorId: d.supervisorId, startAt, endAt,
+      instructions: d.instructions, notes: d.notes,
+      geofenceLatitude: d.geofenceLatitude, geofenceLongitude: d.geofenceLongitude, geofenceRadiusM: d.geofenceRadiusM, geofenceNote: d.geofenceNote,
+    }, { userId: user.id, name: user.name });
+  } catch (e) {
+    return fail(e);
+  }
+  revalidatePath("/shifts");
+  revalidatePath(`/shifts/${id}`);
+  redirect(`/shifts/${id}`);
+}
+
+/** Remove a shift that nothing has happened on. Anything with a history is cancelled, never deleted. */
+export async function deleteShift(id: string) {
+  const user = await actor("ADMIN");
+  await deleteShiftRecord(id, { userId: user.id, name: user.name });
+  revalidatePath("/shifts");
+  redirect("/shifts?deleted=1");
 }
 
 /** Set, change or remove the geofence override of one shift. Bumps the shift's config version so phones re-download it. */

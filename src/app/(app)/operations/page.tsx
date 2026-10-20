@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
+import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { shiftInclude, LIVE_STATUSES } from "@/lib/services/shifts";
@@ -98,7 +98,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
                 <td>{loc(s)}</td>
                 <td><ShiftStatusLabel status={s.status} /></td>
                 <td className="text-ink-3">{ago(s.updatedAt)}</td>
-                <td className="text-right"><Link href={`/shifts/${s.id}`} className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-2 hover:text-ink">Timeline <CaretRightIcon size={12} weight="bold" /></Link></td>
+                <td className="text-right"><Link href={`/shifts/${s.id}`} className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-2 hover:text-ink">Timeline <Icon name="chevron_right" size={12} filled /></Link></td>
               </tr>
             ))}
           </TBody>

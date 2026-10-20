@@ -45,11 +45,18 @@ The design is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): archit
 | [docs/IMPLEMENTATION_AUDIT.md](docs/IMPLEMENTATION_AUDIT.md) | Phase 1 audit: baseline, confirmed defects and root causes, risks, stage results |
 | [docs/ANDROID_ARCHITECTURE.md](docs/ANDROID_ARCHITECTURE.md) | the app after Phase 1: monitoring coordinator, sync coordinator, app state, status rows |
 | [docs/AUTO_SYNC.md](docs/AUTO_SYNC.md) | the automatic sync engine: outbox statuses, priorities, triggers, retries, diagnostics |
+| [docs/CALL_CHECKIN.md](docs/CALL_CHECKIN.md) | call-triggered check-in: the qualifying call, the GPS verification, the five-minute grace rule, late arithmetic, statuses, fraud resistance and settings |
+| [docs/MAPBOX.md](docs/MAPBOX.md) | the map architecture, token restriction, cost and billing alerts, telemetry, and the raster fallback |
+| [docs/ICONS.md](docs/ICONS.md) | the icon system: why Material Symbols, how icons are generated, the concept map, accessibility rules |
+| [docs/UX_WRITING_REVIEW.md](docs/UX_WRITING_REVIEW.md) | the interface copy review, what changed and what was deliberately left dense |
 | [docs/GOOGLE_MAPS_CONFIGURATION.md](docs/GOOGLE_MAPS_CONFIGURATION.md) | the duty-site map picker, the Google Maps key, provenance and config versioning |
 | [docs/OFFLINE_MONITORING.md](docs/OFFLINE_MONITORING.md) | what keeps working without internet and how the record catches up |
 | [docs/DATABASE_CHANGES.md](docs/DATABASE_CHANGES.md) | every Phase 1 and 2 column, all additive |
 | [docs/DEVICE_LOCATION_AND_SITE_SETUP.md](docs/DEVICE_LOCATION_AND_SITE_SETUP.md) | root cause of the wrong site centre, the confirmed-position picker, remote guard-phone location requests, using a guard phone's fix as site coordinates |
 | [docs/ANDROID_UI_AUDIT.md](docs/ANDROID_UI_AUDIT.md) | every dashboard control mapped to its Android handler, event type, backend route and portal workflow |
+| [docs/STAGE0_FINDINGS.md](docs/STAGE0_FINDINGS.md) | production-hardening audit: confirmed defects, risks, blockers, what is preserved |
+| [docs/GUARD_WORKSPACE.md](docs/GUARD_WORKSPACE.md) | the viewport-aware guard workspace: layout, scrolling hierarchy, location-state model, polling |
+| [docs/RELEASE_RUNBOOK.md](docs/RELEASE_RUNBOOK.md) | env checklist, backup, migration, deploy, Android release, smoke test, rollback, monitoring |
 | [docs/EMERGENCY_ALERTS.md](docs/EMERGENCY_ALERTS.md) | the emergency button end to end: phone, outbox, server, portal, acknowledgement, offline fallback |
 | [docs/GUARD_COMMUNICATION.md](docs/GUARD_COMMUNICATION.md) | status messages (assistance, incident, security, late, update, going well, handover) and how operations sees them |
 | [docs/ANDROID_UI.md](docs/ANDROID_UI.md) | the redesigned guard and operations dashboards, card by card |
@@ -78,7 +85,7 @@ npm run db:migration-status  # compare prisma/migrations with the configured dat
 
 ## Stack
 
-Next.js 15 (App Router, server actions), TypeScript, Tailwind CSS 4, Prisma 6, PostgreSQL 16 (Neon or self-hosted), Phosphor icons, Recharts.
+Next.js 15 (App Router, server actions), TypeScript, Tailwind CSS 4, Prisma 6, PostgreSQL 16 (Neon or self-hosted), Mapbox GL JS with a Leaflet fallback, Material Symbols icons, Recharts.
 
 ## Deploy on Vercel
 

@@ -10,7 +10,7 @@ export function GatewayForm({ action, gateway, locations, guards, submitLabel }:
   const g = gateway;
   return (
     <ActionForm action={action} submitLabel={submitLabel}>
-      <FormSection title="Device mode" description="One app, two jobs. An operations gateway is the phone guards call. A guard device is the guard's own phone: it reports calls and, during shifts, whether the guard is inside the assigned site.">
+      <FormSection title="Device mode" description="An operations gateway is the phone guards call. A guard device is the guard's own phone, which also reports whether the guard is inside the assigned site during a shift.">
         <ModeFields mode={g?.mode ?? "OPERATIONS_GATEWAY"} guardId={g?.guardId ?? ""} guards={guards} />
       </FormSection>
       <FormSection title="Phone" description="The app reports call metadata and, for guard devices, location events. It never records audio.">

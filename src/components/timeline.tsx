@@ -1,51 +1,51 @@
 import type { CheckInType, ShiftCheckIn } from "@prisma/client";
-import { CheckCircleIcon, ChatCircleDotsIcon, WarningOctagonIcon, SirenIcon, FirstAidIcon, ClockIcon, FlagIcon, XCircleIcon, NoteIcon, QuestionIcon, ArrowsLeftRightIcon, PaperPlaneTiltIcon, PhoneIncomingIcon, PhoneOutgoingIcon, PhoneCallIcon, PhoneXIcon, PhoneDisconnectIcon, MapPinIcon, MapPinLineIcon, CompassIcon, NavigationArrowIcon, CellSignalSlashIcon, ShieldCheckIcon, ShieldWarningIcon } from "@phosphor-icons/react/dist/ssr";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { fmtTime, fmtDate } from "@/lib/time";
 import { cn } from "@/lib/cn";
 
-const META: Record<CheckInType, { label: string; tone: "ok" | "warn" | "critical" | "neutral" | "info"; icon: React.ElementType }> = {
-  SHIFT_STARTED: { label: "Shift started", tone: "neutral", icon: FlagIcon },
-  ARRIVAL_SMS_SENT: { label: "Arrival check sent", tone: "info", icon: PaperPlaneTiltIcon },
-  ARRIVAL_REMINDER_SENT: { label: "Arrival reminder sent", tone: "warn", icon: PaperPlaneTiltIcon },
-  ARRIVAL_CONFIRMED: { label: "Guard confirmed arrival", tone: "ok", icon: CheckCircleIcon },
-  ARRIVAL_DENIED: { label: "Guard replied NO", tone: "critical", icon: XCircleIcon },
-  ARRIVAL_ESCALATED: { label: "Attendance not confirmed", tone: "critical", icon: WarningOctagonIcon },
-  WELFARE_SMS_SENT: { label: "Welfare check sent", tone: "info", icon: PaperPlaneTiltIcon },
-  WELFARE_OK: { label: "Shift going well", tone: "ok", icon: CheckCircleIcon },
-  WELFARE_ASSISTANCE: { label: "Assistance requested", tone: "warn", icon: FirstAidIcon },
-  WELFARE_INCIDENT: { label: "Incident flagged", tone: "critical", icon: WarningOctagonIcon },
-  WELFARE_MISSED: { label: "Welfare check missed", tone: "warn", icon: ClockIcon },
-  INCIDENT_REPORTED: { label: "Incident reported", tone: "critical", icon: WarningOctagonIcon },
-  EMERGENCY: { label: "EMERGENCY", tone: "critical", icon: SirenIcon },
-  HANDOVER_NOTICE: { label: "Handover notice", tone: "neutral", icon: ArrowsLeftRightIcon },
-  COMPLETION_SMS_SENT: { label: "End-of-shift check sent", tone: "info", icon: PaperPlaneTiltIcon },
-  COMPLETION_CONFIRMED: { label: "Completion confirmed", tone: "ok", icon: CheckCircleIcon },
-  COMPLETION_DENIED: { label: "Still on duty", tone: "warn", icon: ClockIcon },
-  COMPLETION_TIMEOUT: { label: "No completion reply", tone: "warn", icon: ClockIcon },
-  SHIFT_COMPLETED: { label: "Shift completed", tone: "ok", icon: FlagIcon },
-  SHIFT_MISSED: { label: "Shift missed", tone: "critical", icon: XCircleIcon },
-  SHIFT_CANCELLED: { label: "Shift cancelled", tone: "neutral", icon: XCircleIcon },
-  ADMIN_NOTE: { label: "Note", tone: "neutral", icon: NoteIcon },
-  CLIENT_NOTIFIED: { label: "Client updated", tone: "ok", icon: NoteIcon },
-  UNRECOGNISED_REPLY: { label: "Reply not understood", tone: "warn", icon: QuestionIcon },
-  SECURITY_ALERT: { label: "Security alert (app)", tone: "critical", icon: WarningOctagonIcon },
-  RUNNING_LATE: { label: "Running late (app)", tone: "warn", icon: ClockIcon },
-  STATUS_UPDATE: { label: "Status update (app)", tone: "info", icon: ChatCircleDotsIcon },
-  GUARD_OK: { label: "Shift going well (app)", tone: "ok", icon: CheckCircleIcon },
-  ALERT_ACKNOWLEDGED: { label: "Alert acknowledged", tone: "ok", icon: CheckCircleIcon },
-  CALL_INCOMING: { label: "Incoming call from guard", tone: "info", icon: PhoneIncomingIcon },
-  CALL_OUTGOING: { label: "Outgoing call to guard", tone: "info", icon: PhoneOutgoingIcon },
-  CALL_ANSWERED: { label: "Call answered", tone: "ok", icon: PhoneCallIcon },
-  CALL_ENDED: { label: "Call ended", tone: "neutral", icon: PhoneDisconnectIcon },
-  CALL_MISSED: { label: "Missed call from guard", tone: "critical", icon: PhoneXIcon },
-  LOCATION_VERIFIED: { label: "Arrival verified by GPS", tone: "ok", icon: ShieldCheckIcon },
-  LOCATION_EXCEPTION: { label: "Location exception", tone: "warn", icon: ShieldWarningIcon },
-  LOCATION_INSIDE: { label: "Location check · inside", tone: "ok", icon: MapPinIcon },
-  LOCATION_EXIT: { label: "LOCATION EXIT", tone: "critical", icon: NavigationArrowIcon },
-  LOCATION_OUTSIDE: { label: "Still outside the site", tone: "critical", icon: MapPinLineIcon },
-  LOCATION_RETURNED: { label: "LOCATION RETURNED", tone: "ok", icon: CompassIcon },
-  LOCATION_UNAVAILABLE: { label: "Location unavailable", tone: "warn", icon: CellSignalSlashIcon },
-  LOCATION_OVERDUE: { label: "Location verification overdue", tone: "warn", icon: CellSignalSlashIcon },
+const META: Record<CheckInType, { label: string; tone: "ok" | "warn" | "critical" | "neutral" | "info"; icon: IconName }> = {
+  SHIFT_STARTED: { label: "Shift started", tone: "neutral", icon: "flag" },
+  ARRIVAL_SMS_SENT: { label: "Arrival check sent", tone: "info", icon: "send" },
+  ARRIVAL_REMINDER_SENT: { label: "Arrival reminder sent", tone: "warn", icon: "send" },
+  ARRIVAL_CONFIRMED: { label: "Guard confirmed arrival", tone: "ok", icon: "check_circle" },
+  ARRIVAL_DENIED: { label: "Guard replied NO", tone: "critical", icon: "cancel" },
+  ARRIVAL_ESCALATED: { label: "Attendance not confirmed", tone: "critical", icon: "report" },
+  WELFARE_SMS_SENT: { label: "Welfare check sent", tone: "info", icon: "send" },
+  WELFARE_OK: { label: "Shift going well", tone: "ok", icon: "check_circle" },
+  WELFARE_ASSISTANCE: { label: "Assistance requested", tone: "warn", icon: "medical_services" },
+  WELFARE_INCIDENT: { label: "Incident flagged", tone: "critical", icon: "report" },
+  WELFARE_MISSED: { label: "Welfare check missed", tone: "warn", icon: "schedule" },
+  INCIDENT_REPORTED: { label: "Incident reported", tone: "critical", icon: "report" },
+  EMERGENCY: { label: "EMERGENCY", tone: "critical", icon: "e911_emergency" },
+  HANDOVER_NOTICE: { label: "Handover notice", tone: "neutral", icon: "swap_horiz" },
+  COMPLETION_SMS_SENT: { label: "End-of-shift check sent", tone: "info", icon: "send" },
+  COMPLETION_CONFIRMED: { label: "Completion confirmed", tone: "ok", icon: "check_circle" },
+  COMPLETION_DENIED: { label: "Still on duty", tone: "warn", icon: "schedule" },
+  COMPLETION_TIMEOUT: { label: "No completion reply", tone: "warn", icon: "schedule" },
+  SHIFT_COMPLETED: { label: "Shift completed", tone: "ok", icon: "flag" },
+  SHIFT_MISSED: { label: "Shift missed", tone: "critical", icon: "cancel" },
+  SHIFT_CANCELLED: { label: "Shift cancelled", tone: "neutral", icon: "cancel" },
+  ADMIN_NOTE: { label: "Note", tone: "neutral", icon: "sticky_note_2" },
+  CLIENT_NOTIFIED: { label: "Client updated", tone: "ok", icon: "sticky_note_2" },
+  UNRECOGNISED_REPLY: { label: "Reply not understood", tone: "warn", icon: "help" },
+  SECURITY_ALERT: { label: "Security alert (app)", tone: "critical", icon: "report" },
+  RUNNING_LATE: { label: "Running late (app)", tone: "warn", icon: "schedule" },
+  STATUS_UPDATE: { label: "Status update (app)", tone: "info", icon: "chat" },
+  GUARD_OK: { label: "Shift going well (app)", tone: "ok", icon: "check_circle" },
+  ALERT_ACKNOWLEDGED: { label: "Alert acknowledged", tone: "ok", icon: "check_circle" },
+  CALL_INCOMING: { label: "Incoming call from guard", tone: "info", icon: "phone_callback" },
+  CALL_OUTGOING: { label: "Outgoing call to guard", tone: "info", icon: "phone_forwarded" },
+  CALL_ANSWERED: { label: "Call answered", tone: "ok", icon: "phone_in_talk" },
+  CALL_ENDED: { label: "Call ended", tone: "neutral", icon: "call_end" },
+  CALL_MISSED: { label: "Missed call from guard", tone: "critical", icon: "phone_missed" },
+  LOCATION_VERIFIED: { label: "Arrival verified by GPS", tone: "ok", icon: "verified_user" },
+  LOCATION_EXCEPTION: { label: "Location exception", tone: "warn", icon: "gpp_maybe" },
+  LOCATION_INSIDE: { label: "Location check · inside", tone: "ok", icon: "location_on" },
+  LOCATION_EXIT: { label: "LOCATION EXIT", tone: "critical", icon: "directions_run" },
+  LOCATION_OUTSIDE: { label: "Still outside the site", tone: "critical", icon: "wrong_location" },
+  LOCATION_RETURNED: { label: "LOCATION RETURNED", tone: "ok", icon: "where_to_vote" },
+  LOCATION_UNAVAILABLE: { label: "Location unavailable", tone: "warn", icon: "signal_cellular_off" },
+  LOCATION_OVERDUE: { label: "Location verification overdue", tone: "warn", icon: "signal_cellular_off" },
 };
 const ring = { ok: "border-ok text-ok", warn: "border-warn text-warn", critical: "border-critical text-critical", neutral: "border-line-strong text-ink-3", info: "border-info text-info" };
 
@@ -57,14 +57,13 @@ export function Timeline({ events, showDates }: { events: Event[]; showDates?: b
     <ol className="relative ml-2 border-l border-line">
       {events.map((e) => {
         const m = META[e.type];
-        const Icon = m.icon;
         return (
           <li key={e.id} className="relative pb-5 pl-7 last:pb-0">
-            <span className={cn("absolute -left-[11px] top-0 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] bg-surface", ring[m.tone])}><Icon size={12} weight="fill" /></span>
+            <span className={cn("absolute -left-[11px] top-0 flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] bg-surface", ring[m.tone])}><Icon name={m.icon} size={12} filled /></span>
             <div className="flex flex-wrap items-baseline gap-x-3">
               <span className="text-[12px] font-medium text-ink-3 tnum">{showDates ? `${fmtDate(e.at)} ` : ""}{fmtTime(e.at)}</span>
               <span className={cn("text-[14px] font-medium", m.tone === "critical" ? "text-critical" : "text-ink")}>{m.label}</span>
-              {e.source === "SMS" && <ChatCircleDotsIcon size={13} weight="fill" className="text-ink-3" aria-label="via SMS" />}
+              {e.source === "SMS" && <Icon name="chat" size={13} className="text-ink-3" aria-label="via SMS" filled />}
               {e.source === "ADMIN" && <span className="text-[11px] uppercase tracking-[0.06em] text-ink-3">admin</span>}
             </div>
             {e.note && <p className="mt-0.5 text-[13px] text-ink-2">{e.note}</p>}
