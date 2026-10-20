@@ -71,7 +71,7 @@ object AlertFlow {
     fun callOps(a: Activity, fb: Feedback) {
         val phone = Prefs(a).opsPhone
         if (phone.isBlank()) return
-        try { a.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))) } catch (e: Exception) { fb.show(a.getString(R.string.alert_dialer_missing), false) }
+        try { a.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone"))) } catch (e: Exception) { fb.show(a.getString(R.string.alert_dialer_missing, phone), false) }
     }
 
     fun smsOps(a: Activity, type: AlertSender.Type, fb: Feedback) {
@@ -79,6 +79,6 @@ object AlertFlow {
         if (prefs.opsPhone.isBlank()) return
         val keyword = when (type) { AlertSender.Type.EMERGENCY -> "EMERGENCY"; AlertSender.Type.NEED_ASSISTANCE -> "HELP"; AlertSender.Type.INCIDENT_REPORT, AlertSender.Type.SECURITY_ALERT -> "INCIDENT"; else -> "" }
         val body = "$keyword ${prefs.guardName}${prefs.dutySiteName.takeIf { it.isNotBlank() }?.let { " at $it" } ?: ""} (sent from the guard app while offline)".trim()
-        try { a.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${prefs.opsPhone}")).putExtra("sms_body", body)) } catch (e: Exception) { fb.show(a.getString(R.string.alert_dialer_missing), false) }
+        try { a.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${prefs.opsPhone}")).putExtra("sms_body", body)) } catch (e: Exception) { fb.show(a.getString(R.string.alert_dialer_missing, prefs.opsPhone ?: a.getString(R.string.alert_no_ops_number)), false) }
     }
 }

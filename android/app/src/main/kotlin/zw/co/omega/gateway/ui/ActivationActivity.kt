@@ -66,7 +66,9 @@ class ActivationActivity : AppCompatActivity() {
             } catch (e: ApiClient.ApiException) {
                 b.error.text = e.message
             } catch (e: Exception) {
-                b.error.text = getString(R.string.err_network, e.message ?: "")
+                val why = e.message.orEmpty()
+                b.error.text = if (why.isBlank()) getString(R.string.err_network)
+                    else getString(R.string.err_network) + "\n" + getString(R.string.err_detail, why)
             } finally {
                 b.activate.isEnabled = true
                 b.activate.text = getString(R.string.activate_device)

@@ -147,7 +147,7 @@ class MainActivity : AppCompatActivity() {
                 else -> getString(R.string.conn_no_permission)
             }
             AppState.READY -> when {
-                !isOnline -> getString(R.string.conn_no_internet, queued)
+                !isOnline -> resources.getQuantityString(R.plurals.conn_no_internet_events, queued, queued)
                 prefs.lastHeartbeatOk -> ""
                 else -> getString(R.string.conn_waiting, prefs.lastError ?: "")
             }
@@ -170,15 +170,17 @@ class MainActivity : AppCompatActivity() {
         })
         b.syncDetail.text = when (sv) {
             SyncView.REVOKED -> getString(R.string.sync_detail_revoked)
-            SyncView.NO_INTERNET -> getString(R.string.sync_detail_saved, queued)
-            SyncView.SENDING -> getString(R.string.sync_detail_sending, queued)
-            SyncView.RETRY_PENDING -> getString(R.string.sync_detail_retry, queued, prefs.lastSyncError ?: "")
-            SyncView.QUEUED -> getString(R.string.sync_detail_queued, queued)
+            SyncView.NO_INTERNET -> resources.getQuantityString(R.plurals.events_saved_on_phone, queued, queued)
+            SyncView.SENDING -> resources.getQuantityString(R.plurals.events_sending, queued, queued)
+            SyncView.RETRY_PENDING -> resources.getQuantityString(R.plurals.events_retrying, queued, queued, prefs.lastSyncError ?: "")
+            SyncView.QUEUED -> resources.getQuantityString(R.plurals.events_queued, queued, queued)
             SyncView.SYNCED_WITH_FAILURES -> getString(R.string.sync_detail_failures)
             SyncView.SYNCED -> if (prefs.lastSyncAt > 0) getString(R.string.sync_detail_sent, fmt(prefs.lastSyncAt)) else getString(R.string.sync_detail_nothing)
             SyncView.WAITING -> getString(R.string.sync_detail_waiting, prefs.lastError ?: "")
         }
-        b.pendingLine.text = getString(R.string.pending_line, queued, counts.failed)
+        // Two independent counts, so two plurals joined rather than one sentence with "(s)" twice.
+        b.pendingLine.text = resources.getQuantityString(R.plurals.events_waiting_to_send, queued, queued) +
+            " · " + resources.getQuantityString(R.plurals.events_rejected, counts.failed, counts.failed)
         b.lastSync.text = fmt(prefs.lastSyncAt)
         b.lastHeartbeat.text = fmt(prefs.lastHeartbeatAt)
         iconTone(b.syncIconWrap, b.syncIcon, syncTone(sv), when (sv) { SyncView.SYNCED -> R.drawable.ic_check; SyncView.SENDING -> R.drawable.ic_sync; SyncView.REVOKED -> R.drawable.ic_lock; else -> R.drawable.ic_clock })
@@ -261,7 +263,7 @@ class MainActivity : AppCompatActivity() {
         // ---- Quick-action badge and "sent to operations" ----
         val unacked = queue.unacknowledgedAlerts()
         b.unackedLine.visibility = if (unacked > 0) View.VISIBLE else View.GONE
-        b.unackedLine.text = getString(R.string.unacked_alerts, unacked)
+        b.unackedLine.text = resources.getQuantityString(R.plurals.alerts_waiting, unacked, unacked)
         val f = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
         b.commList.removeAllViews()
         val rows = queue.recentComm(4)

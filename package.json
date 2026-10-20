@@ -37,7 +37,9 @@
     "test:map": "node scripts/dev/map-e2e.mjs",
     "test:layout": "node scripts/dev/layout-e2e.mjs",
     "test:time": "TZ=UTC tsx --test tests/time.test.ts && TZ=America/New_York tsx --test tests/time.test.ts",
-    "db:retime": "tsx scripts/retime-wallclock.ts"
+    "db:retime": "tsx scripts/retime-wallclock.ts",
+    "android:icons": "node scripts/dev/build-android-icons.mjs",
+    "android:strings": "node scripts/dev/android-strings-check.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
