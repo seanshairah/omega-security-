@@ -100,6 +100,9 @@
     <string name="notif_mon_off">not on shift</string>
 
     <!-- Permissions onboarding -->
+    <!-- Spoken by a screen reader for each permission row; the icon alone cannot carry the state. -->
+    <string name="perm_state_granted">Allowed</string>
+    <string name="perm_state_pending">Not allowed yet</string>
     <string name="perm_title">Before your first shift</string>
     <string name="perm_intro">This phone is registered to you as a guard. During your shifts the app checks every few minutes whether the phone is inside your assigned site, and reports your calls to the operations room. Nothing is tracked outside shifts, and no audio is ever recorded.</string>
     <string name="perm_location">Location</string>

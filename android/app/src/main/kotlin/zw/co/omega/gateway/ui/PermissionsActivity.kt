@@ -63,7 +63,13 @@ class PermissionsActivity : AppCompatActivity() {
         val phone = granted(Manifest.permission.READ_PHONE_STATE) && granted(Manifest.permission.READ_CALL_LOG)
         val notif = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || granted(Manifest.permission.POST_NOTIFICATIONS)
         val batt = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || (getSystemService(POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)
-        fun mark(v: android.widget.TextView, ok: Boolean) { v.text = if (ok) "✅" else "⬜" }
+        // Was `v.text = if (ok) "✅" else "⬜"`. Emoji render differently on every device font, can
+        // come out as tofu, and a screen reader reads "white large square" rather than the state.
+        fun mark(v: android.widget.ImageView, ok: Boolean) {
+            v.setImageResource(if (ok) R.drawable.ic_perm_granted else R.drawable.ic_perm_pending)
+            v.setColorFilter(androidx.core.content.ContextCompat.getColor(this, if (ok) R.color.ok else R.color.ink3))
+            v.contentDescription = getString(if (ok) R.string.perm_state_granted else R.string.perm_state_pending)
+        }
         mark(b.locationMark, fine); mark(b.backgroundMark, bg); mark(b.phoneMark, phone); mark(b.notificationsMark, notif); mark(b.batteryMark, batt)
         b.background.isEnabled = fine
         b.backgroundHint.text = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) getString(R.string.perm_background_hint_r) else getString(R.string.perm_background_hint)
