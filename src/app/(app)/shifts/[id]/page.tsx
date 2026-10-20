@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { shiftInclude, STATUS_META, CLOSED_STATUSES } from "@/lib/services/shifts";
 import { PageHeader, Meta } from "@/components/ui/page";
 import { CallGuardButton } from "@/components/calls/call-guard";
+import { NotifyClientButton } from "@/components/clients/notify-client";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Timeline } from "@/components/timeline";
 import { ShiftStatusLabel } from "@/components/shift-status";
@@ -74,6 +75,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
         (live || (can.manageShifts(user) && del.canDelete)) && (
           <ButtonGroup>
             {live && <CallGuardButton guardId={s.guardId} guardName={guardName} shiftId={s.id} />}
+            {live && <NotifyClientButton shiftId={s.id} />}
             {can.manageShifts(user) && live && edit.canEdit && <LinkButton href={`/shifts/${s.id}/edit`} size="md">Edit</LinkButton>}
             {can.manageShifts(user) && live && !s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Confirm arrival manually" title="Confirm arrival manually?" body={`Record ${guardName} as on post now, for example after a phone call.`} withNote="How was this confirmed?" confirmLabel="Confirm arrival" action={async (note) => { "use server"; await manualArrival(s.id, note); }} />}
             {can.manageShifts(user) && live && s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Mark completed" title="Mark this shift completed?" body="Use when the guard confirmed by phone or radio rather than SMS." withNote="Note" confirmLabel="Mark completed" action={async (note) => { "use server"; await manualComplete(s.id, note); }} />}

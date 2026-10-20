@@ -217,6 +217,9 @@ export async function locationMaintenance(now = new Date()) {
         if (!escalated) {
           await notify({ type: "LOCATION_EXTENDED", severity: "CRITICAL", title: `EXTENDED ABSENCE · ${who} outside ${s.location.name}`, body: `Left the site at ${fmtTime(exit.occurredAt)} and has not returned after ${escalationMinutes} min. Call ${s.guard.phone}.`, guardId: s.guardId, shiftId: s.id, url: `/shifts/${s.id}` });
           report.escalated++;
+          // The client hears of it only if the site asks and the super admin approves the draft.
+          const { onGuardOutside } = await import("@/lib/client-notifications/rules");
+          await onGuardOutside(s.id, `location:${exit.id}`).catch(() => undefined);
         }
       }
     }

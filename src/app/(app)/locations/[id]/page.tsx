@@ -19,6 +19,8 @@ import { clientPhoneFor } from "@/lib/sms/client-updates";
 import { SiteMap } from "@/components/map/site-map";
 import { EmptyState } from "@/components/workspace/panel";
 import { COORDINATES_SOURCE_META } from "@/lib/site-config";
+import { NotifyClientButton, ClientNotificationList } from "@/components/clients/notify-client";
+import { notificationHistory } from "@/lib/client-notifications/service";
 
 export const metadata = { title: "Location" };
 const PATTERN: Record<string, string> = { DAY_8: "Day · 8 h", NIGHT_8: "Night · 8 h", DAY_12: "Day · 12 h", NIGHT_12: "Night · 12 h", CUSTOM: "Custom" };
@@ -28,20 +30,25 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const l = await db.location.findUnique({ where: { id }, include: { client: true, supervisor: true } });
   if (!l) notFound();
-  const [onPost, upcoming, recent, incidents, assigned] = await Promise.all([
+  const [onPost, upcoming, recent, incidents, assigned, messages] = await Promise.all([
     db.shift.findMany({ where: { locationId: id, status: { in: ON_SITE_STATUSES } }, include: shiftInclude }),
     db.shift.findMany({ where: { locationId: id, startAt: { gte: new Date() }, status: "SCHEDULED" }, include: shiftInclude, orderBy: { startAt: "asc" }, take: 10 }),
     db.shift.findMany({ where: { locationId: id, startAt: { gte: subDays(new Date(), 14), lt: new Date() } }, include: shiftInclude, orderBy: { startAt: "desc" }, take: 30 }),
     db.incident.findMany({ where: { locationId: id }, include: { guard: true }, orderBy: { occurredAt: "desc" }, take: 10 }),
     db.guard.findMany({ where: { homeLocationId: id, active: true }, orderBy: { lastName: "asc" } }),
+    notificationHistory({ locationId: id }, 15),
   ]);
+  const drafts = messages.filter((m) => m.status === "PENDING_APPROVAL").length;
   return (
     <div>
-      <PageHeader title={l.name} description={`${l.client.name} · ${l.address}`} actions={can.manageLocations(user) && (
+      <PageHeader title={l.name} description={`${l.client.name} · ${l.address}`} actions={(
         <ButtonGroup>
+          <NotifyClientButton locationId={l.id} />
+          {can.manageLocations(user) && <>
           <LinkButton href={`/shifts/new?locationId=${l.id}`}>Schedule shift</LinkButton>
           <LinkButton href={`/locations/${l.id}/edit`}>Edit</LinkButton>
           {l.active ? <ConfirmButton size="md" label="Deactivate" variant="danger" title={`Deactivate ${l.name}?`} body="The site is archived. History is kept." confirmLabel="Deactivate" action={async () => { "use server"; await setLocationActive(l.id, false); }} /> : <ConfirmButton size="md" label="Reactivate" title={`Reactivate ${l.name}?`} body="" confirmLabel="Reactivate" action={async () => { "use server"; await setLocationActive(l.id, true); }} />}
+          </>}
         </ButtonGroup>
       )} />
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
@@ -72,6 +79,12 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
               </TBody>
             </Table>
           </Card>
+          <div id="client-messages" className="scroll-mt-20">
+            <Card>
+              <CardHeader title="Messages to the client" description={drafts ? `${drafts} awaiting approval. Nothing is sent until approved.` : "What was sent to the client about this site, and whether it arrived."} action={<Link href={`/clients/${l.clientId}`} className="text-[13px] font-medium text-accent hover:underline">All for {l.client.name}</Link>} />
+              <ClientNotificationList items={messages} role={user.role} showSite={false} empty="No messages to the client about this site yet." />
+            </Card>
+          </div>
           <Card>
             <CardHeader title="Last 14 days" />
             <Table>
@@ -87,12 +100,12 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
           <Card><CardBody className="pt-5">
             <div className="grid grid-cols-2 gap-4">
               <Meta label="Site code">{l.code}</Meta><Meta label="Type">{l.siteType ?? "—"}</Meta>
-              <Meta label="Client">{l.client.name}</Meta><Meta label="Pattern">{PATTERN[l.shiftPattern]}</Meta>
+              <Meta label="Client"><Link href={`/clients/${l.clientId}`} className="hover:underline">{l.client.name}</Link></Meta><Meta label="Pattern">{PATTERN[l.shiftPattern]}</Meta>
               <Meta label="Required guards">{l.requiredGuards}</Meta><Meta label="Supervisor">{l.supervisor?.name ?? "—"}</Meta>
               <Meta label="Geofence" className="col-span-2">{l.latitude != null && l.longitude != null ? <span className="tnum">{l.geofenceRadiusM} m radius · {l.latitude.toFixed(5)}, {l.longitude.toFixed(5)} · config v{l.configVersion}{l.coordinatesSource && <> · <Status tone={COORDINATES_SOURCE_META[l.coordinatesSource].tone}>{COORDINATES_SOURCE_META[l.coordinatesSource].label}</Status></>}{l.coordinatesSource === "TEST" && <span className="block text-warn">{COORDINATES_SOURCE_META.TEST.description} <Link href={`/locations/${l.id}/edit`} className="underline">Place it on the map</Link>.</span>}</span> : <span className="text-warn">No coordinates: GPS verification is off for this site. <Link href={`/locations/${l.id}/edit`} className="underline">Place it on the map</Link>.</span>}</Meta>
               <Meta label="Site contact" className="col-span-2">{l.contactName ?? "—"}{l.contactPhone ? ` · ${l.contactPhone}` : ""}</Meta>
               <Meta label="Status" className="col-span-2">{l.active ? <Status tone="ok">Active</Status> : <Status tone="muted">Inactive</Status>}</Meta>
-              <Meta label="Client updates" className="col-span-2">{l.clientUpdates ? <span>{[l.notifyClientArrival && "arrival", l.notifyClientWelfare && "all well", l.notifyClientCompletion && "shift ended"].filter(Boolean).join(", ") || "none selected"} · to {clientPhoneFor(l) ?? <span className="text-critical">no number set</span>}</span> : <span className="text-ink-3">Off</span>}</Meta>
+              <Meta label="Client updates" className="col-span-2">{l.clientUpdates ? <span>{[l.notifyClientArrival && "arrival", l.notifyClientWelfare && "all well", l.notifyClientCompletion && "shift ended", l.notifyClientLate && "late", l.notifyClientAbsent && "missed check-in", l.notifyClientOutside && "away from post (approval)", l.notifyClientEmergency && "emergency (approval)"].filter(Boolean).join(", ") || "none selected"} · to {clientPhoneFor(l) ?? <span className="text-critical">no number set</span>}{l.clientUpdateEmail ? ` and ${l.clientUpdateEmail}` : ""}</span> : <span className="text-ink-3">Off</span>}</Meta>
             </div>
             {l.specialInstructions && <div className="mt-4 border-t border-dashed border-line pt-3"><div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">Special instructions</div><p className="mt-1 text-[13px] text-ink">{l.specialInstructions}</p></div>}
           </CardBody></Card>

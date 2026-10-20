@@ -23,6 +23,7 @@ import { guardSnapshot } from "@/lib/services/guard-snapshot";
 import { guardActivity } from "@/lib/guard-activity";
 import { audit } from "@/lib/audit";
 import { CallGuardButton } from "@/components/calls/call-guard";
+import { NotifyClientButton } from "@/components/clients/notify-client";
 
 export const metadata = { title: "Guard" };
 
@@ -56,10 +57,12 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
     tab === "history" ? db.auditLog.findMany({ where: { entity: "Guard", entityId: id }, orderBy: { createdAt: "desc" }, take: 40 }) : [],
   ]);
 
-  // Calling is open to every role that can see the guard; the rest of the row is for admins.
+  // Calling and client updates are open to every role that can see the guard (a supervisor's
+  // client update is a draft for approval); the rest of the row is for admins.
   const actions = (
     <ButtonGroup>
       {g.active && <CallGuardButton guardId={g.id} guardName={name} size="sm" />}
+      {g.active && <NotifyClientButton guardId={g.id} size="sm" />}
       {can.manageGuards(user) && <>
       <LinkButton href={`/messages/new?guardId=${g.id}`} size="sm">Message</LinkButton>
       {g.watched

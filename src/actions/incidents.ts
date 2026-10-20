@@ -6,8 +6,6 @@ import { db } from "@/lib/db";
 import { incidentSchema, formToObject, firstIssue } from "@/lib/validation";
 import { createIncident as createIncidentRecord } from "@/lib/services/incidents";
 import { recordEvent } from "@/lib/services/shifts";
-import { sendSms } from "@/lib/sms/outbound";
-import { normalisePhone, isValidPhone } from "@/lib/phone";
 import { actor, auditAs, fail, type ActionState } from "./_helpers";
 
 export async function createIncident(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -60,30 +58,6 @@ export async function resolveIncident(id: string, _: ActionState, fd: FormData):
 }
 
 /** Super admin only: text the client about an incident at their site. The message is reviewed before sending. */
-export async function notifyClientOfIncident(id: string, _: ActionState, fd: FormData): Promise<ActionState> {
-  try {
-    const user = await actor("SUPER_ADMIN");
-    const to = String(fd.get("to") ?? "").trim();
-    const body = String(fd.get("body") ?? "").trim();
-    if (!to) return { error: "Enter the client's phone number." };
-    if (body.length < 10) return { error: "The message is too short." };
-    let phone: string;
-    try { phone = normalisePhone(to); } catch { return { error: "That phone number does not look valid." }; }
-    if (!isValidPhone(phone)) return { error: "That phone number does not look valid." };
-    const inc = await db.incident.findUnique({ where: { id }, include: { location: true } });
-    if (!inc) return { error: "Incident not found." };
-    const msg = await sendSms({ to: phone, body, type: "CLIENT_UPDATE", guardId: inc.guardId, shiftId: inc.shiftId, locationId: inc.locationId, clientId: inc.location.clientId, actor: user.name, userId: user.id });
-    if (msg.status === "FAILED") return { error: `The gateway rejected the message: ${msg.error ?? "unknown error"}` };
-    await db.incident.update({ where: { id }, data: { clientNotifiedAt: new Date() } });
-    if (inc.shiftId) await recordEvent(inc.shiftId, inc.guardId, "CLIENT_NOTIFIED", { source: "ADMIN", note: `${user.name} notified the client on ${phone} about ${inc.incidentNo}.`, smsMessageId: msg.id });
-    await auditAs(user, "CLIENT_NOTIFIED", "Incident", id, { incidentNo: inc.incidentNo, to: phone });
-  } catch (e) {
-    return fail(e);
-  }
-  revalidatePath(`/incidents/${id}`);
-  return { ok: true };
-}
-
 export async function closeIncident(id: string) {
   const user = await actor("ADMIN");
   const inc = await db.incident.update({ where: { id }, data: { status: "CLOSED" } });

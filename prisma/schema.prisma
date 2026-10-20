@@ -1232,6 +1232,8 @@ model ClientNotification {
   channel       MessageChannel           @default(SMS)
   recipient     String
   message       String
+  /// Email subject; null for SMS.
+  subject       String?
   status        ClientNotificationStatus @default(QUEUED)
   failureReason String?
   /// Who sent it; null when a rule sent it.

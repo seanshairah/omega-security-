@@ -82,6 +82,7 @@ CREATE TABLE "ClientNotification" (
     "channel" "MessageChannel" NOT NULL DEFAULT 'SMS',
     "recipient" TEXT NOT NULL,
     "message" TEXT NOT NULL,
+    "subject" TEXT,
     "status" "ClientNotificationStatus" NOT NULL DEFAULT 'QUEUED',
     "failureReason" TEXT,
     "sentById" TEXT,

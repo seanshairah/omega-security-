@@ -39,6 +39,11 @@ export async function createIncident(input: CreateIncidentInput) {
     },
   });
   await audit({ userId: input.actorUserId, actor: input.actorName ?? "system", action: "INCIDENT_CREATED", entity: "Incident", entityId: incident.id, details: { incidentNo, category: input.category, severity: input.severity } });
+  // A site that asks for it gets a draft client message for the super admin to approve. Nothing is sent from here.
+  if (input.category === "EMERGENCY" || input.severity === "CRITICAL") {
+    const { onEmergencyReported } = await import("@/lib/client-notifications/rules");
+    await onEmergencyReported(incident.id).catch(() => undefined);
+  }
   return incident;
 }
 

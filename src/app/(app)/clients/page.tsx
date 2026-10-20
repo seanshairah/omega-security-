@@ -27,7 +27,7 @@ export default async function ClientsPage() {
               const onDuty = c.locations.reduce((n, l) => n + l._count.shifts, 0);
               return (
                 <tr key={c.id}>
-                  <td><div className="font-medium text-ink">{c.name}</div><div className="text-[12px] text-ink-3">{c.code}</div></td>
+                  <td><Link href={`/clients/${c.id}`} className="font-medium text-ink hover:underline">{c.name}</Link><div className="text-[12px] text-ink-3">{c.code}</div></td>
                   <td className="text-ink-2">{c.industry ?? "—"}</td>
                   <td className="text-ink-2">{c.contactName ?? "—"}{c.contactPhone ? <span className="block text-[12px] text-ink-3 tnum">{c.contactPhone}</span> : null}</td>
                   <td><Link href={`/locations?clientId=${c.id}`} className="hover:underline">{c.locations.filter((l) => l.active).length} site{c.locations.length === 1 ? "" : "s"}</Link></td>

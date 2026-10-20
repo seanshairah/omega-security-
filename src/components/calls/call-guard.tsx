@@ -40,7 +40,8 @@ function CallPanel({ guardId, guardName, shiftId, incidentId, onClose }: { guard
   // One key per attempt: a double click, or a retry after a dropped response, is one call.
   const key = useRef<string>(newKey());
   const alive = useRef(true);
-  useEffect(() => () => { alive.current = false; }, []);
+  // Set on every mount, not only the first: React's dev double-mount runs the cleanup once in between.
+  useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
 
   useEffect(() => {
     void (async () => {

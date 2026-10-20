@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { applyDeliveryToNotifications } from "@/lib/client-notifications/service";
 import { db } from "@/lib/db";
 import { getProvider, PROVIDER_NAMES } from "@/lib/sms";
 import type { WebhookRequest } from "@/lib/sms/provider";
@@ -25,6 +26,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ provide
     for (const report of (await provider.parseDeliveryReports?.(wreq)) ?? []) {
       const r = await db.smsMessage.updateMany({ where: { providerMessageId: report.providerMessageId, provider: name }, data: { status: report.status, error: report.error ?? null } });
       results.push({ delivery: report, updated: r.count });
+      // A client message takes its status from the provider's report, never from having been queued.
+      if (r.count) {
+        try {
+          const ids = (await db.smsMessage.findMany({ where: { providerMessageId: report.providerMessageId, provider: name }, select: { id: true } })).map((m) => m.id);
+          await applyDeliveryToNotifications(ids, report.status, report.error);
+        } catch (e) {
+          console.error("client notification delivery update failed", e);
+        }
+      }
     }
     for (const msg of await provider.parseInbound(wreq)) {
       const r = await processIncomingMessage({ from: msg.from, body: msg.body, provider: name, providerMessageId: msg.providerMessageId, receivedAt: msg.receivedAt });

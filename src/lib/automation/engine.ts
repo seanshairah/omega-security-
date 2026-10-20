@@ -11,6 +11,7 @@ import { getSettingNumber } from "@/lib/settings";
 import { notify } from "@/lib/notifications";
 import { sendTemplated } from "@/lib/sms/outbound";
 import { sendClientUpdate } from "@/lib/sms/client-updates";
+import { onArrivalNotConfirmed } from "@/lib/client-notifications/rules";
 import { materialiseRecurrences, recordEvent, shiftInclude, LIVE_STATUSES, ON_SITE_STATUSES } from "@/lib/services/shifts";
 import { runCheckInStep } from "@/lib/attendance/check-in-service";
 import { fmtTime } from "@/lib/time";
@@ -122,6 +123,8 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
         await db.attendance.update({ where: { shiftId: s.id }, data: { status: "NOT_REPORTED" } });
         await recordEvent(s.id, s.guardId, "ARRIVAL_ESCALATED", { at: now, note: `No reply after reminder. Attendance not confirmed. ${s.supervisor?.name ?? "Supervisor"} notified.` });
         await notify({ type: "GUARD_NOT_REPORTED", severity: "CRITICAL", title: `${s.guard.firstName} ${s.guard.lastName} failed to report at ${s.location.name}`, body: `No reply to the arrival check or reminder. Shift ${fmtTime(s.startAt)}–${fmtTime(s.endAt)}. Call ${s.guard.phone}.`, guardId: s.guardId, shiftId: s.id });
+        // Supervisor first (above), then the client if the site asks for late or missed check-ins.
+        await onArrivalNotConfirmed(s.id, `shift:${s.id}:arrival-escalated`);
         report.escalated++;
       } catch (e) {
         report.errors.push(`escalate ${s.id}: ${(e as Error).message}`);
