@@ -11,7 +11,16 @@ const NAMES: Record<string, string> = {
   dashboard: "Overview", operations: "Active operations", alerts: "Guard alerts", shifts: "Shifts", attendance: "Attendance", incidents: "Incidents",
   guards: "Guards", clients: "Clients", locations: "Locations", sms: "SMS logs", templates: "Templates", reports: "Reports",
   users: "Users", settings: "Settings", audit: "Audit log", simulator: "Simulator", notifications: "Notifications", new: "New", edit: "Edit", recurring: "Recurring", monitoring: "Monitoring", messages: "Messages",
+  calls: "Calls", gateways: "Gateways", exceptions: "Exceptions", map: "Map", location: "Location", "check-ins": "Check-ins",
 };
+
+/** A segment with no entry above still has to read as a heading, not as the URL. */
+function label(seg: string): string {
+  if (NAMES[seg]) return NAMES[seg];
+  if (seg.length > 12) return "Detail";
+  const words = seg.replace(/-/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 const SECTION: Record<string, string> = {
   dashboard: "Operations", operations: "Operations", shifts: "Operations", attendance: "Operations", incidents: "Operations",
   guards: "Workforce", clients: "Workforce", locations: "Workforce", sms: "Communications", simulator: "Communications", messages: "Communications", monitoring: "Operations",
@@ -24,7 +33,7 @@ export function Topbar({ user, unread, systemStatus, onMenu }: { user: { name: s
   const [menu, setMenu] = useState(false);
   const segs = path.split("/").filter(Boolean);
   const section = SECTION[segs[0]] ?? "Omega";
-  const crumbs = segs.map((s, i) => ({ label: NAMES[s] ?? (s.length > 12 ? "Detail" : s), href: "/" + segs.slice(0, i + 1).join("/") }));
+  const crumbs = segs.map((s, i) => ({ label: label(s), href: "/" + segs.slice(0, i + 1).join("/") }));
   const dot = { ok: "bg-ok", warn: "bg-warn", critical: "bg-critical" }[systemStatus.tone];
 
   return (

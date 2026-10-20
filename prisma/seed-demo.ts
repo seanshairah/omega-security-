@@ -264,7 +264,7 @@ async function main() {
   ] });
 
   console.log(`Seeded: ${guards.length} guards, 5 clients, 8 locations, ${await db.shift.count()} shifts, ${await db.smsMessage.count()} SMS, ${await db.incident.count()} incidents.`);
-  console.log("Sign in: admin@omegasecurity.co.zw / Sentinel123!");
+  console.log(`Sign in: admin@omegasecurity.co.zw / ${process.env.ADMIN_PASSWORD || "Demo12345!"}`);
 }
 
 main().finally(() => db.$disconnect());

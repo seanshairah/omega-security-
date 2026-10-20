@@ -45,7 +45,7 @@ export function Simulator({ shifts }: { shifts: Shift[] }) {
                   ))}
                 </div>
                 <form onSubmit={(e) => { e.preventDefault(); if (text.trim()) reply(text); }} className="mt-2 flex gap-1.5">
-                  <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a reply" className="h-9 flex-1 rounded-full border border-line bg-white px-3.5 text-[13px] focus:border-accent focus:outline-none" />
+                  <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a reply" className="h-9 min-w-0 flex-1 rounded-full border border-line bg-white px-3.5 text-[13px] focus:border-accent focus:outline-none" />
                   <button disabled={busy || !text.trim()} className="h-9 rounded-full bg-accent px-4 text-[13px] font-medium text-white disabled:opacity-40">Send</button>
                 </form>
                 <div className="mt-2 flex flex-wrap gap-1.5">{QUICK.map((q) => <button key={q.label} disabled={busy || !shift} onClick={() => reply(q.body)} className={cn("h-7 rounded-full border px-2.5 text-[12px] font-medium disabled:opacity-50", q.critical ? "border-critical/40 bg-critical-soft text-[#b3301a]" : "border-line bg-white text-ink")}>{q.label}</button>)}</div>

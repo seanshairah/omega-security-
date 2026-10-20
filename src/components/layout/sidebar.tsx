@@ -72,13 +72,13 @@ export function Sidebar({ counts, role, onClose, simulator = true }: { counts: S
             <input name="q" placeholder="Search guards" className="h-9 w-full rounded-[var(--radius-control)] border border-line bg-surface px-3 text-sm placeholder:text-ink-3 focus:border-accent focus:outline-none" />
           </form>
         )}
-        <Link href="/dashboard" className={cn("mb-1 flex h-9 items-center gap-2.5 rounded-[9px] px-2.5 text-[14px] font-medium", path === "/dashboard" ? "bg-surface-2 text-ink" : "text-ink-2 hover:bg-surface-2 hover:text-ink", collapsed && "justify-center px-0")} title="Home">
+        <Link href="/dashboard" className={cn("mb-1 flex h-11 items-center gap-2.5 rounded-[9px] px-2.5 text-[14px] font-medium sm:h-9", path === "/dashboard" ? "bg-surface-2 text-ink" : "text-ink-2 hover:bg-surface-2 hover:text-ink", collapsed && "justify-center px-0")} title="Home">
           <Icon name="home" size={18} className="shrink-0" filled />
           {!collapsed && "Home"}
         </Link>
         {groups.map((g) => (
           <div key={g.label} className="mb-1">
-            <button onClick={() => setOpen((o) => ({ ...o, [g.label]: !o[g.label] }))} className={cn("flex h-9 w-full items-center gap-2.5 rounded-[9px] px-2.5 text-[14px] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink", collapsed && "justify-center px-0")} title={g.label}>
+            <button onClick={() => setOpen((o) => ({ ...o, [g.label]: !o[g.label] }))} className={cn("flex h-11 w-full items-center gap-2.5 rounded-[9px] px-2.5 text-[14px] font-medium text-ink-2 hover:bg-surface-2 hover:text-ink sm:h-9", collapsed && "justify-center px-0")} title={g.label}>
               <Icon name={g.icon} size={18} filled className="shrink-0" />
               {!collapsed && <span className="flex-1 text-left">{g.label}</span>}
               {!collapsed && (open[g.label] ? <Icon name="keyboard_arrow_up" size={12} filled /> : <Icon name="keyboard_arrow_down" size={12} filled />)}
@@ -87,7 +87,7 @@ export function Sidebar({ counts, role, onClose, simulator = true }: { counts: S
               <ul className={cn(collapsed ? "mt-1 space-y-1" : "ml-[19px] mt-0.5 space-y-0.5 border-l border-line pl-2")}>
                 {g.items.map((it) => (
                   <li key={it.href}>
-                    <Link href={it.href} title={it.label} className={cn("flex h-8 items-center gap-2.5 rounded-[8px] px-2.5 text-[13.5px]", isActive(it.href) ? "bg-surface-2 font-medium text-ink" : "text-ink-2 hover:bg-surface-2 hover:text-ink", collapsed && "justify-center px-0")}>
+                    <Link href={it.href} title={it.label} className={cn("flex h-11 items-center gap-2.5 rounded-[8px] px-2.5 text-[13.5px] sm:h-8", isActive(it.href) ? "bg-surface-2 font-medium text-ink" : "text-ink-2 hover:bg-surface-2 hover:text-ink", collapsed && "justify-center px-0")}>
                       {collapsed ? <Icon name={it.icon} size={17} filled /> : <span className="flex-1 truncate">{it.label}</span>}
                       {!collapsed && it.count ? <Count value={it.count} urgent={it.urgent} /> : null}
                     </Link>
@@ -101,7 +101,7 @@ export function Sidebar({ counts, role, onClose, simulator = true }: { counts: S
         <ul className="space-y-0.5">
           {singles.map((it) => (
             <li key={it.href}>
-              <Link href={it.href} title={it.label} className={cn("flex h-9 items-center gap-2.5 rounded-[9px] px-2.5 text-[14px] font-medium", isActive(it.href) ? "bg-surface-2 text-ink" : "text-ink-2 hover:bg-surface-2 hover:text-ink", collapsed && "justify-center px-0")}>
+              <Link href={it.href} title={it.label} className={cn("flex h-11 items-center gap-2.5 rounded-[9px] px-2.5 text-[14px] font-medium sm:h-9", isActive(it.href) ? "bg-surface-2 text-ink" : "text-ink-2 hover:bg-surface-2 hover:text-ink", collapsed && "justify-center px-0")}>
                 <Icon name={it.icon} size={18} filled className="shrink-0" />
                 {!collapsed && it.label}
               </Link>
