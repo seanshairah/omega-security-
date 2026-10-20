@@ -29,7 +29,20 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: d.reason, detail: d.detail }, { status: 409 });
   }
 
-  const bytes = await releaseBytes(d.release.file);
+  // The APK reaches the serverless bundle only through outputFileTracingIncludes in
+  // next.config.ts: nothing imports it, so nothing traces it automatically. If that ever stops
+  // working the file is simply absent at runtime, and an unhandled read error would surface as an
+  // opaque 500 that looks like any other outage. Name it instead.
+  let bytes: Buffer;
+  try {
+    bytes = await releaseBytes(d.release.file);
+  } catch {
+    return NextResponse.json({
+      error: "The release APK is not present in this deployment",
+      detail: `${d.release.file} is described by artifacts/android/release.json but was not bundled. ` +
+        "Check outputFileTracingIncludes in next.config.ts, and that the APK is committed.",
+    }, { status: 503 });
+  }
   return new NextResponse(new Uint8Array(bytes), {
     headers: {
       "Content-Type": "application/vnd.android.package-archive",
