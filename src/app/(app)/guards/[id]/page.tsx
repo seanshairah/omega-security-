@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser, can } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
-import { guardPerformance, guardLiveStatus, GUARD_STATUS_LABEL } from "@/lib/services/guards";
-import { ON_SITE_STATUSES, shiftInclude } from "@/lib/services/shifts";
+import { shiftInclude } from "@/lib/services/shifts";
 import { ATTENDANCE_LABEL } from "@/lib/services/attendance";
 import { CATEGORY_LABEL } from "@/lib/services/incidents";
 import { Table, THead, TBody, Empty } from "@/components/ui/table";
@@ -19,8 +18,7 @@ import { CallList } from "@/components/calls/call-list";
 import { CommunicationHistory } from "@/components/calls/communication-history";
 import { LocationEventList } from "@/components/location/location-events";
 import { GuardWorkspace } from "@/components/guards/guard-workspace";
-import { guardSnapshot } from "@/lib/services/guard-snapshot";
-import { guardActivity } from "@/lib/guard-activity";
+import { guardWorkspaceData } from "@/lib/services/guard-workspace-data";
 import { audit } from "@/lib/audit";
 import { CallGuardButton } from "@/components/calls/call-guard";
 import { NotifyClientButton } from "@/components/clients/notify-client";
@@ -36,14 +34,11 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
   const user = await requireUser();
   const { id } = await params;
   const { tab = "shifts" } = await searchParams;
-  const g = await db.guard.findUnique({ where: { id }, include: { homeLocation: true, supervisor: true } });
-  if (!g) notFound();
-  const [perf, deployed, snapshot, activity] = await Promise.all([guardPerformance(id), db.shift.findFirst({ where: { guardId: id, status: { in: ON_SITE_STATUSES } }, include: { location: true } }), guardSnapshot(id), guardActivity(id, { since: new Date(Date.now() - 7 * 86_400_000), limit: 50 })]);
-  if (!snapshot) notFound();
+  const data = await guardWorkspaceData(id);
+  if (!data) notFound();
+  const { guard: g, snapshot, activity, profile } = data;
   await audit({ userId: user.id, actor: user.name, action: "LOCATION_VIEWED", entity: "Guard", entityId: id, details: { via: "workspace" } });
   const name = `${g.firstName} ${g.lastName}`;
-  const live = guardLiveStatus(g, Boolean(deployed));
-  const tone = { DEPLOYED: "ok", AVAILABLE: "neutral", ON_LEAVE: "warn", SUSPENDED: "critical", INACTIVE: "muted" } as const;
   const tabs = [{ key: "shifts", label: "Shifts & attendance" }, { key: "incidents", label: "Incidents" }, { key: "messages", label: "SMS" }, { key: "calls", label: "Calls" }, { key: "communication", label: "Communication" }, ...(g.deviceKind === "ANDROID_GUARD" ? [{ key: "location", label: "Location events" }] : []), { key: "history", label: "Audit" }];
 
   // Only the active tab's rows are read.
@@ -77,15 +72,8 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
     </ButtonGroup>
   );
 
-  const profile = {
-    photoUrl: g.photoUrl, email: g.email, nationalId: g.nationalId, supervisor: g.supervisor?.name ?? null, homeLocation: g.homeLocation ? { id: g.homeLocation.id, name: g.homeLocation.name } : null, address: g.address,
-    emergencyContact: g.emergencyContactName ? `${g.emergencyContactName} · ${g.emergencyContactPhone ?? ""}` : null,
-    employment: g.employmentStatus === "ACTIVE" ? "Active" : g.employmentStatus === "ON_LEAVE" ? "On leave" : g.employmentStatus === "SUSPENDED" ? "Suspended" : "Inactive", employedSince: fmtDate(g.dateEmployed),
-    notes: g.notes, watchNote: g.watched ? g.watchNote ?? "" : null, liveLabel: live === "DEPLOYED" && deployed ? `Deployed · ${deployed.location.name}` : GUARD_STATUS_LABEL[live], liveTone: tone[live], performance: perf,
-  };
-
   return (
-    <GuardWorkspace initial={JSON.parse(JSON.stringify(snapshot))} profile={profile} canRequest={can.manageGuards(user)} canEditSites={can.manageLocations(user)} actions={actions} tabs={tabs} tab={tab} initialActivity={activity}>
+    <GuardWorkspace initial={snapshot} profile={profile} canRequest={can.manageGuards(user)} canEditSites={can.manageLocations(user)} actions={actions} tabs={tabs} tab={tab} initialActivity={activity}>
       {tab === "shifts" && (
         <Table>
           <THead><tr><th>Date</th><th>Location</th><th>Hours</th><th>Arrival</th><th>Completion</th><th>Attendance</th><th>Status</th></tr></THead>

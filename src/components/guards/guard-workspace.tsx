@@ -22,7 +22,7 @@ type Snapshot = Omit<GuardSnapshot, "device" | "shift" | "presentation" | "reque
   request: (Record<string, unknown> & { id: string; status: keyof typeof REQUEST_STATUS_META; latitude: number | null; longitude: number | null; accuracyM: number | null; capturedAt: string | null; failureReason: keyof typeof FAILURE_META | null; secondsLeft: number; requestedBy?: string | null; mock: boolean }) | null;
 };
 
-export type GuardProfile = { photoUrl: string | null; email: string | null; nationalId: string; supervisor: string | null; homeLocation: { id: string; name: string } | null; address: string | null; emergencyContact: string | null; employment: string; employedSince: string; notes: string | null; watchNote: string | null; liveLabel: string; liveTone: Tone; performance: { attendancePct: number; completed: number; late: number; missed: number; missedChecks: number; incidents: number; assistance: number } };
+export type GuardProfile = { photoUrl: string | null; email: string | null; nationalId: string; supervisor: string | null; homeLocation: { id: string; name: string } | null; address: string | null; emergencyContact: string | null; employment: string; employedSince: string; notes: string | null; watchNote: string | null; liveLabel: string; liveTone: Tone; attendance?: { label: string; tone: Tone } | null; performance: { attendancePct: number; completed: number; late: number; missed: number; missedChecks: number; incidents: number; assistance: number } };
 
 const fmtT = (d: string | Date | null | undefined) => (d ? new Date(d).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Harare" }) : "—");
 const fmtDT = (d: string | Date | null | undefined) => (d ? new Date(d).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Harare" }) : "—");
@@ -36,7 +36,7 @@ const CAT_LABEL = Object.fromEntries(ACTIVITY_CATEGORIES.map((c) => [c.key, c.la
  * scroll. Below xl it stacks with controlled heights. Status and feed poll their own small
  * endpoints (15 s / 30 s); nothing refreshes the whole page.
  */
-export function GuardWorkspace({ initial, profile, canRequest, canEditSites, actions, tabs, tab, children, initialActivity }: { initial: Snapshot; profile: GuardProfile; canRequest: boolean; canEditSites: boolean; actions?: React.ReactNode; tabs: { key: string; label: string }[]; tab: string; children: React.ReactNode; initialActivity: { items: ActivityItem[]; nextBefore: string | null } }) {
+export function GuardWorkspace({ initial, profile, canRequest, canEditSites, actions, tabs = [], tab = "", children, initialActivity, fill }: { initial: Snapshot; profile: GuardProfile; canRequest: boolean; canEditSites: boolean; actions?: React.ReactNode; tabs?: { key: string; label: string }[]; tab?: string; children?: React.ReactNode; initialActivity: { items: ActivityItem[]; nextBefore: string | null }; fill?: boolean }) {
   const [snap, setSnap] = useState<Snapshot>(initial);
   const [now, setNow] = useState(() => Date.now());
   const [fitKey, setFitKey] = useState(0);
@@ -68,21 +68,25 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
   const btn = "inline-flex h-8 items-center gap-1 rounded-[var(--radius-control)] border border-line bg-surface px-2.5 text-[12.5px] font-medium text-ink hover:bg-surface-2 disabled:opacity-50";
 
   const identity = (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-card)] border border-line bg-surface px-4 py-2.5 xl:flex-nowrap" data-testid="guard-identity">
-      <div className="flex min-w-0 items-center gap-3">
+    <div className="shrink-0 rounded-[var(--radius-card)] border border-line bg-surface" data-testid="guard-identity">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5">
+      <div className="flex min-w-[220px] items-center gap-3">
         <Avatar src={profile.photoUrl} name={snap.guard.name} size={40} />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2"><h1 className="truncate text-[18px] font-semibold leading-tight text-ink">{snap.guard.name}</h1><Status tone={profile.liveTone}>{profile.liveLabel}</Status>{snap.guard.watched && <Pill tone="warn">watched</Pill>}{!snap.guard.active && <Pill tone="critical">deactivated</Pill>}</div>
           <div className="truncate text-[12.5px] text-ink-2">{snap.guard.guardNo} · <a href={`tel:${snap.guard.phone}`} className="underline">{snap.guard.phone}</a>{snap.device ? ` · ${snap.device.deviceName}` : " · no guard phone"}</div>
         </div>
       </div>
-      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-2 lg:ml-auto xl:flex-nowrap xl:overflow-hidden xl:whitespace-nowrap">
-        <span className="inline-flex items-center gap-1.5"><Status tone={p.connection.tone} pulse={p.connection.state === "ONLINE"}>{p.connection.label}</Status>{p.connection.lastSeenAt && <span className="text-ink-3">heartbeat {ago(p.connection.lastSeenAt, now)}</span>}</span>
+      <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 text-[12.5px] text-ink-2 lg:ml-auto">
+        <span className="inline-flex items-center gap-1.5"><Status tone={p.connection.tone} pulse={p.connection.state === "ONLINE"}>{p.connection.label}</Status>{p.connection.lastSeenAt && <span className="text-ink-3" suppressHydrationWarning>heartbeat {ago(p.connection.lastSeenAt, now)}</span>}</span>
         <span>{snap.shift ? <><span className="font-medium text-ink">On shift</span> · {snap.shift.siteName} · {fmtT(snap.shift.startAt)}–{fmtT(snap.shift.endAt)}</> : <span className="text-ink-3">Off shift</span>}</span>
         {snap.device?.batteryLevel != null && <span className={cn(snap.device.batteryLevel < 15 && "text-critical")}>Battery {snap.device.batteryLevel}%</span>}
+        {profile.attendance && <span className="inline-flex items-center gap-1.5"><span className="text-ink-3">Check-in</span><Status tone={profile.attendance.tone}>{profile.attendance.label}</Status></span>}
         {snap.openAlerts > 0 && <Pill tone="critical">{snap.openAlerts} open alert{snap.openAlerts > 1 ? "s" : ""}</Pill>}
       </div>
-      {actions && <div className="flex w-full flex-wrap items-center gap-2 xl:w-auto xl:shrink-0">{actions}</div>}
+    </div>
+      {/* The actions get their own row: inline, seven buttons squeezed the guard's name to two letters. */}
+      {actions && <div className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-2">{actions}</div>}
     </div>
   );
 
@@ -90,7 +94,7 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
     <div className="space-y-3" data-testid="location-state">
       <div>
         <div className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-ink-3">Device connection</div>
-        <div className="mt-0.5 flex items-center justify-between gap-2"><Status tone={p.connection.tone} pulse={p.connection.state === "ONLINE"}>{p.connection.label}</Status><span className="text-[12px] text-ink-3">{p.connection.lastSeenAt ? `heartbeat ${ago(p.connection.lastSeenAt, now)}` : ""}</span></div>
+        <div className="mt-0.5 flex items-center justify-between gap-2"><Status tone={p.connection.tone} pulse={p.connection.state === "ONLINE"}>{p.connection.label}</Status><span className="text-[12px] text-ink-3" suppressHydrationWarning>{p.connection.lastSeenAt ? `heartbeat ${ago(p.connection.lastSeenAt, now)}` : ""}</span></div>
         {snap.device && <div className="mt-0.5 text-[12px] text-ink-3">{snap.device.deviceModel ?? "—"}{snap.device.appVersion ? ` · v${snap.device.appVersion}` : ""}{snap.device.networkType ? ` · ${snap.device.networkType}` : ""} · location {snap.device.locationPermission === "background" ? "always allowed" : snap.device.locationPermission === "foreground_only" ? "while using only" : snap.device.locationPermission ?? "unknown"}</div>}
         {snap.device?.buildType === "debug" && <div className="mt-1"><Pill tone="warn">debug build</Pill></div>}
       </div>
@@ -104,7 +108,7 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
         {pos ? (
           <div className="mt-0.5 text-[13px] text-ink">
             <div className="flex flex-wrap items-center gap-x-2"><span className="tnum">{pos.latitude.toFixed(5)}, {pos.longitude.toFixed(5)}</span><Pill tone={pos.freshness === "LIVE" ? "ok" : pos.freshness === "RECENT" ? "warn" : "muted"}>{pos.freshness.toLowerCase()}</Pill></div>
-            <div className="text-[12px] text-ink-3">{pos.accuracyM != null ? `±${Math.round(pos.accuracyM)} m · ` : ""}{fmtDT(pos.at)} · {ago(pos.at, now)} · {pos.source === "REQUESTED" ? "requested GPS fix" : "automatic monitoring"}</div>
+            <div className="text-[12px] text-ink-3" suppressHydrationWarning>{pos.accuracyM != null ? `±${Math.round(pos.accuracyM)} m · ` : ""}{fmtDT(pos.at)} · {ago(pos.at, now)} · {pos.source === "REQUESTED" ? "requested GPS fix" : "automatic monitoring"}</div>
           </div>
         ) : <div className="mt-0.5 text-[13px] text-ink-3">No position from this phone yet.</div>}
       </div>
@@ -118,7 +122,7 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
 
   const requestRow = (
     <div className="flex flex-wrap items-center gap-2 border-t border-line px-3 py-2 text-[12.5px]" data-testid="map-request-row">
-      {snap.device && canRequest ? <button type="button" onClick={() => req.start({ purpose: "CHECK" })} disabled={busy || req.busy} className={cn(btn, "border-accent/60 bg-accent-soft text-accent-strong hover:bg-accent-soft")} data-testid="request-location"><Icon name="my_location" size="sm" filled />{busy ? "Locating…" : "Request fix"}</button> : !snap.device ? <span className="inline-flex items-center gap-1 text-ink-3"><Icon name="location_off" size="sm" />No guard phone: SMS and calls only</span> : null}
+      {snap.device && canRequest ? <button type="button" onClick={() => req.start({ purpose: "CHECK" })} disabled={busy || req.busy} className={cn(btn, "border-accent/60 bg-accent-soft text-accent-strong hover:bg-accent-soft")} data-testid="request-location"><Icon name="my_location" size="sm" filled />{busy ? "Locating…" : "Request location"}</button> : !snap.device ? <span className="inline-flex items-center gap-1 text-ink-3"><Icon name="location_off" size="sm" />No guard phone: SMS and calls only</span> : null}
       {busy && canRequest && <button type="button" onClick={() => req.cancel()} disabled={req.busy} className={btn}><Icon name="close" size="sm" />Cancel</button>}
       {liveReq && (
         <span className="inline-flex items-center gap-1.5"><Status tone={REQUEST_STATUS_META[liveReq.status].tone} pulse={isOpen(liveReq.status)}>{REQUEST_STATUS_META[liveReq.status].label}</Status>
@@ -135,7 +139,7 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
   );
 
   return (
-    <Workspace>
+    <Workspace fill={fill}>
       {identity}
       <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-[240px_minmax(0,1fr)_300px] 2xl:grid-cols-[290px_minmax(0,1fr)_370px]">
         {/* Profile column */}
@@ -172,7 +176,7 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
         </Panel>
 
         {/* Map column */}
-        <Panel title="Live map" subtitle={pos ? `${pos.source === "REQUESTED" ? "Requested fix" : "Monitoring fix"} · ${ago(pos.at, now)}${pos.accuracyM != null ? ` · ±${Math.round(pos.accuracyM)} m` : ""} · ${p.geofence.label.toLowerCase()}` : "No verified position yet"} className="order-1 min-h-[400px] overflow-hidden xl:order-2 xl:min-h-0" bodyClassName="flex flex-col">
+        <Panel title="Live map" subtitle={pos ? <span suppressHydrationWarning>{`${pos.source === "REQUESTED" ? "Requested fix" : "Monitoring fix"} · ${ago(pos.at, now)}${pos.accuracyM != null ? ` · ±${Math.round(pos.accuracyM)} m` : ""} · ${p.geofence.label.toLowerCase()}`}</span> : "No verified position yet"} className="order-1 min-h-[400px] overflow-hidden xl:order-2 xl:min-h-0" bodyClassName="flex flex-col">
           <div className="relative min-h-[280px] flex-1 xl:min-h-0"><GuardMap site={site} position={mapPosition} requested={older} trail={showTrail ? snap.trail : []} fitKey={fitKey} className="absolute inset-0 flex flex-col p-0" /></div>
           {requestRow}
         </Panel>
@@ -182,14 +186,14 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
       </div>
 
       {/* Detail region: the existing tables, inside a controlled-height panel on desktop */}
-      <section className={cn("flex min-h-0 flex-col rounded-[var(--radius-card)] border border-line bg-surface", detailOpen ? "xl:h-[31%] xl:min-h-[180px]" : "xl:h-auto")} data-testid="detail-region">
+      {tabs.length > 0 && <section className={cn("flex min-h-0 flex-col rounded-[var(--radius-card)] border border-line bg-surface", detailOpen ? "xl:h-[31%] xl:min-h-[180px]" : "xl:h-auto")} data-testid="detail-region">
         <div className="flex shrink-0 items-center gap-1 overflow-x-auto border-b border-line px-2 scroll-thin">
           {tabs.map((t) => <Link key={t.key} href={`${pathname}?tab=${t.key}`} scroll={false} className={cn("-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-[13px] font-medium", tab === t.key ? "border-accent text-ink" : "border-transparent text-ink-2 hover:text-ink")}>{t.label}</Link>)}
           <button type="button" onClick={() => setDetailOpen((v) => !v)} className="ml-auto hidden px-2 text-[12px] text-ink-3 hover:text-ink xl:block" aria-expanded={detailOpen}>{detailOpen ? "Collapse" : "Expand"}</button>
         </div>
         <div className={cn("min-h-0 flex-1 overflow-auto scroll-thin", !detailOpen && "hidden xl:hidden")}>{children}</div>
         {!detailOpen && <div className="xl:hidden">{children}</div>}
-      </section>
+      </section>}
     </Workspace>
   );
 }
@@ -246,7 +250,7 @@ function ActivityFeed({ guardId, initial, className }: { guardId: string; initia
             <div className="flex items-start gap-2">
               <span className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", { info: "bg-line-strong", success: "bg-ok", warning: "bg-warn", critical: "bg-critical" }[i.severity])} />
               <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-2"><span className={cn("truncate text-[13px] font-medium", SEV_TONE[i.severity] === "critical" ? "text-critical" : "text-ink")}>{i.href ? <Link href={i.href} className="hover:underline">{i.title}</Link> : i.title}</span><span className="shrink-0 text-[11px] text-ink-3 tnum" title={fmtDT(i.at)}>{ago(i.at, now)}</span></div>
+                <div className="flex items-baseline justify-between gap-2"><span className={cn("truncate text-[13px] font-medium", SEV_TONE[i.severity] === "critical" ? "text-critical" : "text-ink")}>{i.href ? <Link href={i.href} className="hover:underline">{i.title}</Link> : i.title}</span><span className="shrink-0 text-[11px] text-ink-3 tnum" title={fmtDT(i.at)} suppressHydrationWarning>{ago(i.at, now)}</span></div>
                 <div className="flex flex-wrap items-center gap-x-2 text-[11.5px] text-ink-3"><span className="uppercase tracking-[0.06em]">{CAT_LABEL[i.category]}</span>{i.late && <span className="rounded-[4px] bg-info-soft px-1 text-[10px] font-semibold uppercase text-[#3a50ad]">synced late</span>}{i.detail && <span className="truncate text-ink-2">{i.detail}</span>}</div>
               </div>
             </div>

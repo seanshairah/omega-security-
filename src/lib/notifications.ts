@@ -40,6 +40,7 @@ export type NotifyInput = {
     | "CHECK_IN_CALL_OUTSTANDING"
     | "CLIENT_NOTIFICATION_APPROVAL"
     | "CALL_REQUEST_FAILED"
+    | "GUARD_ESCALATED"
     | "GENERAL";
   severity?: NotificationSeverity;
   title: string;
