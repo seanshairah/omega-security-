@@ -11,8 +11,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call the engine
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          AUTOMATION_SECRET: ${{ secrets.AUTOMATION_SECRET }}
         run: |
+          if [ -z "$APP_URL" ] || [ -z "$AUTOMATION_SECRET" ]; then
+            echo "APP_URL or AUTOMATION_SECRET is not set; skipping the tick."
+            exit 0
+          fi
+          failed=0
           for i in 1 2 3 4 5; do
-            curl -fsS -X POST "${{ secrets.APP_URL }}/api/automation/tick" -H "Authorization: Bearer ${{ secrets.AUTOMATION_SECRET }}" -o /dev/null || echo "tick $i failed"
-            [ $i -lt 5 ] && sleep 55
+            if ! curl -fsS -X POST "$APP_URL/api/automation/tick" -H "Authorization: Bearer $AUTOMATION_SECRET" -o /dev/null; then
+              echo "tick $i failed"
+              failed=$((failed + 1))
+            fi
+            # Not `[ $i -lt 5 ] && sleep 55`: on the last pass that test is false, and under
+            # `bash -e` its non-zero status ended the step, so the job could never report success.
+            if [ "$i" -lt 5 ]; then sleep 55; fi
           done
+          if [ "$failed" -gt 0 ]; then
+            echo "$failed of 5 ticks failed."
+            exit 1
+          fi
+          echo "5 of 5 ticks succeeded."
