@@ -40,6 +40,7 @@
     "db:retime": "tsx scripts/retime-wallclock.ts",
     "android:icons": "node scripts/dev/build-android-icons.mjs",
     "android:strings": "node scripts/dev/android-strings-check.mjs",
+    "android:layout": "node scripts/dev/android-layout-audit.mjs",
     "apk:manifest": "node scripts/dev/apk-manifest.mjs",
     "test:app-release": "node scripts/dev/app-release-e2e.mjs"
   },

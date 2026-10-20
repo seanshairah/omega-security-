@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.view.View
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -70,7 +71,18 @@ class PermissionsActivity : AppCompatActivity() {
             v.setColorFilter(androidx.core.content.ContextCompat.getColor(this, if (ok) R.color.ok else R.color.ink3))
             v.contentDescription = getString(if (ok) R.string.perm_state_granted else R.string.perm_state_pending)
         }
-        mark(b.locationMark, fine); mark(b.backgroundMark, bg); mark(b.phoneMark, phone); mark(b.notificationsMark, notif); mark(b.batteryMark, batt)
+        // A granted permission has nothing left to ask for, so its button goes: the guard watches
+        // the screen empty out instead of reading five identical green buttons for the one that is
+        // still their turn. It comes back on the next onResume if the permission is withdrawn.
+        fun step(dot: android.widget.ImageView, action: android.widget.Button, ok: Boolean) {
+            mark(dot, ok)
+            action.visibility = if (ok) View.GONE else View.VISIBLE
+        }
+        step(b.locationMark, b.location, fine)
+        step(b.backgroundMark, b.background, bg)
+        step(b.phoneMark, b.phone, phone)
+        step(b.notificationsMark, b.notifications, notif)
+        step(b.batteryMark, b.battery, batt)
         b.background.isEnabled = fine
         b.backgroundHint.text = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) getString(R.string.perm_background_hint_r) else getString(R.string.perm_background_hint)
         b.done.isEnabled = fine && bg && phone

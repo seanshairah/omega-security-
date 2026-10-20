@@ -4,6 +4,7 @@
 
     <!-- Activation -->
     <string name="server_label">Server</string>
+    <string name="server_hint">https://your-portal-address</string>
     <string name="code_label">Activation code</string>
     <string name="code_hint">A8F42X</string>
     <string name="activate_device">Activate this phone</string>
