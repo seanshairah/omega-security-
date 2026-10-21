@@ -56,7 +56,7 @@ object AlertSender {
         }
         extra.put("meta", JSONObject().put("online", DeviceInfo.isOnline(app)).put("battery", DeviceInfo.batteryLevel(app)))
         val event = GatewayEvent(eventId = UUID.randomUUID().toString(), eventType = type.wire, timestampMs = now, extra = extra)
-        val queue = EventQueue(app)
+        val queue = EventQueue.get(app)
         queue.enqueue(event, type.priority)
         queue.logComm(event.eventId, "ALERT", type.wire, message?.trim()?.takeIf { it.isNotEmpty() }, now, hadLocation)
         val online = DeviceInfo.isOnline(app)

@@ -40,7 +40,7 @@ object CallMonitor {
         val prefs = Prefs(app)
         // Guard phone: attach where the guard was at the time of the call. Never a fresh stream, just the last fix.
         val event = if (prefs.isGuardMode) LocationMonitor(app).lastFixJson()?.let { raw.copy(extra = JSONObject().put("location", it)) } ?: raw else raw
-        val q = EventQueue(app)
+        val q = EventQueue.get(app)
         q.enqueue(event)
         if (event.eventType == GatewayEvent.CALL_STARTED || event.eventType == GatewayEvent.CALL_ENDED || event.eventType == GatewayEvent.CALL_MISSED) {
             val what = when (event.eventType) { GatewayEvent.CALL_STARTED -> if (event.direction == "OUTGOING") "Outgoing call" else "Incoming call"; GatewayEvent.CALL_MISSED -> "Missed call"; else -> "Call ended · ${event.durationSeconds ?: 0}s" }

@@ -16,6 +16,7 @@ import { cn } from "@/lib/cn";
 import { Rows, CardRow } from "@/components/ui/rows";
 import { Empty as EmptyState } from "@/components/ui/table";
 import { LOCATION_STATE_META, freshness } from "@/lib/geofence";
+import { effectiveGeofence } from "@/lib/site-config";
 import type { LocationEvent } from "@prisma/client";
 
 export const metadata = { title: "Active operations" };
@@ -27,8 +28,12 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
   // Latest location event per shift, for guards with a device. Feature-phone guards show "—".
   const latestLoc = new Map<string, LocationEvent>();
   if (all.length) for (const e of await db.locationEvent.findMany({ where: { shiftId: { in: all.map((s) => s.id) } }, orderBy: { occurredAt: "desc" }, take: 500 })) if (e.shiftId && !latestLoc.has(e.shiftId)) latestLoc.set(e.shiftId, e);
+  // A site with no coordinates cannot be GPS-verified. It is said here, not discovered on a phone.
+  const noFence = all.filter((s) => s.guard.deviceKind === "ANDROID_GUARD" && !effectiveGeofence(s, s.location));
+  const sitesNoFence = [...new Map(noFence.map((s) => [s.locationId, s.location])).values()];
   const loc = (s: (typeof all)[number]) => {
     if (s.guard.deviceKind !== "ANDROID_GUARD") return <span className="text-ink-3">—</span>;
+    if (!effectiveGeofence(s, s.location)) return <Status tone="warn">Site has no coordinates</Status>;
     const e = latestLoc.get(s.id);
     if (!e) return <Status tone="muted">No fix yet</Status>;
     const f = freshness(e.occurredAt, new Date(), e.syncStatus);
@@ -57,6 +62,12 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
   return (
     <div>
       <PageHeader title="Active operations" description="Every live shift, refreshed as guards reply. Click a row for the full timeline." actions={<span className="flex flex-wrap gap-2"><LinkButton href="/operations/map">Live map</LinkButton><LinkButton href="/operations/exceptions">Location exceptions</LinkButton><LinkButton href="/alerts">Guard alerts</LinkButton><LinkButton href="/shifts/new" variant="primary">New shift</LinkButton></span>} />
+      {sitesNoFence.length > 0 && (
+        <div role="status" className="mb-4 flex gap-2.5 rounded-[var(--radius-card)] border border-warn/40 bg-warn-soft px-4 py-3 text-[13px] text-ink">
+          <Icon name="location_off" size={18} className="mt-0.5 shrink-0 text-warn" />
+          <p><span className="font-semibold">GPS verification is off at {sitesNoFence.length === 1 ? "1 site" : `${sitesNoFence.length} sites`} with guards on duty or starting soon</span>, because the site has no coordinates. Attendance by SMS and call still works. Place the site on the map: {sitesNoFence.map((l, i) => <span key={l.id}>{i > 0 && ", "}<Link href={`/locations/${l.id}/edit`} className="font-medium underline">{l.name}</Link></span>)}.</p>
+        </div>
+      )}
       <Segments className="mb-4" items={[
         { href: "/operations", label: "All", count: groups.all.length, active: f === "all" },
         { href: "/operations?f=attention", label: "Needs attention", count: groups.attention.length, active: f === "attention", tone: "critical" },

@@ -81,6 +81,7 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
         <span className="inline-flex items-center gap-1.5"><Status tone={p.connection.tone} pulse={p.connection.state === "ONLINE"}>{p.connection.label}</Status>{p.connection.lastSeenAt && <span className="text-ink-3" suppressHydrationWarning>heartbeat {ago(p.connection.lastSeenAt, now)}</span>}</span>
         <span>{snap.shift ? <><span className="font-medium text-ink">On shift</span> · {snap.shift.siteName} · {fmtT(snap.shift.startAt)}–{fmtT(snap.shift.endAt)}</> : <span className="text-ink-3">Off shift</span>}</span>
         {snap.device?.batteryLevel != null && <span className={cn(snap.device.batteryLevel < 15 && "text-critical")}>Battery {snap.device.batteryLevel}%</span>}
+        {snap.shift && snap.device && snap.site && snap.site.latitude == null && <Link href={`/locations/${snap.site.id}/edit`} title="GPS verification is off until the site is placed on the map. SMS and call attendance still work."><Pill tone="warn">site has no coordinates</Pill></Link>}
         {profile.attendance && <span className="inline-flex items-center gap-1.5"><span className="text-ink-3">Check-in</span><Status tone={profile.attendance.tone}>{profile.attendance.label}</Status></span>}
         {snap.openAlerts > 0 && <Pill tone="critical">{snap.openAlerts} open alert{snap.openAlerts > 1 ? "s" : ""}</Pill>}
       </div>

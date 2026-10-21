@@ -45,6 +45,22 @@ android {
     }
 
     signingConfigs {
+        // Debug builds are signed with each machine's own ~/.android/debug.keystore, so a debug APK
+        // built on one machine cannot update one built on another (INSTALL_FAILED_UPDATE_INCOMPATIBLE).
+        // Point every machine at one shared development keystore to avoid that; never commit it, and
+        // never uninstall the app to get round it (that loses its activation and its queued events).
+        //   omega.debugKeystore=/path/to/omega-dev.jks  (android/local.properties) or OMEGA_DEBUG_KEYSTORE
+        //   optional: omega.debugKeystorePassword / omega.debugKeyAlias / omega.debugKeyPassword
+        val sharedDebug = (System.getenv("OMEGA_DEBUG_KEYSTORE") ?: localProps.getProperty("omega.debugKeystore"))?.trim()?.takeIf { it.isNotEmpty() }
+        if (sharedDebug != null) {
+            getByName("debug") {
+                storeFile = file(sharedDebug)
+                storePassword = System.getenv("OMEGA_DEBUG_KEYSTORE_PASSWORD") ?: localProps.getProperty("omega.debugKeystorePassword") ?: "android"
+                keyAlias = System.getenv("OMEGA_DEBUG_KEY_ALIAS") ?: localProps.getProperty("omega.debugKeyAlias") ?: "androiddebugkey"
+                keyPassword = System.getenv("OMEGA_DEBUG_KEY_PASSWORD") ?: localProps.getProperty("omega.debugKeyPassword") ?: "android"
+            }
+            logger.lifecycle("Debug builds signed with the shared development keystore $sharedDebug")
+        }
         if (releaseKeystore != null) {
             create("release") {
                 storeFile = file(releaseKeystore)

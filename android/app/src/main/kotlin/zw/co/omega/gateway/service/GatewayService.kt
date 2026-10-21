@@ -92,7 +92,7 @@ class GatewayService : Service() {
             periodMs = (prefs.heartbeatSeconds * 1000L).coerceIn(60_000L, 15 * 60_000L),
             log = { Log.e(TAG, it) },
         )
-        EventQueue(this).resetSending() // a run that died mid-send must not leave rows stuck in SENDING
+        EventQueue.get(this).resetSending() // a run that died mid-send must not leave rows stuck in SENDING
         prefs.gpsChecking = false
         startInForeground(getString(R.string.notif_starting))
         registerPhoneReceiver()

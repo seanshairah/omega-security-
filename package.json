@@ -85,5 +85,13 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "^8.5.31"
+    },
+    "@prisma/config": {
+      "deepmerge-ts": "^8.0.2"
+    }
   }
 }

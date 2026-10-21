@@ -19,7 +19,7 @@ import zw.co.omega.gateway.util.DeviceInfo
  */
 class SyncEngine(private val context: Context) {
     private val prefs = Prefs(context)
-    private val queue = EventQueue(context)
+    private val queue = EventQueue.get(context)
 
     sealed class Outcome { object Done : Outcome(); data class Retry(val error: String) : Outcome(); data class Rejected(val error: String) : Outcome() }
 

@@ -41,7 +41,7 @@ import java.util.UUID
  */
 class LocationMonitor(private val context: Context) {
     private val prefs = Prefs(context)
-    private val queue = EventQueue(context)
+    private val queue = EventQueue.get(context)
     private val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     @Volatile var state = MonitorState()
         private set

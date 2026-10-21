@@ -306,6 +306,8 @@
     <string name="chip_online">Online</string>
     <string name="chip_no_internet">No internet</string>
     <string name="chip_reconnecting">Reconnecting</string>
+    <string name="chip_not_heard">Not connected</string>
+    <string name="attn_not_heard">The server has not heard from this phone since %1$s. Events are saved on the phone. Open the app again, or restart the phone if this stays.</string>
     <string name="chip_revoked">Revoked</string>
     <string name="chip_action">Action needed</string>
     <string name="attn_revoked">This phone has been revoked. Nothing is sent. Ask the administrator to register it again.</string>

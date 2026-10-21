@@ -59,6 +59,8 @@ data class HomeFacts(
     val lastCallAt: Long,
     val calls: List<EventQueue.CommRow>,
     val now: Long,
+    /** How often the phone heartbeats; three missed in a row is "not heard from". */
+    val heartbeatSeconds: Int = 120,
 )
 
 data class HomeShift(
@@ -80,7 +82,7 @@ data class HomeShift(
 object HomeScreen {
 
     fun bind(ctx: Context, b: ActivityMainBinding, f: HomeFacts) {
-        val online = f.heartbeatOk && !f.authRejected && f.isOnline
+        val conn = connectionView(f.authRejected, f.isOnline, f.heartbeatOk, f.lastHeartbeatAt, f.heartbeatSeconds, f.now)
         val net = when (f.network) { "mobile" -> ctx.getString(R.string.net_mobile); "wifi" -> ctx.getString(R.string.net_wifi); "none" -> ctx.getString(R.string.net_none); else -> ctx.getString(R.string.net_other) }
         val permissionProblem = f.appState == AppState.PERMISSIONS_INCOMPLETE || f.appState == AppState.PERMISSION_REVOKED
 
@@ -88,10 +90,11 @@ object HomeScreen {
         b.headerTitle.text = if (f.guardMode) f.guardName.ifBlank { f.deviceName.ifBlank { ctx.getString(R.string.guard_phone) } } else f.deviceName.ifBlank { ctx.getString(R.string.header_ops_title) }
         b.headerSub.text = ctx.getString(if (f.guardMode) R.string.header_sub_guard else R.string.header_sub_ops, net)
         val (chipWord, chipTone) = when {
-            f.authRejected -> R.string.chip_revoked to Tone.CRITICAL
-            !f.isOnline -> R.string.chip_no_internet to Tone.WARN
+            conn == ConnectionView.REVOKED -> R.string.chip_revoked to Tone.CRITICAL
             permissionProblem -> R.string.chip_action to Tone.WARN
-            online -> R.string.chip_online to Tone.OK
+            conn == ConnectionView.ONLINE -> R.string.chip_online to Tone.OK
+            conn == ConnectionView.NO_INTERNET -> R.string.chip_no_internet to Tone.WARN
+            conn == ConnectionView.NOT_HEARD -> R.string.chip_not_heard to Tone.WARN
             else -> R.string.chip_reconnecting to Tone.WARN
         }
         chip(ctx, b.connChip, ctx.getString(chipWord), chipTone)
@@ -106,7 +109,8 @@ object HomeScreen {
                 else -> ctx.getString(R.string.attn_phone)
             }
             AppState.READY -> when {
-                !f.isOnline && f.queued > 0 -> ctx.resources.getQuantityString(R.plurals.attn_no_internet, f.queued, f.queued)
+                conn == ConnectionView.NO_INTERNET && f.queued > 0 -> ctx.resources.getQuantityString(R.plurals.attn_no_internet, f.queued, f.queued)
+                conn == ConnectionView.NOT_HEARD -> ctx.getString(R.string.attn_not_heard, time(f.lastHeartbeatAt))
                 f.batteryRestricted -> ctx.getString(R.string.attn_battery)
                 else -> ""
             }

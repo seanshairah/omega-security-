@@ -112,7 +112,7 @@ class MainActivity : AppCompatActivity() {
 
     /** The phone's state, read once per refresh and handed to HomeScreen, which only draws. */
     private fun facts(): HomeFacts {
-        val queue = EventQueue(this)
+        val queue = EventQueue.get(this)
         val counts = queue.counts()
         val cfg = ShiftConfig.load(this)
         val now = System.currentTimeMillis()
@@ -138,7 +138,7 @@ class MainActivity : AppCompatActivity() {
             recent = if (guard) queue.recentComm(3) else emptyList(),
             lastCallSummary = prefs.lastCallSummary, lastCallAt = prefs.lastCallAt,
             calls = if (guard) emptyList() else queue.recentComm(6, kind = "CALL"),
-            now = now,
+            now = now, heartbeatSeconds = prefs.heartbeatSeconds,
         )
     }
 

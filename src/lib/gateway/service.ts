@@ -11,6 +11,7 @@ import { getSettingNumber, getSettings } from "@/lib/settings";
 import { normalisePhone, isValidPhone } from "@/lib/phone";
 import { generateActivationCode, generateDeviceToken, hashToken } from "./auth";
 import { effectiveGeofence, configVersionString } from "@/lib/site-config";
+import { selectDeviceShift, DEVICE_SHIFT_WINDOW } from "./device-shift";
 
 export const ACTIVATION_CODE_HOURS = 24;
 
@@ -157,11 +158,14 @@ export async function guardDeviceConfig(device: GatewayDevice, now = new Date())
   const config = await gatewayConfig();
   if (device.mode !== "GUARD" || !device.guardId) return { mode: device.mode, guard: null, shift: null, config };
   const guard = await db.guard.findUnique({ where: { id: device.guardId }, select: { id: true, firstName: true, lastName: true, guardNo: true } });
-  const shift = await db.shift.findFirst({
-    where: { guardId: device.guardId, status: { notIn: ["COMPLETED", "MISSED", "CANCELLED"] }, endAt: { gte: addMinutes(now, -60) } },
+  // Candidates from the last half hour to the next day; selectDeviceShift applies the phone's own window.
+  const candidates = await db.shift.findMany({
+    where: { guardId: device.guardId, status: { notIn: ["COMPLETED", "MISSED", "CANCELLED"] }, endAt: { gte: addMinutes(now, -DEVICE_SHIFT_WINDOW.afterMinutes) }, startAt: { lte: addHours(now, 24) } },
     include: { location: { select: { id: true, name: true, latitude: true, longitude: true, geofenceRadiusM: true, address: true, configVersion: true, coordinatesSource: true } } },
     orderBy: { startAt: "asc" },
+    take: 20,
   });
+  const shift = selectDeviceShift(candidates, now);
   // The fence the phone judges against: the shift's override when set, else the site. Versioned so the phone can echo what it applied.
   const eff = shift ? effectiveGeofence(shift, shift.location) : null;
   const configVersion = shift ? configVersionString(shift.location.configVersion, shift.configVersion) : null;

@@ -49,11 +49,11 @@ class SettingsActivity : AppCompatActivity() {
         b.appVersion.text = DeviceInfo.appVersion()
         b.android.text = "${DeviceInfo.androidVersion()} · ${DeviceInfo.model()}"
         b.heartbeat.text = getString(R.string.every_seconds, prefs.heartbeatSeconds)
-        b.queue.text = EventQueue(this).size().toString()
+        b.queue.text = EventQueue.get(this).size().toString()
         b.gatewayStatus.text = when { prefs.authRejected -> getString(R.string.status_rejected); prefs.lastHeartbeatOk -> getString(R.string.status_online); else -> getString(R.string.status_offline) }
         b.lastError.text = prefs.lastError ?: getString(R.string.none)
         // Sync diagnostics: what is waiting, why, and the last runs.
-        val q = EventQueue(this)
+        val q = EventQueue.get(this)
         val c = q.counts()
         val f = java.text.SimpleDateFormat("dd MMM HH:mm:ss", java.util.Locale.getDefault())
         val nextRetry = q.nextAttemptAt()?.takeIf { it > System.currentTimeMillis() }?.let { f.format(java.util.Date(it)) }
