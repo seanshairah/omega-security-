@@ -153,7 +153,7 @@ upstream. It does not ship to production.
 ## Remaining dependencies and owner actions
 
 1. **Approve and apply the three migrations to production**, then merge PR #26. Merging deploys.
-2. **Create the release keystore.** The 1.8.0 APKs in `artifacts/android` are debug-signed.
+2. **Create the release keystore** on your own machine with `npm run android:keystore`, back it up in two places, then `npm run android:release` and `npm run apk:manifest` (`docs/APK_DISTRIBUTION.md`). The 1.8.0 APKs in `artifacts/android` are debug-signed until then.
 3. **Run the physical tests above.**
 4. **Voice provider**, if automated IVR is wanted: choose one with confirmed +263 coverage, get the
    per-minute price approved, then set `VOICE_PROVIDER` and `VOICE_WEBHOOK_SECRET`.
