@@ -6,8 +6,9 @@ import { Icon, type IconName } from "@/components/ui/icon";
  *   Workspace (fills the viewport below the top bar on xl screens) → Panel (header stays, body scrolls when `scroll`).
  * Every flex child that may scroll carries min-h-0, or the browser lets it grow past its parent.
  */
-export function Workspace({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={cn("flex min-h-0 flex-col gap-3 xl:h-[calc(100dvh-6.75rem)]", className)}>{children}</div>;
+/** A viewport-high workspace on desktop; `fill` makes it take its parent's height instead (when it sits inside another layout). */
+export function Workspace({ children, className, fill = false }: { children: React.ReactNode; className?: string; fill?: boolean }) {
+  return <div className={cn("flex min-h-0 flex-col gap-3", fill ? "xl:min-h-0 xl:flex-1" : "xl:h-[calc(100dvh-6.75rem)]", className)}>{children}</div>;
 }
 
 export function Panel({ title, subtitle, action, children, className, bodyClassName, scroll = false, tone }: { title?: React.ReactNode; subtitle?: React.ReactNode; action?: React.ReactNode; children: React.ReactNode; className?: string; bodyClassName?: string; scroll?: boolean; tone?: "critical" | "warn" }) {

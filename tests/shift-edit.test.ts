@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { editPolicy, deletePolicy, type ShiftTraceCounts } from "../src/lib/shift-edit";
 
-const noTrace: ShiftTraceCounts = { checkIns: 0, welfareChecks: 0, incidents: 0, smsMessages: 0, callLogs: 0, locationEvents: 0, alerts: 0, notifications: 0 };
+const noTrace: ShiftTraceCounts = { checkIns: 0, welfareChecks: 0, incidents: 0, smsMessages: 0, callLogs: 0, locationEvents: 0, alerts: 0, notifications: 0, evidence: 0, networkChecks: 0 };
 
 test("a scheduled shift that nothing has touched is fully editable", () => {
   const p = editPolicy({ status: "SCHEDULED" });

@@ -5,6 +5,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// ./gradlew -Pscreenshots :app:recordPaparazziDebug renders the screens in src/screenshotTest to
+// app/src/test/snapshots. It is a review aid, not a device test: layoutlib is not a phone.
+val screenshots = project.hasProperty("screenshots")
+if (screenshots) apply(plugin = "app.cash.paparazzi")
+
 // Release signing: set ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 // (environment or android/keystore.properties). Without them the release APK is signed with the debug key so it
 // still installs for testing, and the build prints a warning.
@@ -32,14 +37,30 @@ android {
         applicationId = "zw.co.omega.gateway"
         minSdk = 24          // Android 7.0: old phones are the point of this app
         targetSdk = 35
-        versionCode = 8
-        versionName = "1.7.0"
+        versionCode = 9
+        versionName = "1.8.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Default server pre-filled on the activation screen; the user can change it.
         buildConfigField("String", "DEFAULT_SERVER_URL", "\"${System.getenv("GATEWAY_DEFAULT_SERVER_URL") ?: "https://omega-security-gamma.vercel.app"}\"")
     }
 
     signingConfigs {
+        // Debug builds are signed with each machine's own ~/.android/debug.keystore, so a debug APK
+        // built on one machine cannot update one built on another (INSTALL_FAILED_UPDATE_INCOMPATIBLE).
+        // Point every machine at one shared development keystore to avoid that; never commit it, and
+        // never uninstall the app to get round it (that loses its activation and its queued events).
+        //   omega.debugKeystore=/path/to/omega-dev.jks  (android/local.properties) or OMEGA_DEBUG_KEYSTORE
+        //   optional: omega.debugKeystorePassword / omega.debugKeyAlias / omega.debugKeyPassword
+        val sharedDebug = (System.getenv("OMEGA_DEBUG_KEYSTORE") ?: localProps.getProperty("omega.debugKeystore"))?.trim()?.takeIf { it.isNotEmpty() }
+        if (sharedDebug != null) {
+            getByName("debug") {
+                storeFile = file(sharedDebug)
+                storePassword = System.getenv("OMEGA_DEBUG_KEYSTORE_PASSWORD") ?: localProps.getProperty("omega.debugKeystorePassword") ?: "android"
+                keyAlias = System.getenv("OMEGA_DEBUG_KEY_ALIAS") ?: localProps.getProperty("omega.debugKeyAlias") ?: "androiddebugkey"
+                keyPassword = System.getenv("OMEGA_DEBUG_KEY_PASSWORD") ?: localProps.getProperty("omega.debugKeyPassword") ?: "android"
+            }
+            logger.lifecycle("Debug builds signed with the shared development keystore $sharedDebug")
+        }
         if (releaseKeystore != null) {
             create("release") {
                 storeFile = file(releaseKeystore)
@@ -76,7 +97,7 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { buildConfig = true; viewBinding = true }
     sourceSets["main"].java.srcDirs("src/main/kotlin")
-    sourceSets["test"].java.srcDirs("src/test/kotlin")
+    sourceSets["test"].java.srcDirs(listOfNotNull("src/test/kotlin", if (screenshots) "src/screenshotTest/kotlin" else null))
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 

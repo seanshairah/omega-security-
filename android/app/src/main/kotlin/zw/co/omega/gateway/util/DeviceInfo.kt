@@ -60,9 +60,14 @@ object DeviceInfo {
         return if (phone && log) "granted" else if (phone) "partial" else "denied"
     }
 
+    /** CALL_PHONE: an operations phone needs it to dial a call the portal asked for in one tap. */
+    fun placeCallPermission(context: Context): String =
+        if (androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.CALL_PHONE) == android.content.pm.PackageManager.PERMISSION_GRANTED) "granted" else "denied"
+
     fun json(context: Context): JSONObject = JSONObject()
         .put("locationPermission", locationPermission(context))
         .put("callPermission", callPermission(context))
+        .put("placeCallPermission", placeCallPermission(context))
         .put("appVersion", appVersion())
         .put("androidVersion", androidVersion())
         .put("deviceModel", model())

@@ -10,6 +10,6 @@ export const metadata = { title: "Add location" };
 export default async function NewLocationPage({ searchParams }: { searchParams: Promise<{ clientId?: string }> }) {
   await requireUser("ADMIN");
   const { clientId } = await searchParams;
-  const [clients, supervisors, guardDevices] = await Promise.all([db.client.findMany({ where: { active: true }, orderBy: { name: "asc" } }), db.user.findMany({ where: { active: true }, orderBy: { name: "asc" } }), guardDevicesForPicker()]);
-  return <div className="w-full"><PageHeader title="Add location" /><Card><CardBody><LocationForm action={createLocation} clients={clients} supervisors={supervisors} submitLabel="Add location" defaultClientId={clientId} guardDevices={guardDevices} /></CardBody></Card></div>;
+  const [clients, supervisors, guardDevices, gateways] = await Promise.all([db.client.findMany({ where: { active: true }, orderBy: { name: "asc" } }), db.user.findMany({ where: { active: true }, orderBy: { name: "asc" } }), guardDevicesForPicker(), db.gatewayDevice.findMany({ where: { mode: "OPERATIONS_GATEWAY", status: { notIn: ["REVOKED", "DISABLED"] } }, select: { id: true, deviceName: true }, orderBy: { deviceName: "asc" } })]);
+  return <div className="w-full"><PageHeader title="Add location" /><Card><CardBody><LocationForm action={createLocation} clients={clients} supervisors={supervisors} submitLabel="Add location" defaultClientId={clientId} guardDevices={guardDevices} gateways={gateways} /></CardBody></Card></div>;
 }

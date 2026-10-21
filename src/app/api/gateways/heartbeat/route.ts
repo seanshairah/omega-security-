@@ -1,9 +1,13 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { authenticateGateway, clientIp, rateLimit } from "@/lib/gateway/auth";
 import { heartbeat, guardDeviceConfig } from "@/lib/gateway/service";
 import { alertsForDevice } from "@/lib/gateway/alerts";
-import { pendingCommandsForDevice, commandPollSeconds } from "@/lib/gateway/location-requests";
+import { commandsForDevice, commandPollSeconds } from "@/lib/gateway/location-requests";
 import { currentRelease, distributable } from "@/lib/app-release";
+import { maybeTickFromHeartbeat } from "@/lib/automation/scheduler";
+
+// Long enough for the engine run a heartbeat may trigger after it has answered the phone.
+export const maxDuration = 60;
 
 /** POST /api/gateways/heartbeat  Bearer <deviceToken>  { appVersion, androidVersion, batteryLevel, networkType, timestamp } */
 export async function POST(req: Request) {
@@ -19,13 +23,17 @@ export async function POST(req: Request) {
     oldestPendingSeconds: "oldestPendingSeconds" in b ? (typeof b.oldestPendingSeconds === "number" ? b.oldestPendingSeconds : null) : undefined,
     lastEventSyncAt: "lastEventSyncAt" in b ? s(b.lastEventSyncAt) ?? null : undefined, lastSyncAttemptAt: "lastSyncAttemptAt" in b ? s(b.lastSyncAttemptAt) ?? null : undefined,
     lastSyncError: "lastSyncError" in b ? s(b.lastSyncError) ?? null : undefined, lastSyncTrigger: "lastSyncTrigger" in b ? s(b.lastSyncTrigger) ?? null : undefined,
-    secureStorage: typeof b.secureStorage === "boolean" ? b.secureStorage : undefined, buildType: s(b.buildType) }, clientIp(req));
+    secureStorage: typeof b.secureStorage === "boolean" ? b.secureStorage : undefined, buildType: s(b.buildType), placeCallPermission: s(b.placeCallPermission) }, clientIp(req));
+  // Phones heartbeat every two minutes whether or not anyone is signed in to the portal, so they
+  // keep the engine on time when the external cron lags. Runs after the response is sent.
+  after(() => maybeTickFromHeartbeat());
   // Guard phones compare this with the version they applied and re-download the shift config when it differs.
   const configVersion = device.mode === "GUARD" ? (await guardDeviceConfig(device)).configVersion : null;
   // Acknowledgements for the alerts this guard sent recently travel back on the heartbeat.
   const alerts = device.mode === "GUARD" ? await alertsForDevice(device) : [];
-  // Operations commands (location requests) ride on the heartbeat too; GET /api/gateways/commands polls them faster.
-  const [commands, pollSeconds] = device.mode === "GUARD" ? await Promise.all([pendingCommandsForDevice(device), commandPollSeconds()]) : [[], null];
+  // Commands ride on the heartbeat too (location requests for a guard phone, call requests for an
+  // operations phone); GET /api/gateways/commands polls them faster.
+  const [commands, pollSeconds] = await Promise.all([commandsForDevice(device), commandPollSeconds()]);
   // There is no Play Store, so a phone only learns an update exists if the server tells it. The
   // heartbeat already runs on its own schedule, so it costs no extra call. Withheld when the build
   // is not distributable, so a phone is never pointed at a download that will be refused.

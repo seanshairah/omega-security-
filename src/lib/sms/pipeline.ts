@@ -192,6 +192,7 @@ async function applyInterpretation(shift: ShiftWithRelations, interpreted: Inter
         await db.shift.update({ where: { id: shift.id }, data: { pendingPrompt: "NONE", status: nextStatus } });
         await recordEvent(shift.id, shift.guardId, "WELFARE_OK", { ...sms, note: "Guard replied: shift going well." });
         await sendTemplated(await reload(shift.id), "WELFARE_OK", "WELFARE");
+        await smsEvidence(shift, "WELFARE", msgId, now);
         const cu = await sendClientUpdate(shift, "WELFARE_OK", now);
         return { action: `Welfare check: shift going well${cu.sent ? "; client updated" : ""}`, replySent: true };
       }
@@ -210,6 +211,7 @@ async function applyInterpretation(shift: ShiftWithRelations, interpreted: Inter
         await recordEvent(shift.id, shift.guardId, "ARRIVAL_CONFIRMED", { ...sms, note: isLate ? `Guard confirmed arrival, ${lateMinutes} min late.` : "Guard confirmed arrival." });
         if (isLate) await notify({ type: "GUARD_LATE", severity: "WARNING", title: `${guardName} arrived late at ${shift.location.name}`, body: `Confirmed at ${fmtTime(now)}, ${lateMinutes} min after the ${fmtTime(shift.startAt)} start.`, guardId: shift.guardId, shiftId: shift.id });
         await sendTemplated(await reload(shift.id), "ARRIVAL_CONFIRMED", "ARRIVAL");
+        await smsEvidence(shift, "CHECK_IN", msgId, now);
         const cu = await sendClientUpdate(shift, "ARRIVAL", now);
         await verifyArrivalFromSms(shift.id, shift.guardId, now); // GPS correlation for Android guards; no-op for feature phones
         return { action: `${isLate ? `Arrival confirmed, ${lateMinutes} min late` : "Arrival confirmed, on time"}${cu.sent ? "; client updated" : ""}`, replySent: true };
@@ -221,6 +223,7 @@ async function applyInterpretation(shift: ShiftWithRelations, interpreted: Inter
         await recordEvent(shift.id, shift.guardId, "SHIFT_COMPLETED", { at: now, note: "Shift completed." });
         await notify({ type: "SHIFT_COMPLETED", severity: "INFO", title: `${guardName} completed the shift at ${shift.location.name}`, body: `Confirmed at ${fmtTime(now)}.`, guardId: shift.guardId, shiftId: shift.id });
         await sendTemplated(await reload(shift.id), "COMPLETION_CONFIRMED", "COMPLETION");
+        await smsEvidence(shift, "CHECK_OUT", msgId, now);
         const cu = await sendClientUpdate(shift, "SHIFT_ENDED", now);
         return { action: `Shift completed and confirmed${cu.sent ? "; client updated" : ""}`, replySent: true };
       }
@@ -265,5 +268,19 @@ async function applyInterpretation(shift: ShiftWithRelations, interpreted: Inter
       }
       return { action: "Reply not understood; logged", replySent: false };
     }
+  }
+}
+
+/**
+ * The guard's YES, as attendance evidence (labelled SMS, never location), and the end of any call
+ * that was waiting for exactly this reply. Never throws into the SMS flow.
+ */
+async function smsEvidence(shift: { id: string; guardId: string }, kind: "CHECK_IN" | "WELFARE" | "CHECK_OUT", smsMessageId: string, at: Date) {
+  try {
+    const { recordEvidence, settlePendingCalls } = await import("@/lib/attendance/evidence");
+    await recordEvidence({ shiftId: shift.id, guardId: shift.guardId, kind, source: "SMS", status: "CONFIRMED", occurredAt: at, dedupeKey: `sms:${smsMessageId}`, smsMessageId, note: "Guard replied YES by SMS." });
+    await settlePendingCalls(shift.id, kind, "confirmed by the guard's SMS reply", at);
+  } catch (e) {
+    console.warn("[evidence] SMS evidence failed", (e as Error).message);
   }
 }

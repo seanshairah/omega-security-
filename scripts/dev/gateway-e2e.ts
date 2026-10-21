@@ -22,7 +22,8 @@ import { runAutomationTick } from "../../src/lib/automation/engine";
 import { createGateway, revokeGateway, gatewayMaintenance } from "../../src/lib/gateway/service";
 
 const BASE = process.env.APP_URL ?? "http://localhost:3000";
-const GUARD_PHONE = "+263771234567";
+// Not +263771234567: gateway-qa-data.ts seeds that number for its own QA guard, and Guard.phone is unique.
+const GUARD_PHONE = "+263771234581";
 let passed = 0, failed = 0;
 const check = (name: string, ok: boolean, detail = "") => { if (ok) { passed++; console.log(`  ✓ ${name}`); } else { failed++; console.log(`  ✗ ${name} ${detail}`); } };
 const post = async (path: string, body: unknown, token?: string) => { const r = await fetch(`${BASE}${path}`, { method: "POST", headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body) }); return { status: r.status, json: (await r.json().catch(() => ({}))) as Record<string, any> }; };
@@ -81,7 +82,7 @@ async function main() {
     const tick = await runAutomationTick(new Date());
     const arrivalSms = await db.smsMessage.findFirst({ where: { shiftId: shift.id, type: "ARRIVAL", direction: "OUTBOUND" } });
     check("4. existing engine sent the arrival SMS", Boolean(arrivalSms), JSON.stringify(tick.errors));
-    const reply = await processIncomingMessage({ from: "0771234567", body: "YES", provider: "simulated" });
+    const reply = await processIncomingMessage({ from: "0771234581", body: "YES", provider: "simulated" });
     check("5. YES reply understood by the existing pipeline", reply.interpreted === "YES", reply.action);
     const att = await db.attendance.findUniqueOrThrow({ where: { shiftId: shift.id } });
     check("6. attendance recorded by the existing SMS system", att.status === "PRESENT" || att.status === "LATE", att.status);
@@ -90,10 +91,10 @@ async function main() {
     console.log("7–16. Guard calls the gateway");
     const callId = `e2e-${randomUUID()}`;
     const t0 = new Date();
-    const e1 = await post("/api/gateways/events", { events: [{ eventId: `${callId}-1`, eventType: "CALL_STARTED", callId, phoneNumber: "0771234567", direction: "INCOMING", timestamp: t0.toISOString() }] }, token);
+    const e1 = await post("/api/gateways/events", { events: [{ eventId: `${callId}-1`, eventType: "CALL_STARTED", callId, phoneNumber: "0771234581", direction: "INCOMING", timestamp: t0.toISOString() }] }, token);
     check("9. backend accepted CALL_STARTED", e1.status === 200 && e1.json.acks?.[0]?.status === "ok", JSON.stringify(e1.json));
     let call = await db.callLog.findUniqueOrThrow({ where: { gatewayDeviceId_callId: { gatewayDeviceId: gw.id, callId } } });
-    check("10. system identified John Moyo from 0771234567", call.guardId === guard.id && call.normalizedPhoneNumber === GUARD_PHONE);
+    check("10. system identified John Moyo from 0771234581", call.guardId === guard.id && call.normalizedPhoneNumber === GUARD_PHONE);
     check("11. call is RINGING on the dashboard feed", call.status === "RINGING");
     check("12. call associated with the active shift and location", call.shiftId === shift.id && call.locationId === loc.id && call.clientId === client.id);
     const e2 = await post("/api/gateways/events", { events: [{ eventId: `${callId}-2`, eventType: "CALL_ANSWERED", callId, timestamp: new Date(t0.getTime() + 6000).toISOString() }] }, token);

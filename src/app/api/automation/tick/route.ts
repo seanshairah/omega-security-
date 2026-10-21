@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runAutomationTick } from "@/lib/automation/engine";
+import { runScheduledTick } from "@/lib/automation/scheduler";
 import { apiUser } from "@/lib/auth/rbac";
 
 export const maxDuration = 60;
@@ -19,8 +19,10 @@ async function authorised(req: Request) {
 
 async function handle(req: Request) {
   if (!(await authorised(req))) return NextResponse.json({ error: "unauthorised" }, { status: 401 });
-  const report = await runAutomationTick();
-  return NextResponse.json(report);
+  // Through the shared lease, so a cron call landing on top of a heartbeat-driven run does not run
+  // the engine twice. A skipped call is still a success: the engine ran, just not because of it.
+  const result = await runScheduledTick(req.headers.get("authorization") ? "cron" : "manual");
+  return NextResponse.json(result.ran ? { ran: true, ...result.report } : { ran: false, skipped: result.reason });
 }
 
 export const GET = handle;

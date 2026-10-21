@@ -29,7 +29,7 @@ export function ClientForm({ action, client, submitLabel }: { action: A; client?
 
 const SITE_TYPES = ["Shopping mall", "Warehouse", "Mine", "Construction site", "School", "Office building", "Residential property", "Factory", "Farm", "Other"];
 
-export function LocationForm({ action, location, clients, supervisors, submitLabel, defaultClientId, guardDevices, candidate }: { action: A; location?: Location | null; clients: Client[]; supervisors: User[]; submitLabel: string; defaultClientId?: string; guardDevices?: PickerGuardDevice[]; candidate?: PickerCandidate | null }) {
+export function LocationForm({ action, location, clients, supervisors, submitLabel, defaultClientId, guardDevices, candidate, gateways = [] }: { action: A; location?: Location | null; clients: Client[]; supervisors: User[]; submitLabel: string; defaultClientId?: string; guardDevices?: PickerGuardDevice[]; candidate?: PickerCandidate | null; gateways?: { id: string; deviceName: string }[] }) {
   const l = location;
   return (
     <ActionForm action={action} submitLabel={submitLabel}>
@@ -66,6 +66,37 @@ export function LocationForm({ action, location, clients, supervisors, submitLab
         <Checkbox name="notifyClientArrival" label="Guard has arrived" hint="When the guard confirms arrival." defaultChecked={l?.notifyClientArrival ?? true} />
         <Checkbox name="notifyClientWelfare" label="Everything going well" hint="When the mid-shift welfare check comes back fine." defaultChecked={l?.notifyClientWelfare ?? true} />
         <Checkbox name="notifyClientCompletion" label="Shift ended" hint="When the shift is completed or closed." defaultChecked={l?.notifyClientCompletion ?? true} />
+        <Checkbox name="notifyClientLate" label="Guard running late" hint="After the supervisor has been told, if the guard is still not verified on site." defaultChecked={l?.notifyClientLate ?? false} />
+        <Checkbox name="notifyClientAbsent" label="Guard absent or check-in missed" hint="When the check-in escalates with no evidence the guard is on site." defaultChecked={l?.notifyClientAbsent ?? false} />
+        <Checkbox name="notifyClientOutside" label="Guard outside the site (draft for approval)" hint="Never sent on its own: a supervisor reviews and approves the message first." defaultChecked={l?.notifyClientOutside ?? false} />
+        <Checkbox name="notifyClientEmergency" label="Emergency (draft for approval)" hint="Internal escalation first; the client message waits for a supervisor's approval." defaultChecked={l?.notifyClientEmergency ?? false} />
+        <Field label="Client update email" hint="Optional. Used when an update is sent by email instead of SMS." className="sm:col-span-2"><Input name="clientUpdateEmail" type="email" defaultValue={l?.clientUpdateEmail ?? ""} placeholder="security@client.co.zw" /></Field>
+      </FormSection>
+      <FormSection title="Welfare checks" description="Leave both times and interval empty for one welfare text in the middle of each shift. A connected call is not a response: only a key press, a reply, or a person confirming settles a check.">
+        <Field label="Check at" hint="Local times, 24-hour, e.g. 00:00, 03:00. Overnight shifts get both."><Input name="welfareTimes" defaultValue={l?.welfareTimes ?? ""} placeholder="00:00, 03:00" /></Field>
+        <Field label="Or every (minutes)" hint="From the shift start. 15 at least."><Input type="number" name="welfareIntervalMinutes" min={15} max={720} defaultValue={l?.welfareIntervalMinutes ?? ""} placeholder="120" /></Field>
+        <Field label="Ask by" hint="SMS: the guard replies 1. Operations phone: the operator confirms. Automated: the guard presses 1, 2 or 3.">
+          <Select name="welfareChannel" defaultValue={l?.welfareChannel ?? "SMS"}>
+            <option value="SMS">SMS reply</option>
+            <option value="GATEWAY_CALL">Call from the operations phone</option>
+            <option value="VOICE">Automated call (needs a voice provider)</option>
+          </Select>
+        </Field>
+        <Field label="Tries before escalating" hint="Calls or texts, each one waiting for an answer."><Input type="number" name="welfareMaxAttempts" min={1} max={5} defaultValue={l?.welfareMaxAttempts ?? 2} /></Field>
+        <Field label="Minutes between calls"><Input type="number" name="welfareRetryMinutes" min={2} max={60} defaultValue={l?.welfareRetryMinutes ?? 10} /></Field>
+        <Checkbox name="welfareSmsFallback" label="Text the guard before escalating an unanswered call" hint="Skipped for guards with SMS confirmation turned off." defaultChecked={l?.welfareSmsFallback ?? true} />
+      </FormSection>
+      <FormSection title="Network duty area" description="Optional. For checks by the guard's mobile network, where an operator offers them. Separate from the GPS geofence above, which it never widens. Network positions are approximate; ask the operator which area sizes they support.">
+        <Checkbox name="networkVerifyEnabled" label="Allow network location checks at this site" hint="Each guard also needs consent recorded and network checks allowed on their profile." defaultChecked={l?.networkVerifyEnabled ?? false} />
+        <Field label="Network area radius (m)" hint="Centred on the site's coordinates. For example 1000."><Input type="number" name="networkRadiusM" min={50} max={50000} defaultValue={l?.networkRadiusM ?? ""} placeholder="1000" /></Field>
+      </FormSection>
+      <FormSection title="Calling guards from the portal" description="The operations phone that rings guards at this site when someone presses Call guard. Any other eligible phone can still be chosen at the time.">
+        <Field label="Default gateway phone" className="sm:col-span-2">
+          <Select name="defaultGatewayId" defaultValue={l?.defaultGatewayId ?? ""}>
+            <option value="">No default: use a phone registered at this site, else any available one</option>
+            {gateways.map((g) => <option key={g.id} value={g.id}>{g.deviceName}</option>)}
+          </Select>
+        </Field>
       </FormSection>
     </ActionForm>
   );

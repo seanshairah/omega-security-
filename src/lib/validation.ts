@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { normalisePhone, isValidPhone } from "@/lib/phone";
 import { coordinatePairError } from "@/lib/site-config";
+import { parseWelfareTimes } from "@/lib/welfare/welfare-rules";
 
 export const phoneSchema = z.string().trim().min(6, "Phone number is required").transform((v) => normalisePhone(v)).refine(isValidPhone, "Enter a valid phone number, e.g. 0772 123 456");
 /** Checkbox: present ("on") when ticked, absent when not. */
@@ -23,6 +24,27 @@ export const guardSchema = z.object({
   supervisorId: opt(z.string()),
   homeLocationId: opt(z.string()),
   notes: opt(z.string()),
+  // Phone and attendance
+  phoneType: z.enum(["BASIC", "ANDROID", "OTHER", "UNKNOWN"]).default("UNKNOWN"),
+  mobileOperator: z.enum(["ECONET", "NETONE", "TELECEL", "OTHER", "UNKNOWN"]).default("UNKNOWN"),
+  alternatePhones: z.string().optional().transform((v, ctx) => {
+    const out: string[] = [];
+    for (const raw of (v ?? "").split(/[,;\n]/).map((x) => x.trim()).filter(Boolean)) {
+      let p: string;
+      try { p = normalisePhone(raw); } catch { p = ""; }
+      if (!p || !isValidPhone(p)) { ctx.addIssue({ code: "custom", message: `"${raw}" is not a valid phone number` }); return z.NEVER; }
+      if (!out.includes(p)) out.push(p);
+    }
+    return out;
+  }),
+  preferredAttendance: z.enum(["CALL", "SMS", "APP"]).default("SMS"),
+  callAttendanceEnabled: flag,
+  smsAttendanceEnabled: flag,
+  welfareExempt: flag,
+  assignedGatewayId: opt(z.string()),
+  phoneVerified: flag,
+  networkLocationEligible: flag,
+  networkLocationConsent: flag,
 });
 
 export const clientSchema = z.object({
@@ -58,9 +80,28 @@ export const locationSchema = z.object({
   notifyClientArrival: flag,
   notifyClientWelfare: flag,
   notifyClientCompletion: flag,
+  notifyClientLate: flag,
+  notifyClientAbsent: flag,
+  notifyClientOutside: flag,
+  notifyClientEmergency: flag,
+  clientUpdateEmail: opt(z.string().email("Enter a valid email address")),
+  defaultGatewayId: opt(z.string()),
+  // Scheduled welfare checks. Neither times nor an interval: the single mid-shift welfare SMS.
+  welfareTimes: opt(z.string()),
+  welfareIntervalMinutes: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().int().min(15, "Check at most every 15 minutes").max(720).optional()).transform((v) => v ?? null),
+  welfareChannel: z.preprocess((v) => (v === "" || v == null ? "SMS" : v), z.enum(["SMS", "VOICE", "GATEWAY_CALL"])),
+  welfareMaxAttempts: z.preprocess((v) => (v === "" || v == null ? 2 : Number(v)), z.number().int().min(1).max(5)),
+  welfareRetryMinutes: z.preprocess((v) => (v === "" || v == null ? 10 : Number(v)), z.number().int().min(2).max(60)),
+  welfareSmsFallback: flag,
+  // Network duty area: its own radius, never the GPS geofence's.
+  networkVerifyEnabled: flag,
+  networkRadiusM: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().int().min(50, "The network area must be at least 50 m").max(50000).optional()).transform((v) => v ?? null),
 }).superRefine((d, ctx) => {
+  if (d.networkVerifyEnabled && d.networkRadiusM == null) ctx.addIssue({ code: "custom", message: "Give the network duty area a radius, or turn network checks off for this site.", path: ["networkRadiusM"] });
+  if (d.networkVerifyEnabled && (d.latitude == null || d.longitude == null)) ctx.addIssue({ code: "custom", message: "Network checks need the site's coordinates.", path: ["networkVerifyEnabled"] });
   const e = coordinatePairError(d.latitude, d.longitude);
   if (e) ctx.addIssue({ code: "custom", message: e, path: ["latitude"] });
+  try { parseWelfareTimes(d.welfareTimes); } catch (err) { ctx.addIssue({ code: "custom", message: (err as Error).message, path: ["welfareTimes"] }); }
 });
 
 const optNum = (min: number, max: number) => z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().min(min).max(max).optional()).transform((v) => v ?? null);

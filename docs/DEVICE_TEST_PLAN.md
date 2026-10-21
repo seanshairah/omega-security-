@@ -56,3 +56,41 @@ When all rows pass, replace the UNVERIFIED entries in `docs/IMPLEMENTATION_AUDIT
 | U10 | GPS card on shift, outdoors inside the fence | Green tick icon, "Inside the site", STATUS "Verified" in green |
 | U11 | Operations-gateway phone | Call-monitoring card with phone icon (green/amber/red by permission), sync and device cards; no guard cards |
 | U12 | 320 dp-wide phone (or font size Largest) | No clipped text in the three quick-action tiles or the stat strip; everything scrolls |
+
+## v1.8.0: needs a physical Android phone
+
+None of these has been run on a device. Each needs app 1.8.0 (debug or release) and a shift in the
+portal. Record pass/fail with the phone model and Android version.
+
+### Home screen
+
+1. Fresh install, Android 15 phone: nothing sits under the status bar or the gesture bar; the sync
+   footer's white runs behind the navigation bar.
+2. Same on an Android 8–10 phone with three-button navigation.
+3. A 5-inch phone (320–360 dp wide): the shift card, EMERGENCY and the actions fit without
+   horizontal scrolling; text at the largest system font size still wraps rather than clipping.
+4. Settings icon opens Diagnostics; the Device card shows name, phone, battery, model.
+5. Turn on airplane mode: the header chip says No internet, the attention banner counts saved events,
+   the footer says Saved on the phone. Turn it off: Sync now clears them.
+
+### Automatic check-in
+
+6. Guard phone at the site, shift starting in 15 minutes: within a minute or two of T-10 the portal
+   shows Location pending, then Verified on time after the fix arrives. No call is made.
+7. Phone outside the site at the start: Outside the site after the grace period; supervisor alerted.
+8. Phone switched off before the start: Device offline, not Missed; no client message.
+9. Indoors with poor GPS (accuracy worse than the site limit): Location uncertain, never Verified.
+10. With `checkin.callRequired` on: verified by GPS, no call made, portal shows Call outstanding.
+
+### Portal calling (operations gateway phone)
+
+11. Control-room phone in Operations gateway mode on 1.8.0, call permission granted. Call guard in the
+    portal: the phone shows the confirmation screen over the lock screen; the portal shows Waiting for
+    the operator; nothing rings until Call is tapped.
+12. Tap Call: the guard's phone rings; the portal shows Dialling, then Connected and Call completed
+    after hang-up, with duration.
+13. Guard does not answer: Not answered.
+14. Ignore the request for 2 minutes: Timed out; no call placed.
+15. Revoke the call permission: Call opens the dialler with the number; the portal still only shows
+    Connected once the call log shows the call.
+16. Two gateway phones online: the request appears only on the one chosen.

@@ -29,6 +29,7 @@ class ActivationActivity : AppCompatActivity() {
         if (prefs.isActivated) { startActivity(Intent(this, MainActivity::class.java)); finish(); return }
         b = ActivityActivationBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Insets.applySystemBars(b.root)
         b.server.setText(prefs.serverUrl.ifBlank { BuildConfig.DEFAULT_SERVER_URL })
         b.version.text = getString(R.string.version_line, DeviceInfo.appVersion())
         b.activate.setOnClickListener { activate() }

@@ -43,6 +43,7 @@ const ICONS = {
   ic_chevron: ["chevron_right", false],
   ic_more: ["more_vert", true],
   ic_doc: ["article", true],
+  ic_settings: ["settings", true],
 
   // Communications
   ic_phone: ["call", true],
@@ -52,6 +53,7 @@ const ICONS = {
   // Location
   ic_place: ["location_on", true],
   ic_my_location: ["my_location", true],
+  ic_verified: ["verified_user", true],
 
   // Device and connectivity
   ic_cellular: ["signal_cellular_alt", true],

@@ -17,50 +17,55 @@ enum Role {
 }
 
 model User {
-  checkInDecisions AttendanceCheckIn[] @relation("CheckInDecidedBy")
-  id               String              @id @default(cuid())
-  name             String
-  email            String              @unique
-  passwordHash     String
-  role             Role                @default(ADMIN)
-  phone            String?
-  title            String?
-  avatarUrl        String?
-  active           Boolean             @default(true)
-  lastLoginAt      DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  checkInDecisions  AttendanceCheckIn[]  @relation("CheckInDecidedBy")
+  evidenceDecisions AttendanceEvidence[] @relation("EvidenceDecidedBy")
+  id                String               @id @default(cuid())
+  name              String
+  email             String               @unique
+  passwordHash      String
+  role              Role                 @default(ADMIN)
+  phone             String?
+  title             String?
+  avatarUrl         String?
+  active            Boolean              @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
-  supervisedGuards    Guard[]                 @relation("GuardSupervisor")
-  supervisedLocations Location[]              @relation("LocationSupervisor")
-  supervisedShifts    Shift[]                 @relation("ShiftSupervisor")
-  supervisedIncidents Incident[]              @relation("IncidentSupervisor")
-  recurrences         ShiftRecurrence[]
-  auditLogs           AuditLog[]
-  pushSubscriptions   PushSubscription[]
-  acknowledgedAlerts  GuardAlert[]            @relation("AlertAcknowledgedBy")
-  resolvedAlerts      GuardAlert[]            @relation("AlertResolvedBy")
-  locationRequests    DeviceLocationRequest[] @relation("LocationRequestedBy")
+  supervisedGuards            Guard[]                 @relation("GuardSupervisor")
+  supervisedLocations         Location[]              @relation("LocationSupervisor")
+  supervisedShifts            Shift[]                 @relation("ShiftSupervisor")
+  supervisedIncidents         Incident[]              @relation("IncidentSupervisor")
+  recurrences                 ShiftRecurrence[]
+  auditLogs                   AuditLog[]
+  pushSubscriptions           PushSubscription[]
+  acknowledgedAlerts          GuardAlert[]            @relation("AlertAcknowledgedBy")
+  resolvedAlerts              GuardAlert[]            @relation("AlertResolvedBy")
+  locationRequests            DeviceLocationRequest[] @relation("LocationRequestedBy")
+  callRequests                CallRequest[]           @relation("CallRequestedBy")
+  clientNotifications         ClientNotification[]    @relation("ClientNotificationSentBy")
+  approvedClientNotifications ClientNotification[]    @relation("ClientNotificationApprovedBy")
 }
 
 // ───────────────────────── Clients & locations ─────────────────────────
 
 model Client {
-  id           String       @id @default(cuid())
-  code         String       @unique
-  name         String
-  industry     String?
-  contactName  String?
-  contactPhone String?
-  contactEmail String?
-  address      String?
-  notes        String?
-  active       Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  locations    Location[]
-  smsMessages  SmsMessage[]
-  callLogs     CallLog[]
+  id                  String               @id @default(cuid())
+  code                String               @unique
+  name                String
+  industry            String?
+  contactName         String?
+  contactPhone        String?
+  contactEmail        String?
+  address             String?
+  notes               String?
+  active              Boolean              @default(true)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  locations           Location[]
+  smsMessages         SmsMessage[]
+  callLogs            CallLog[]
+  clientNotifications ClientNotification[]
 }
 
 enum ShiftPattern {
@@ -110,15 +115,39 @@ model Location {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
-  guards         Guard[]
-  shifts         Shift[]
-  incidents      Incident[]
-  recurrences    ShiftRecurrence[]
-  smsMessages    SmsMessage[]
-  gateways       GatewayDevice[]
-  alerts         GuardAlert[]
-  callLogs       CallLog[]
-  locationEvents LocationEvent[]
+  guards                 Guard[]
+  shifts                 Shift[]
+  incidents              Incident[]
+  recurrences            ShiftRecurrence[]
+  smsMessages            SmsMessage[]
+  gateways               GatewayDevice[]
+  alerts                 GuardAlert[]
+  callLogs               CallLog[]
+  locationEvents         LocationEvent[]
+  // Client notification rules beyond arrival / all well / shift ended. Off unless a site opts in.
+  notifyClientLate       Boolean              @default(false)
+  notifyClientAbsent     Boolean              @default(false)
+  // These two never send on their own: they draft a message a supervisor approves first.
+  notifyClientOutside    Boolean              @default(false)
+  notifyClientEmergency  Boolean              @default(false)
+  /// Welfare schedule. Neither set: one welfare SMS at welfare.offsetPercent of the shift, as before.
+  /// Local (Harare) times such as "00:00,03:00", or a check every N minutes from the shift start.
+  welfareTimes           String?
+  welfareIntervalMinutes Int?
+  welfareChannel         WelfareChannel       @default(SMS)
+  welfareMaxAttempts     Int                  @default(2)
+  welfareRetryMinutes    Int                  @default(10)
+  /// After the voice or gateway attempts, text the guard before escalating.
+  welfareSmsFallback     Boolean              @default(true)
+  /// Network duty-area verification: separate from the GPS geofence and never used to widen it.
+  /// The centre is the site's (or shift override's) coordinates; the radius is this one.
+  networkVerifyEnabled   Boolean              @default(false)
+  networkRadiusM         Int?
+  clientUpdateEmail      String?
+  // The operations phone that calls guards at this site from the portal.
+  defaultGatewayId       String?
+  defaultGateway         GatewayDevice?       @relation("SiteDefaultGateway", fields: [defaultGatewayId], references: [id], onDelete: SetNull)
+  clientNotifications    ClientNotification[]
 
   @@index([clientId])
   @@index([active])
@@ -140,50 +169,72 @@ enum EmploymentStatus {
 }
 
 model Guard {
-  attendanceCheckIns    AttendanceCheckIn[]
-  id                    String              @id @default(cuid())
-  guardNo               String              @unique
-  firstName             String
-  lastName              String
-  phone                 String              @unique
-  nationalId            String              @unique
-  gender                Gender              @default(MALE)
-  dateOfBirth           DateTime?
-  address               String?
-  emergencyContactName  String?
-  emergencyContactPhone String?
-  employmentStatus      EmploymentStatus    @default(ACTIVE)
-  dateEmployed          DateTime?
-  supervisorId          String?
-  supervisor            User?               @relation("GuardSupervisor", fields: [supervisorId], references: [id])
-  homeLocationId        String?
-  homeLocation          Location?           @relation(fields: [homeLocationId], references: [id])
-  photoUrl              String?
-  email                 String?
-  notes                 String?
-  active                Boolean             @default(true)
-  deactivatedAt         DateTime?
+  attendanceCheckIns       AttendanceCheckIn[]
+  id                       String              @id @default(cuid())
+  guardNo                  String              @unique
+  firstName                String
+  lastName                 String
+  phone                    String              @unique
+  nationalId               String              @unique
+  gender                   Gender              @default(MALE)
+  dateOfBirth              DateTime?
+  address                  String?
+  emergencyContactName     String?
+  emergencyContactPhone    String?
+  employmentStatus         EmploymentStatus    @default(ACTIVE)
+  dateEmployed             DateTime?
+  supervisorId             String?
+  supervisor               User?               @relation("GuardSupervisor", fields: [supervisorId], references: [id])
+  homeLocationId           String?
+  homeLocation             Location?           @relation(fields: [homeLocationId], references: [id])
+  photoUrl                 String?
+  email                    String?
+  notes                    String?
+  active                   Boolean             @default(true)
+  deactivatedAt            DateTime?
   // Monitoring: admins can watch a guard closely; their events are highlighted and pushed.
-  watched               Boolean             @default(false)
-  watchedAt             DateTime?
-  watchedById           String?
-  watchNote             String?
+  watched                  Boolean             @default(false)
+  watchedAt                DateTime?
+  watchedById              String?
+  watchNote                String?
   // ANDROID_GUARD once a guard device is linked; FEATURE_PHONE guards use SMS and calls only
-  deviceKind            GuardDeviceKind     @default(FEATURE_PHONE)
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  deviceKind               GuardDeviceKind     @default(FEATURE_PHONE)
+  /// What phone the guard carries, as declared (deviceKind is derived from registered APK phones).
+  phoneType                PhoneType           @default(UNKNOWN)
+  mobileOperator           MobileOperator      @default(UNKNOWN)
+  /// When someone confirmed the number belongs to the guard (a test call, an SMS reply).
+  phoneVerifiedAt          DateTime?
+  /// Other numbers the guard may call or text from. A number shared by two guards matches neither.
+  alternatePhones          String[]            @default([])
+  preferredAttendance      AttendanceChannel   @default(SMS)
+  callAttendanceEnabled    Boolean             @default(true)
+  smsAttendanceEnabled     Boolean             @default(true)
+  ivrAttendanceEnabled     Boolean             @default(false)
+  /// The operations gateway this guard is expected to call. Null: the site's default, else any.
+  assignedGatewayId        String?
+  assignedGateway          GatewayDevice?      @relation("GuardAssignedGateway", fields: [assignedGatewayId], references: [id], onDelete: SetNull)
+  networkLocationEligible  Boolean             @default(false)
+  networkLocationConsentAt DateTime?
+  /// No scheduled welfare checks for this guard (the site's schedule does not apply).
+  welfareExempt            Boolean             @default(false)
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
 
-  shifts           Shift[]
-  checkIns         ShiftCheckIn[]
-  incidents        Incident[]
-  smsMessages      SmsMessage[]
-  recurrences      ShiftRecurrence[]
-  notifications    Notification[]
-  callLogs         CallLog[]
-  locationRequests DeviceLocationRequest[]
-  devices          GatewayDevice[]
-  locationEvents   LocationEvent[]
-  alerts           GuardAlert[]
+  shifts                Shift[]
+  checkIns              ShiftCheckIn[]
+  incidents             Incident[]
+  smsMessages           SmsMessage[]
+  recurrences           ShiftRecurrence[]
+  notifications         Notification[]
+  callLogs              CallLog[]
+  locationRequests      DeviceLocationRequest[]
+  devices               GatewayDevice[]
+  locationEvents        LocationEvent[]
+  alerts                GuardAlert[]
+  callRequests          CallRequest[]
+  clientNotifications   ClientNotification[]
+  attendanceEvidence    AttendanceEvidence[]
+  networkLocationChecks NetworkLocationCheck[]
 
   @@index([lastName, firstName])
   @@index([active])
@@ -237,22 +288,23 @@ model ShiftRecurrence {
 }
 
 model Shift {
-  id              String           @id @default(cuid())
-  guardId         String
-  guard           Guard            @relation(fields: [guardId], references: [id])
-  locationId      String
-  location        Location         @relation(fields: [locationId], references: [id])
-  supervisorId    String?
-  supervisor      User?            @relation("ShiftSupervisor", fields: [supervisorId], references: [id])
-  recurrenceId    String?
-  recurrence      ShiftRecurrence? @relation(fields: [recurrenceId], references: [id])
-  startAt         DateTime
-  endAt           DateTime
-  durationMinutes Int
-  instructions    String?
-  notes           String?
-  status          ShiftStatus      @default(SCHEDULED)
-  pendingPrompt   PendingPrompt    @default(NONE)
+  attendanceEvidence AttendanceEvidence[]
+  id                 String               @id @default(cuid())
+  guardId            String
+  guard              Guard                @relation(fields: [guardId], references: [id])
+  locationId         String
+  location           Location             @relation(fields: [locationId], references: [id])
+  supervisorId       String?
+  supervisor         User?                @relation("ShiftSupervisor", fields: [supervisorId], references: [id])
+  recurrenceId       String?
+  recurrence         ShiftRecurrence?     @relation(fields: [recurrenceId], references: [id])
+  startAt            DateTime
+  endAt              DateTime
+  durationMinutes    Int
+  instructions       String?
+  notes              String?
+  status             ShiftStatus          @default(SCHEDULED)
+  pendingPrompt      PendingPrompt        @default(NONE)
 
   // Optional geofence override for this shift only (e.g. a gate post away from the site centre)
   geofenceLatitude    Float?
@@ -279,16 +331,19 @@ model Shift {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  attendance        Attendance?
-  attendanceCheckIn AttendanceCheckIn?
-  checkIns          ShiftCheckIn[]
-  welfareChecks     WelfareCheck[]
-  incidents         Incident[]
-  smsMessages       SmsMessage[]
-  notifications     Notification[]
-  callLogs          CallLog[]
-  locationEvents    LocationEvent[]
-  alerts            GuardAlert[]
+  attendance            Attendance?
+  attendanceCheckIn     AttendanceCheckIn?
+  checkIns              ShiftCheckIn[]
+  welfareChecks         WelfareCheck[]
+  incidents             Incident[]
+  smsMessages           SmsMessage[]
+  notifications         Notification[]
+  callLogs              CallLog[]
+  locationEvents        LocationEvent[]
+  alerts                GuardAlert[]
+  callRequests          CallRequest[]
+  clientNotifications   ClientNotification[]
+  networkLocationChecks NetworkLocationCheck[]
 
   @@index([startAt])
   @@index([endAt])
@@ -337,6 +392,87 @@ enum GuardDeviceKind {
   ANDROID_GUARD
 }
 
+enum PhoneType {
+  BASIC
+  ANDROID
+  OTHER
+  UNKNOWN
+}
+
+enum MobileOperator {
+  ECONET
+  NETONE
+  TELECEL
+  OTHER
+  UNKNOWN
+}
+
+enum AttendanceChannel {
+  CALL
+  SMS
+  APP
+}
+
+/// What a piece of attendance evidence is about.
+enum EvidenceKind {
+  CHECK_IN
+  WELFARE
+  CHECK_OUT
+  PRESENCE
+}
+
+/// Where it came from. A call is communication, never location.
+enum EvidenceSource {
+  CALL
+  MISSED_CALL
+  SMS
+  GPS
+  NETWORK
+  IVR
+  MANUAL
+}
+
+enum EvidenceStatus {
+  CONFIRMED // applied to the attendance record
+  PROVISIONAL // applied, and flagged for review
+  PENDING // waiting for a person (or an SMS reply) to decide; nothing applied
+  REJECTED // decided against, or not allowed by policy
+}
+
+/// One fact about a guard's attendance on a shift and where it came from: a call, a missed call,
+/// an SMS reply, a GPS check, a network check, an IVR answer or a supervisor's decision.
+model AttendanceEvidence {
+  id              String         @id @default(cuid())
+  shiftId         String
+  shift           Shift          @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  guardId         String
+  guard           Guard          @relation(fields: [guardId], references: [id])
+  kind            EvidenceKind
+  source          EvidenceSource
+  status          EvidenceStatus
+  /// When it happened (the call's start, the reply's arrival), not when the server heard of it.
+  occurredAt      DateTime
+  receivedAt      DateTime       @default(now())
+  callLogId       String?
+  smsMessageId    String?
+  gatewayDeviceId String?
+  /// WRONG_GATEWAY, LATE_SYNC, SHORT_CALL, SHIFT_CLOSED, AMBIGUOUS, MISSED_CALL, SMS_CONFIRM_SENT
+  flags           String[]       @default([])
+  note            String?
+  /// One record per fact: a re-sent call event or a second tick finds the key taken.
+  dedupeKey       String         @unique
+  decidedById     String?
+  decidedBy       User?          @relation("EvidenceDecidedBy", fields: [decidedById], references: [id])
+  decidedAt       DateTime?
+  decisionNote    String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([shiftId, occurredAt])
+  @@index([guardId, occurredAt])
+  @@index([status])
+}
+
 enum CheckInType {
   SHIFT_STARTED
   ARRIVAL_SMS_SENT
@@ -380,6 +516,7 @@ enum CheckInType {
   LOCATION_RETURNED
   LOCATION_UNAVAILABLE
   LOCATION_OVERDUE
+  NETWORK_LOCATION // a mobile-network location check: never GPS
 }
 
 enum CheckInSource {
@@ -408,6 +545,97 @@ model ShiftCheckIn {
   @@index([guardId, at])
 }
 
+enum WelfareChannel {
+  SMS
+  VOICE // a programmable voice provider rings the guard and reads their key press
+  GATEWAY_CALL // the operations gateway phone rings the guard; the operator speaks to them
+}
+
+enum WelfareCallStatus {
+  CALL_SCHEDULED
+  CALL_INITIATED
+  CALL_RINGING
+  CALL_ANSWERED
+  RESPONSE_CONFIRMED
+  NO_ANSWER
+  BUSY
+  FAILED
+  ESCALATED
+}
+
+/// Voice-provider webhooks already accepted. A replayed event finds its id here and changes nothing.
+enum NetworkLocationResult {
+  NETWORK_VERIFIED_INSIDE
+  NETWORK_VERIFIED_OUTSIDE
+  NETWORK_PARTIAL_MATCH
+  NETWORK_LOCATION_STALE
+  NETWORK_LOCATION_UNAVAILABLE
+  NETWORK_PROVIDER_UNAVAILABLE
+  NETWORK_NOT_AUTHORISED
+  NETWORK_UNSUPPORTED
+  NETWORK_ERROR
+}
+
+enum NetworkCheckTrigger {
+  SHIFT_START
+  MID_SHIFT
+  SHIFT_END
+  INCOMING_CALL
+  AFTER_WELFARE_CALL
+  MANUAL
+  RETRY_UNCERTAIN
+  ANDROID_FALLBACK
+}
+
+/// One network location check, or the reason none was made. Kept apart from GPS location events:
+/// a network result never overwrites or stands in for GPS history. Only the requested area and the
+/// provider's answer are stored; no coordinates are derived from a yes/no verification.
+model NetworkLocationCheck {
+  id               String                @id @default(cuid())
+  /// One check per trigger occurrence ("SHIFT_START:<shiftId>", "call:<callLogId>"); null for manual checks.
+  dedupeKey        String?               @unique
+  guardId          String
+  guard            Guard                 @relation(fields: [guardId], references: [id])
+  shiftId          String?
+  shift            Shift?                @relation(fields: [shiftId], references: [id])
+  locationId       String?
+  trigger          NetworkCheckTrigger
+  requestedById    String?
+  operator         MobileOperator        @default(UNKNOWN)
+  /// The adapter that answered, or "router" when no request was sent.
+  provider         String
+  /// False when the router decided not to ask a provider (not authorised, unsupported, unavailable).
+  requestSent      Boolean               @default(false)
+  result           NetworkLocationResult
+  reason           String?
+  areaLatitude     Float?
+  areaLongitude    Float?
+  areaRadiusM      Int?
+  maxAgeSeconds    Int?
+  /// When the network last located the subscriber, as the provider says.
+  observedAt       DateTime?
+  matchRate        Int?
+  uncertaintyM     Int?
+  authorisationRef String?
+  providerRef      String?
+  costUnits        Float?
+  simulated        Boolean               @default(false)
+  requestedAt      DateTime              @default(now())
+  completedAt      DateTime?
+
+  @@index([guardId, requestedAt])
+  @@index([shiftId, requestedAt])
+}
+
+model VoiceWebhookEvent {
+  id         String   @id @default(cuid())
+  provider   String
+  eventId    String
+  receivedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+}
+
 enum WelfareResponse {
   PENDING
   WELL
@@ -417,12 +645,28 @@ enum WelfareResponse {
 }
 
 model WelfareCheck {
-  id          String          @id @default(cuid())
-  shiftId     String
-  shift       Shift           @relation(fields: [shiftId], references: [id])
-  sentAt      DateTime        @default(now())
-  respondedAt DateTime?
-  response    WelfareResponse @default(PENDING)
+  id             String             @id @default(cuid())
+  shiftId        String
+  shift          Shift              @relation(fields: [shiftId], references: [id])
+  sentAt         DateTime           @default(now())
+  respondedAt    DateTime?
+  response       WelfareResponse    @default(PENDING)
+  /// Scheduled checks only: "<shiftId>:<n>", so one engine pass cannot create a due point twice.
+  scheduleKey    String?            @unique
+  dueAt          DateTime?
+  channel        WelfareChannel     @default(SMS)
+  /// Voice and gateway checks: what the call did. Answered is not a response; only a key press,
+  /// an SMS reply or a person confirming is.
+  callStatus     WelfareCallStatus?
+  attempts       Int                @default(1)
+  lastAttemptAt  DateTime?
+  provider       String?
+  providerCallId String?            @unique
+  callRequestId  String?
+  digits         String?
+  smsFallbackAt  DateTime?
+  escalatedAt    DateTime?
+  note           String?
 
   @@index([shiftId])
 }
@@ -461,6 +705,7 @@ enum IncidentSource {
   ADMIN
   EMERGENCY
   APP
+  VOICE // a key press on a welfare call (IVR)
 }
 
 /// Guard-initiated alerts and status messages from the Android app (Phase 2, Stage 5)
@@ -778,10 +1023,15 @@ model GatewayDevice {
   revokedAt            DateTime?
   disabledAt           DateTime?
 
-  events         GatewayEvent[]
-  callLogs       CallLog[]
-  locationEvents LocationEvent[]
-  alerts         GuardAlert[]
+  events              GatewayEvent[]
+  callLogs            CallLog[]
+  locationEvents      LocationEvent[]
+  alerts              GuardAlert[]
+  /// The CALL_PHONE permission, reported by the phone: an operations gateway cannot dial without it.
+  placeCallPermission String? // granted | denied | unknown
+  callRequests        CallRequest[]
+  defaultForSites     Location[]      @relation("SiteDefaultGateway")
+  assignedGuards      Guard[]         @relation("GuardAssignedGateway")
 
   @@index([status])
   @@index([locationId])
@@ -1024,6 +1274,7 @@ enum CheckInStatus {
   MANUAL_REVIEW // a supervisor must resolve the exception
   MANUALLY_APPROVED // a supervisor accepted attendance; never shown as GPS-verified
   MANUALLY_REJECTED // a supervisor rejected it
+  DEVICE_OFFLINE // the registered phone stopped reporting before any usable fix; not the same as absent
 }
 
 enum CheckInSourceKind {
@@ -1032,6 +1283,7 @@ enum CheckInSourceKind {
   MONITORING // a background monitoring fix inside the correlation window
   SMS_ONLY // feature phone or no Android device: not verified by GPS
   MANUAL // a supervisor decided
+  AUTO_GPS // a fix the server asked the phone for at shift start, with no call involved
 }
 
 model AttendanceCheckIn {
@@ -1083,10 +1335,152 @@ model AttendanceCheckIn {
   decisionReason String?
   previousStatus CheckInStatus?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+  // Presence and the check-in call are separate facts. `status` says what GPS established; these
+  // say whether the attendance policy also required a call, and whether it came.
+  callRequired              Boolean   @default(false)
+  callOutstandingNotifiedAt DateTime?
+  /// When the server first asked the phone for a fix without waiting for a call.
+  autoRequestedAt           DateTime?
 
   @@index([status])
   @@index([guardId, scheduledStartAt])
   @@index([scheduledStartAt])
+}
+
+// ---------------------------------------------------------------------------------------------
+// The scheduler's lease. One row per job; whoever moves `leaseUntil` forward owns the run, so a
+// cron call, a device heartbeat and a manual tick can never run the engine twice at once.
+model SchedulerLease {
+  name       String    @id
+  holder     String?
+  leaseUntil DateTime
+  lastRunAt  DateTime?
+  lastSource String? // cron | heartbeat | manual | in-process
+  lastError  String?
+  updatedAt  DateTime  @updatedAt
+}
+
+// ---------------------------------------------------------------------------------------------
+// A call the portal asked an operations phone to place. Each state is only ever set from evidence:
+// DIALING when the phone says it started the dialler, CONNECTED / COMPLETED / NO_ANSWER from the
+// phone's own call record. A delivered command is never reported as a call.
+enum CallRequestStatus {
+  QUEUED // created; no phone has fetched it yet
+  DELIVERED // the phone fetched the command
+  AWAITING_CONFIRMATION // the phone is showing it to the operator
+  DIALING // the operator confirmed and the phone started the call
+  CONNECTED // the phone's call record shows the call was answered
+  COMPLETED // answered and ended
+  NO_ANSWER // dialled and ended without being answered
+  FAILED // the phone could not dial (no permission, no SIM, invalid number)
+  TIMED_OUT // nobody acted on it before it expired
+  CANCELLED // operations withdrew it
+}
+
+model CallRequest {
+  id              String            @id @default(cuid())
+  guardId         String
+  guard           Guard             @relation(fields: [guardId], references: [id], onDelete: Cascade)
+  gatewayDeviceId String
+  gatewayDevice   GatewayDevice     @relation(fields: [gatewayDeviceId], references: [id], onDelete: Cascade)
+  requestedById   String?
+  requestedBy     User?             @relation("CallRequestedBy", fields: [requestedById], references: [id])
+  shiftId         String?
+  shift           Shift?            @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  incidentId      String?
+  /// The guard's number at the time of the request, normalised. The phone dials exactly this.
+  phoneNumber     String
+  reason          String?
+  status          CallRequestStatus @default(QUEUED)
+  /// Set by the portal so a double click or a retried request makes one call, not two.
+  idempotencyKey  String            @unique
+  requestedAt     DateTime          @default(now())
+  expiresAt       DateTime
+  deliveredAt     DateTime?
+  shownAt         DateTime?
+  dialedAt        DateTime?
+  connectedAt     DateTime?
+  endedAt         DateTime?
+  durationSeconds Int?
+  failureReason   String?
+  /// The CallLog row of the phone's own record of this call, once it arrives.
+  callLogId       String?           @unique
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  @@index([gatewayDeviceId, status])
+  @@index([guardId, requestedAt])
+  @@index([status, expiresAt])
+}
+
+// ---------------------------------------------------------------------------------------------
+// Messages to clients about their sites. One row per message, whatever sent it, so the history a
+// client page shows is complete. A rule-driven message carries a dedupe key, so a GPS event that
+// arrives twice, or a retried engine tick, cannot text a client twice.
+enum ClientNotificationType {
+  GUARD_ARRIVED
+  GUARD_VERIFIED
+  GUARD_LATE
+  GUARD_ABSENT
+  MISSED_CHECK_IN
+  GUARD_OUTSIDE
+  EMERGENCY
+  ASSISTANCE
+  SHIFT_COMPLETED
+  REPLACEMENT_DISPATCHED
+  SITE_STATUS
+  WELFARE_OK
+  CUSTOM
+}
+
+enum ClientNotificationStatus {
+  PENDING_APPROVAL // drafted by a rule; a supervisor must approve before anything is sent
+  QUEUED
+  SENT // the provider accepted it; not proof of delivery
+  DELIVERED // the provider reported delivery
+  FAILED
+  DISCARDED // a draft a supervisor chose not to send
+}
+
+model ClientNotification {
+  id            String                   @id @default(cuid())
+  clientId      String
+  client        Client                   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  locationId    String?
+  location      Location?                @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  guardId       String?
+  guard         Guard?                   @relation(fields: [guardId], references: [id], onDelete: SetNull)
+  shiftId       String?
+  shift         Shift?                   @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  incidentId    String?
+  type          ClientNotificationType
+  channel       MessageChannel           @default(SMS)
+  recipient     String
+  message       String
+  /// Email subject; null for SMS.
+  subject       String?
+  status        ClientNotificationStatus @default(QUEUED)
+  failureReason String?
+  /// Who sent it; null when a rule sent it.
+  sentById      String?
+  sentBy        User?                    @relation("ClientNotificationSentBy", fields: [sentById], references: [id])
+  approvedById  String?
+  approvedBy    User?                    @relation("ClientNotificationApprovedBy", fields: [approvedById], references: [id])
+  approvedAt    DateTime?
+  /// The rule that produced it, e.g. "auto:GUARD_LATE"; null for a message written by hand.
+  rule          String?
+  /// One message per rule per shift: the second attempt to create the same key is a no-op.
+  dedupeKey     String?                  @unique
+  /// The event that prompted it, e.g. "checkin:<id>", "incident:<id>".
+  eventRef      String?
+  smsMessageId  String?
+  sentAt        DateTime?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  @@index([clientId, createdAt])
+  @@index([locationId, createdAt])
+  @@index([status])
 }

@@ -17,8 +17,22 @@ import zw.co.omega.gateway.service.SyncPlanner
  *
  * Schema v2 adds per-row status, priority, retry time and timestamps, and a `sync_log` table the
  * diagnostics screen and the server read. v1 rows become QUEUED / NORMAL on upgrade.
+ *
+ * One instance per process ([get]). Each instance of a SQLiteOpenHelper keeps its own connection,
+ * and `@Synchronized` locks only that instance, so ten helpers on one file meant unserialised
+ * writers ("database is locked") and connections nobody closed. Write-ahead logging lets the
+ * screens read while the sync engine writes. Neither changes the schema: queued rows survive.
  */
-class EventQueue(context: Context) : SQLiteOpenHelper(context.applicationContext, "gateway_queue.db", null, 3) {
+class EventQueue private constructor(context: Context) : SQLiteOpenHelper(context.applicationContext, "gateway_queue.db", null, 3) {
+    init { setWriteAheadLoggingEnabled(true) }
+
+    companion object {
+        @Volatile private var instance: EventQueue? = null
+
+        /** The process-wide queue. Safe from any thread; never closed while the process lives. */
+        fun get(context: Context): EventQueue = instance ?: synchronized(this) { instance ?: EventQueue(context.applicationContext).also { instance = it } }
+    }
+
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE outbox (id INTEGER PRIMARY KEY AUTOINCREMENT, eventId TEXT UNIQUE NOT NULL, json TEXT NOT NULL, createdAt INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, lastError TEXT)")
         db.execSQL("CREATE INDEX outbox_created ON outbox(createdAt)")

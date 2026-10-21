@@ -34,6 +34,7 @@ class AlertsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityAlertsBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Insets.applySystemBars(b.root)
         b.back.setOnClickListener { finish() }
         b.emergency.setOnClickListener { guard(it) { AlertFlow.confirmEmergency(this, fb) } }
         b.assistance.setOnClickListener { guard(it) { AlertFlow.askMessage(this, AlertSender.Type.NEED_ASSISTANCE, R.string.alert_assistance, R.string.alert_msg_hint_optional, false, fb) } }
@@ -62,7 +63,7 @@ class AlertsActivity : AppCompatActivity() {
 
     private fun renderHistory() {
         if (!::b.isInitialized) return
-        val rows = EventQueue(this).recentComm(30, kind = "ALERT")
+        val rows = EventQueue.get(this).recentComm(30, kind = "ALERT")
         val f = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
         b.history.removeAllViews()
         if (rows.isEmpty()) { b.history.addView(TextView(this).apply { text = getString(R.string.alert_history_none); setTextColor(getColor(R.color.ink3)); textSize = 14f; setPadding(0, 8, 0, 0) }); return }

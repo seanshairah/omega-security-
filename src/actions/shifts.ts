@@ -8,6 +8,7 @@ import { shiftSchema, shiftGeofenceSchema, recurrenceSchema, formToObject, first
 import { combineDateTime } from "@/lib/time";
 import { createShift as createShiftRecord, cancelShift as cancelShiftRecord, updateShift as updateShiftRecord, deleteShift as deleteShiftRecord, materialiseRecurrences, recordEvent } from "@/lib/services/shifts";
 import { getSettingNumber } from "@/lib/settings";
+import { recordEvidence, settlePendingCalls } from "@/lib/attendance/evidence";
 import { actor, auditAs, fail, type ActionState } from "./_helpers";
 
 export async function createShift(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -137,6 +138,8 @@ export async function manualArrival(id: string, note: string) {
   await db.attendance.update({ where: { shiftId: id }, data: { status: lateMinutes > grace ? "LATE" : "PRESENT", arrivalConfirmedAt: now, lateMinutes } });
   await db.shift.update({ where: { id }, data: { status: "ON_DUTY", pendingPrompt: s.pendingPrompt === "ARRIVAL" ? "NONE" : s.pendingPrompt } });
   await recordEvent(id, s.guardId, "ARRIVAL_CONFIRMED", { source: "ADMIN", note: `Arrival confirmed manually by ${user.name}. ${note}`.trim() });
+  await recordEvidence({ shiftId: id, guardId: s.guardId, kind: "CHECK_IN", source: "MANUAL", status: "CONFIRMED", occurredAt: now, dedupeKey: `manual:checkin:${id}:${now.getTime()}`, decidedById: user.id, decidedAt: now, note: `Confirmed by ${user.name}. Not location evidence.${note ? ` ${note}` : ""}` }).catch(() => undefined);
+  await settlePendingCalls(id, "CHECK_IN", `Settled when ${user.name} confirmed arrival manually.`, now).catch(() => 0);
   await auditAs(user, "ATTENDANCE_CONFIRMED_MANUALLY", "Shift", id, { note });
   revalidatePath(`/shifts/${id}`);
   revalidatePath("/operations");
@@ -149,6 +152,8 @@ export async function manualComplete(id: string, note: string) {
   await db.attendance.update({ where: { shiftId: id }, data: { status: "COMPLETED", completionConfirmedAt: now } });
   await db.shift.update({ where: { id }, data: { status: "COMPLETED", pendingPrompt: "NONE" } });
   await recordEvent(id, s.guardId, "COMPLETION_CONFIRMED", { source: "ADMIN", note: `Completed manually by ${user.name}. ${note}`.trim() });
+  await recordEvidence({ shiftId: id, guardId: s.guardId, kind: "CHECK_OUT", source: "MANUAL", status: "CONFIRMED", occurredAt: now, dedupeKey: `manual:checkout:${id}:${now.getTime()}`, decidedById: user.id, decidedAt: now, note: `Completed by ${user.name}.${note ? ` ${note}` : ""}` }).catch(() => undefined);
+  await settlePendingCalls(id, "CHECK_OUT", `Settled when ${user.name} completed the shift manually.`, now).catch(() => 0);
   await recordEvent(id, s.guardId, "SHIFT_COMPLETED", { note: "Shift completed." });
   await auditAs(user, "SHIFT_COMPLETED_MANUALLY", "Shift", id, { note });
   revalidatePath(`/shifts/${id}`);

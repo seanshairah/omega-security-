@@ -8,6 +8,19 @@
             <ImageButton android:id="@+id/back" android:layout_width="48dp" android:layout_height="48dp" android:background="?attr/selectableItemBackgroundBorderless" android:src="@drawable/ic_back" app:tint="@color/ink" android:contentDescription="@string/back" />
             <TextView style="@style/Headline" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:layout_marginStart="4dp" android:text="@string/settings_title" />
         </LinearLayout>
+        <!-- Device: moved here from the home screen in v1.8; nobody acts on it during a shift. -->
+        <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="18dp">
+                <FrameLayout android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/circle_grey_soft"><ImageView android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center" android:src="@drawable/ic_phone_android" app:tint="@color/ink2" android:contentDescription="@null" /></FrameLayout>
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:layout_marginStart="14dp">
+                    <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/device_label" />
+                    <TextView android:id="@+id/deviceName" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold" />
+                    <TextView android:id="@+id/deviceLine" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" />
+                    <TextView android:id="@+id/healthLine" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="13sp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
                 <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/connection_label" />
@@ -38,7 +51,7 @@
                         <TextView android:id="@+id/android" style="@style/Value" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="14sp" />
                     </LinearLayout>
                 </LinearLayout>
-                <Button android:id="@+id/test" style="@style/Button.Outlined" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/test_connection" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/test" style="@style/Button.Outlined" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/test_connection" />
                 <TextView android:id="@+id/testResult" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:textColor="@color/ink2" android:textSize="13.5sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -47,12 +60,12 @@
             <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="18dp">
                 <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="0dp" android:text="@string/sync_diag_label" />
                 <TextView android:id="@+id/syncSummary" style="@style/Value" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:textSize="13.5sp" android:lineSpacingExtra="3dp" />
-                <Button android:id="@+id/syncNow" style="@style/Button.Outlined" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/sync_now" app:icon="@drawable/ic_sync" app:iconGravity="textStart" app:iconTint="@color/accent_strong" />
+                <com.google.android.material.button.MaterialButton android:id="@+id/syncNow" style="@style/Button.Outlined" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="@string/sync_now" app:icon="@drawable/ic_sync" app:iconGravity="textStart" app:iconTint="@color/accent_strong" />
                 <TextView style="@style/Label" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/sync_history_label" />
                 <TextView android:id="@+id/syncHistory" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:background="@drawable/bg_stat" android:padding="12dp" android:textColor="@color/ink2" android:textSize="11sp" android:fontFamily="monospace" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <Button android:id="@+id/deactivate" style="@style/Button.Text" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:minHeight="52dp" android:text="@string/deactivate" android:textColor="@color/critical" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/deactivate" style="@style/Button.Text" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" android:minHeight="52dp" android:text="@string/deactivate" android:textColor="@color/critical" />
     </LinearLayout>
 </ScrollView>

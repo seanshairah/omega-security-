@@ -4,6 +4,9 @@ import { requireUser, can } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
 import { shiftInclude, STATUS_META, CLOSED_STATUSES } from "@/lib/services/shifts";
 import { PageHeader, Meta } from "@/components/ui/page";
+import { CallGuardButton } from "@/components/calls/call-guard";
+import { NotifyClientButton } from "@/components/clients/notify-client";
+import { EvidenceList } from "@/components/attendance/evidence-list";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Timeline } from "@/components/timeline";
 import { ShiftStatusLabel } from "@/components/shift-status";
@@ -28,6 +31,9 @@ import { CATEGORY_LABEL } from "@/lib/services/incidents";
 import { SiteMap } from "@/components/map/site-map";
 import { LocationEventList, SyncBadge } from "@/components/location/location-events";
 import { LOCATION_STATE_META, freshness } from "@/lib/geofence";
+import { WELFARE_CALL_LABEL, hasSchedule } from "@/lib/welfare/welfare-rules";
+import { NETWORK_RESULT_META, NETWORK_TRIGGER_LABEL } from "@/lib/network-location/router-rules";
+import { requestNetworkCheck } from "@/actions/network-location";
 
 export const metadata = { title: "Shift" };
 
@@ -53,6 +59,13 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   const fence = effectiveGeofence(s, s.location);
   // The call check-in for this shift, when the feature has opened one.
   const checkInRow = await db.attendanceCheckIn.findUnique({ where: { shiftId: s.id }, include: { gatewayDevice: true, decidedBy: { select: { name: true } } } });
+  const evidenceRows = await db.attendanceEvidence.findMany({ where: { shiftId: s.id }, include: { decidedBy: { select: { name: true } } }, orderBy: { occurredAt: "asc" } });
+  const evidenceGateways = await db.gatewayDevice.findMany({ where: { id: { in: [...new Set(evidenceRows.map((e) => e.gatewayDeviceId).filter((x): x is string => Boolean(x)))] } }, select: { id: true, deviceName: true } });
+  const evidence = evidenceRows.map((e) => ({ ...e, gateway: evidenceGateways.find((g) => g.id === e.gatewayDeviceId) ?? null }));
+  const pendingEvidence = evidence.filter((e) => e.status === "PENDING" || e.status === "PROVISIONAL").length;
+  const scheduledChecks = s.welfareChecks.filter((w) => w.scheduleKey);
+  const networkChecks = await db.networkLocationCheck.findMany({ where: { shiftId: s.id }, orderBy: { requestedAt: "desc" }, take: 20 });
+  const networkPossible = s.guard.networkLocationEligible && s.location.networkVerifyEnabled;
   const checkIn: CheckInView | null = checkInRow ? {
     id: checkInRow.id, shiftId: s.id, guardName, guardPhone: s.guard.phone, siteName: s.location.name,
     status: checkInRow.status as CheckInStatus, scheduledStartAt: checkInRow.scheduledStartAt,
@@ -70,13 +83,15 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   return (
     <div>
       <PageHeader title={`${guardName} · ${s.location.name}`} description={`${fmtDate(s.startAt)} · ${fmtTime(s.startAt)}–${fmtTime(s.endAt)} · ${fmtDuration(s.durationMinutes)}`} actions={
-        can.manageShifts(user) && (live || del.canDelete) && (
+        (live || (can.manageShifts(user) && del.canDelete)) && (
           <ButtonGroup>
-            {live && edit.canEdit && <LinkButton href={`/shifts/${s.id}/edit`} size="md">Edit</LinkButton>}
-            {live && !s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Confirm arrival manually" title="Confirm arrival manually?" body={`Record ${guardName} as on post now, for example after a phone call.`} withNote="How was this confirmed?" confirmLabel="Confirm arrival" action={async (note) => { "use server"; await manualArrival(s.id, note); }} />}
-            {live && s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Mark completed" title="Mark this shift completed?" body="Use when the guard confirmed by phone or radio rather than SMS." withNote="Note" confirmLabel="Mark completed" action={async (note) => { "use server"; await manualComplete(s.id, note); }} />}
-            {live && <ConfirmButton size="md" label="Cancel shift" variant="danger" title="Cancel this shift?" body="The guard will no longer receive checks for it. This is recorded on the timeline." withNote="Reason" confirmLabel="Cancel shift" action={async (note) => { "use server"; await cancelShift(s.id, note); }} />}
-            {del.canDelete && <ConfirmButton size="md" label="Delete" variant="danger" title="Delete this shift?" body={DELETE_EXPLAINER} confirmLabel="Delete permanently" action={async () => { "use server"; await deleteShift(s.id); }} />}
+            {live && <CallGuardButton guardId={s.guardId} guardName={guardName} shiftId={s.id} />}
+            {live && <NotifyClientButton shiftId={s.id} />}
+            {can.manageShifts(user) && live && edit.canEdit && <LinkButton href={`/shifts/${s.id}/edit`} size="md">Edit</LinkButton>}
+            {can.manageShifts(user) && live && !s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Confirm arrival manually" title="Confirm arrival manually?" body={`Record ${guardName} as on post now, for example after a phone call.`} withNote="How was this confirmed?" confirmLabel="Confirm arrival" action={async (note) => { "use server"; await manualArrival(s.id, note); }} />}
+            {can.manageShifts(user) && live && s.attendance?.arrivalConfirmedAt && <ConfirmButton size="md" label="Mark completed" title="Mark this shift completed?" body="Use when the guard confirmed by phone or radio rather than SMS." withNote="Note" confirmLabel="Mark completed" action={async (note) => { "use server"; await manualComplete(s.id, note); }} />}
+            {can.manageShifts(user) && live && <ConfirmButton size="md" label="Cancel shift" variant="danger" title="Cancel this shift?" body="The guard will no longer receive checks for it. This is recorded on the timeline." withNote="Reason" confirmLabel="Cancel shift" action={async (note) => { "use server"; await cancelShift(s.id, note); }} />}
+            {can.manageShifts(user) && del.canDelete && <ConfirmButton size="md" label="Delete" variant="danger" title="Delete this shift?" body={DELETE_EXPLAINER} confirmLabel="Delete permanently" action={async () => { "use server"; await deleteShift(s.id); }} />}
           </ButtonGroup>
         )
       } />
@@ -104,6 +119,51 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
                 <ActionForm action={updateShiftGeofence.bind(null, s.id)} submitLabel="Save geofence" successMessage="Geofence saved. The phone picks it up on its next heartbeat.">
                   <GeofenceOverrideSection initial={{ enabled: s.geofenceLatitude != null, lat: s.geofenceLatitude, lng: s.geofenceLongitude, radiusM: s.geofenceRadiusM, note: s.geofenceNote }} mapsKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} siteRadius={s.location.geofenceRadiusM} siteName={s.location.name} />
                 </ActionForm>
+              </CardBody>
+            </Card>
+          )}
+          <div id="attendance-evidence" className="scroll-mt-20">
+            <Card className={pendingEvidence ? "border-warn/50" : ""}>
+              <CardHeader title="Attendance evidence" description={pendingEvidence ? `${pendingEvidence} to confirm. Nothing pending is applied until someone confirms it.` : "Each clock-in, welfare check and clock-out, and where it came from. Calls and SMS are communication, not location."} />
+              <CardBody className="pt-1"><EvidenceList rows={evidence} canDecide={can.manageShifts(user)} /></CardBody>
+            </Card>
+          </div>
+          {scheduledChecks.length > 0 && (
+            <Card>
+              <CardHeader title="Welfare checks" description="Scheduled for this site. An answered call is not a response: only a key press, a reply or a person confirming settles a check." />
+              <CardBody className="pt-1">
+                <ul className="divide-y divide-line">
+                  {scheduledChecks.map((w) => {
+                    const st = welfareState(w);
+                    return (
+                      <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                        <span className="text-ink">Due {fmtTime(w.dueAt ?? w.sentAt)} <span className="text-ink-3">· {WELFARE_CHANNEL_LABEL[w.channel]}{w.attempts > 1 ? ` · ${w.attempts} tries` : ""}{w.smsFallbackAt ? " · then SMS" : ""}{w.provider === "simulated" ? " · simulated" : ""}</span></span>
+                        <Status tone={st.tone}>{st.label}</Status>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </CardBody>
+            </Card>
+          )}
+          {(networkChecks.length > 0 || networkPossible) && (
+            <Card>
+              <CardHeader
+                title="Network location checks"
+                description="From the guard's mobile network, not GPS. Approximate, and stored apart from the GPS history. Attendance does not wait for them."
+                action={networkPossible && live && can.manageShifts(user) ? <ConfirmButton label="Check by network" title="Ask the mobile network?" body="One request to the guard's network, if consent, the shift window, the cooldown and the monthly limit allow it. The operator may charge for it." confirmLabel="Ask the network" action={async () => { "use server"; await requestNetworkCheck(s.id); }} /> : undefined}
+              />
+              <CardBody className="pt-1">
+                {networkChecks.length === 0 ? <p className="py-2 text-sm text-ink-3">No network checks on this shift.</p> : (
+                  <ul className="divide-y divide-line">
+                    {networkChecks.map((c) => (
+                      <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                        <span className="text-ink">{fmtTime(c.requestedAt)} <span className="text-ink-3">· {NETWORK_TRIGGER_LABEL[c.trigger]} · {c.requestSent ? c.provider : "not sent"}{c.areaRadiusM ? ` · ${c.areaRadiusM.toLocaleString("en-GB")} m area` : ""}{c.reason ? ` · ${c.reason}` : ""}</span></span>
+                        <Status tone={c.simulated ? "muted" : NETWORK_RESULT_META[c.result].tone}>{c.simulated ? `Simulated · ${NETWORK_RESULT_META[c.result].label}` : NETWORK_RESULT_META[c.result].label}</Status>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </CardBody>
             </Card>
           )}
@@ -170,7 +230,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
                 <Meta label="Attendance">{att ? <Status tone={att.tone}>{att.label}</Status> : "—"}</Meta>
                 <Meta label="Arrival">{s.attendance?.arrivalConfirmedAt ? `${fmtTime(s.attendance.arrivalConfirmedAt)}${s.attendance.lateMinutes ? ` (${s.attendance.lateMinutes} min late)` : ""}` : "Not confirmed"}</Meta>
                 <Meta label="Completion">{s.attendance?.completionConfirmedAt ? fmtTime(s.attendance.completionConfirmedAt) : s.completionTimedOutAt ? "Unconfirmed" : "—"}</Meta>
-                <Meta label="Welfare check">{s.welfareSmsSentAt ? `Sent ${fmtTime(s.welfareSmsSentAt)}` : `Due ${fmtTime(midpoint)}`}</Meta>
+                <Meta label="Welfare check">{hasSchedule({ times: s.location.welfareTimes, intervalMinutes: s.location.welfareIntervalMinutes }) ? (s.location.welfareTimes ? `At ${s.location.welfareTimes}` : `Every ${s.location.welfareIntervalMinutes} min`) : s.welfareSmsSentAt ? `Sent ${fmtTime(s.welfareSmsSentAt)}` : `Due ${fmtTime(midpoint)}`}</Meta>
                 <Meta label="Missed checks">{s.attendance?.missedChecks ?? 0}</Meta>
                 <Meta label="Awaiting reply">{s.pendingPrompt === "NONE" ? "Nothing" : s.pendingPrompt.toLowerCase().replace("_", " ")}</Meta>
                 <Meta label="Status">{STATUS_META[s.status].label}</Meta>
@@ -216,4 +276,15 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
       </div>
     </div>
   );
+}
+
+const WELFARE_CHANNEL_LABEL = { SMS: "SMS", VOICE: "automated call", GATEWAY_CALL: "operations phone" } as const;
+
+/** A settled response wins over what the call did; an open check shows the call's state. */
+function welfareState(w: { response: string; callStatus: keyof typeof WELFARE_CALL_LABEL | null; escalatedAt: Date | null }) {
+  if (w.response === "WELL") return { label: "Well", tone: "ok" as const };
+  if (w.response === "ASSISTANCE") return { label: "Needs assistance", tone: "warn" as const };
+  if (w.response === "INCIDENT") return { label: "Emergency", tone: "critical" as const };
+  if (w.response === "NO_RESPONSE") return { label: w.escalatedAt ? "No response · escalated" : "No response", tone: "critical" as const };
+  return w.callStatus ? WELFARE_CALL_LABEL[w.callStatus] : { label: "Waiting for a reply", tone: "info" as const };
 }

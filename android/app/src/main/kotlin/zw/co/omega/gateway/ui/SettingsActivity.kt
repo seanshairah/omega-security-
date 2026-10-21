@@ -27,6 +27,7 @@ class SettingsActivity : AppCompatActivity() {
         prefs = Prefs(this)
         b = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(b.root)
+        Insets.applySystemBars(b.root)
         b.back.setOnClickListener { finish() }
         b.test.setOnClickListener { testConnection() }
         b.deactivate.setOnClickListener { confirmDeactivate() }
@@ -37,16 +38,22 @@ class SettingsActivity : AppCompatActivity() {
     override fun onResume() { super.onResume(); render() }
 
     private fun render() {
+        val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+        val bat = DeviceInfo.batteryLevel(this)
+        val bgAllowed = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M && pm.isIgnoringBatteryOptimizations(packageName)
+        b.deviceName.text = prefs.deviceName.ifBlank { "—" }
+        b.deviceLine.text = getString(R.string.device_line, prefs.phoneNumber.ifBlank { "—" }, prefs.locationName.ifBlank { getString(R.string.head_office) }, DeviceInfo.appVersion())
+        b.healthLine.text = getString(R.string.health_line, if (bat >= 0) "$bat%" else "—", if (prefs.batterySaver) getString(R.string.health_saver) else "", if (bgAllowed) getString(R.string.health_bg_ok) else getString(R.string.health_bg_restricted), DeviceInfo.model())
         b.serverUrl.text = prefs.serverUrl
         b.deviceId.text = prefs.deviceId ?: "—"
         b.appVersion.text = DeviceInfo.appVersion()
         b.android.text = "${DeviceInfo.androidVersion()} · ${DeviceInfo.model()}"
         b.heartbeat.text = getString(R.string.every_seconds, prefs.heartbeatSeconds)
-        b.queue.text = EventQueue(this).size().toString()
+        b.queue.text = EventQueue.get(this).size().toString()
         b.gatewayStatus.text = when { prefs.authRejected -> getString(R.string.status_rejected); prefs.lastHeartbeatOk -> getString(R.string.status_online); else -> getString(R.string.status_offline) }
         b.lastError.text = prefs.lastError ?: getString(R.string.none)
         // Sync diagnostics: what is waiting, why, and the last runs.
-        val q = EventQueue(this)
+        val q = EventQueue.get(this)
         val c = q.counts()
         val f = java.text.SimpleDateFormat("dd MMM HH:mm:ss", java.util.Locale.getDefault())
         val nextRetry = q.nextAttemptAt()?.takeIf { it > System.currentTimeMillis() }?.let { f.format(java.util.Date(it)) }

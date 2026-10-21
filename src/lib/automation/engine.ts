@@ -11,12 +11,14 @@ import { getSettingNumber } from "@/lib/settings";
 import { notify } from "@/lib/notifications";
 import { sendTemplated } from "@/lib/sms/outbound";
 import { sendClientUpdate } from "@/lib/sms/client-updates";
+import { onArrivalNotConfirmed } from "@/lib/client-notifications/rules";
 import { materialiseRecurrences, recordEvent, shiftInclude, LIVE_STATUSES, ON_SITE_STATUSES } from "@/lib/services/shifts";
 import { runCheckInStep } from "@/lib/attendance/check-in-service";
 import { fmtTime } from "@/lib/time";
 import { gatewayMaintenance } from "@/lib/gateway/service";
 import { locationMaintenance } from "@/lib/gateway/location-events";
 import { expireStaleRequests } from "@/lib/gateway/location-requests";
+import { runWelfareSchedule, unscheduledSite } from "@/lib/welfare/scheduled";
 
 export type TickReport = {
   at: string;
@@ -35,13 +37,14 @@ export type TickReport = {
   locationEscalated: number;
   checkInsOpened: number;
   checkInsEscalated: number;
+  arrivalRetried: number;
   errors: string[];
 };
 
 let running = false;
 
 export async function runAutomationTick(now = new Date()): Promise<TickReport> {
-  const report: TickReport = { at: now.toISOString(), recurrencesCreated: 0, arrivalSent: 0, remindersSent: 0, escalated: 0, welfareSent: 0, welfareMissed: 0, handoverNotices: 0, completionSent: 0, completionTimedOut: 0, missed: 0, gatewaysOffline: 0, locationOverdue: 0, locationEscalated: 0, checkInsOpened: 0, checkInsEscalated: 0, errors: [] };
+  const report: TickReport = { at: now.toISOString(), recurrencesCreated: 0, arrivalSent: 0, remindersSent: 0, escalated: 0, welfareSent: 0, welfareMissed: 0, handoverNotices: 0, completionSent: 0, completionTimedOut: 0, missed: 0, gatewaysOffline: 0, locationOverdue: 0, locationEscalated: 0, checkInsOpened: 0, checkInsEscalated: 0, arrivalRetried: 0, errors: [] };
   if (running) {
     report.errors.push("tick already running");
     return report;
@@ -90,6 +93,15 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
       }
     }
 
+    // 2b. arrival texts the provider refused. The shift already counts as prompted (the reminder
+    // timing runs from the first attempt), but a guard who never received the question cannot be
+    // expected to answer it, so the text is sent again: at most three sends, five minutes apart.
+    try {
+      report.arrivalRetried = await retryFailedArrivals(now);
+    } catch (e) {
+      report.errors.push(`arrival retry: ${(e as Error).message}`);
+    }
+
     // 3. arrival reminder
     const remind = await db.shift.findMany({ where: { status: "AWAITING_ARRIVAL", arrivalReminderSentAt: null, arrivalSmsSentAt: { lte: addMinutes(now, -grace) }, attendance: { arrivalConfirmedAt: null } }, include: shiftInclude });
     for (const s of remind) {
@@ -112,6 +124,8 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
         await db.attendance.update({ where: { shiftId: s.id }, data: { status: "NOT_REPORTED" } });
         await recordEvent(s.id, s.guardId, "ARRIVAL_ESCALATED", { at: now, note: `No reply after reminder. Attendance not confirmed. ${s.supervisor?.name ?? "Supervisor"} notified.` });
         await notify({ type: "GUARD_NOT_REPORTED", severity: "CRITICAL", title: `${s.guard.firstName} ${s.guard.lastName} failed to report at ${s.location.name}`, body: `No reply to the arrival check or reminder. Shift ${fmtTime(s.startAt)}–${fmtTime(s.endAt)}. Call ${s.guard.phone}.`, guardId: s.guardId, shiftId: s.id });
+        // Supervisor first (above), then the client if the site asks for late or missed check-ins.
+        await onArrivalNotConfirmed(s.id, `shift:${s.id}:arrival-escalated`);
         report.escalated++;
       } catch (e) {
         report.errors.push(`escalate ${s.id}: ${(e as Error).message}`);
@@ -119,7 +133,8 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
     }
 
     // 5. welfare check at the configured point of the shift
-    const onSite = await db.shift.findMany({ where: { status: { in: ON_SITE_STATUSES }, welfareSmsSentAt: null, endAt: { gt: now } }, include: shiftInclude });
+    // Sites with a welfare schedule are handled by step 6b instead.
+    const onSite = await db.shift.findMany({ where: { status: { in: ON_SITE_STATUSES }, welfareSmsSentAt: null, endAt: { gt: now }, location: unscheduledSite }, include: shiftInclude });
     for (const s of onSite) {
       const point = new Date(s.startAt.getTime() + (s.durationMinutes * 60000 * welfarePct) / 100);
       if (point > now) continue;
@@ -136,7 +151,7 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
     }
 
     // 6. missed welfare check
-    const missedWelfare = await db.shift.findMany({ where: { pendingPrompt: "WELFARE", welfareMissedAt: null, welfareSmsSentAt: { lte: addMinutes(now, -welfareWindow) } }, include: shiftInclude });
+    const missedWelfare = await db.shift.findMany({ where: { pendingPrompt: "WELFARE", welfareMissedAt: null, welfareSmsSentAt: { lte: addMinutes(now, -welfareWindow) }, location: unscheduledSite }, include: shiftInclude });
     for (const s of missedWelfare) {
       try {
         await db.shift.update({ where: { id: s.id }, data: { welfareMissedAt: now, pendingPrompt: "WELFARE" } }); // keep listening
@@ -148,6 +163,26 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
       } catch (e) {
         report.errors.push(`welfare-missed ${s.id}: ${(e as Error).message}`);
       }
+    }
+
+    // 6b. scheduled welfare checks (sites with welfare times or an interval): create, call or text,
+    // retry, fall back to SMS, escalate. Isolated so a voice or gateway problem never stops the steps above.
+    try {
+      const w = await runWelfareSchedule(now);
+      report.welfareSent += w.placed;
+      report.welfareMissed += w.escalated;
+      report.errors.push(...w.errors);
+    } catch (e) {
+      report.errors.push(`welfare schedule: ${(e as Error).message}`);
+    }
+
+    // 6c. mobile-network location checks (off unless configured); isolated like the steps below
+    try {
+      const { runNetworkLocationSchedule } = await import("@/lib/network-location/service");
+      const n = await runNetworkLocationSchedule(now);
+      report.errors.push(...n.errors);
+    } catch (e) {
+      report.errors.push(`network location: ${(e as Error).message}`);
     }
 
     // 7. handover notices
@@ -231,8 +266,12 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
     } catch (e) {
       report.errors.push(`location ${(e as Error).message}`);
     }
+    // 12b. tell the control room, once an hour, when the SMS provider is refusing messages
+    try { await alertOnFailingSms(now); } catch (e) { report.errors.push(`sms alert ${(e as Error).message}`); }
     // 13. location requests to guard phones past their deadline become EXPIRED (never left pending for ever)
     try { await expireStaleRequests(now); } catch (e) { report.errors.push(`location requests ${(e as Error).message}`); }
+    // 14. call requests nobody acted on lapse; a "dialling" with no call record is reported as failed
+    try { const { expireCallRequests } = await import("@/lib/gateway/call-requests"); await expireCallRequests(now); } catch (e) { report.errors.push(`call requests ${(e as Error).message}`); }
   } finally {
     running = false;
   }
@@ -243,7 +282,57 @@ let timer: NodeJS.Timeout | null = null;
 export function startInProcessScheduler(intervalMs = 60_000) {
   if (timer) return;
   console.log(`[automation] in-process scheduler started, every ${intervalMs / 1000}s`);
-  const tick = () => runAutomationTick().then((r) => { if (r.errors.length) console.error("[automation]", r.errors); }).catch((e) => console.error("[automation] tick failed", e));
+  // Through the shared lease, so this timer and a cron or heartbeat run never overlap.
+  const tick = () => import("./scheduler")
+    .then((m) => m.runScheduledTick("in-process"))
+    .then((r) => { if (r.ran && r.report.errors.length) console.error("[automation]", r.report.errors); })
+    .catch((e) => console.error("[automation] tick failed", e));
   timer = setInterval(tick, intervalMs);
   setTimeout(tick, 5_000);
+}
+
+export const ARRIVAL_MAX_SENDS = 3;
+const ARRIVAL_RETRY_MINUTES = 5;
+
+/** Re-send an arrival text whose last attempt failed. Returns how many were re-sent. */
+export async function retryFailedArrivals(now = new Date()): Promise<number> {
+  const shifts = await db.shift.findMany({
+    where: { status: "AWAITING_ARRIVAL", pendingPrompt: "ARRIVAL", arrivalReminderSentAt: null, endAt: { gt: now }, attendance: { arrivalConfirmedAt: null } },
+    include: shiftInclude, take: 200,
+  });
+  let resent = 0;
+  for (const s of shifts) {
+    const sends = await db.smsMessage.findMany({ where: { shiftId: s.id, direction: "OUTBOUND", type: "ARRIVAL" }, orderBy: { createdAt: "desc" }, take: ARRIVAL_MAX_SENDS + 1 });
+    const last = sends[0];
+    if (!last || last.status !== "FAILED") continue;
+    if (sends.length >= ARRIVAL_MAX_SENDS) continue;
+    if (now.getTime() - last.createdAt.getTime() < ARRIVAL_RETRY_MINUTES * 60_000) continue;
+    const msg = await sendTemplated(s, "ARRIVAL", "ARRIVAL");
+    await recordEvent(s.id, s.guardId, "ARRIVAL_SMS_SENT", { at: now, note: `Arrival check sent again (attempt ${sends.length + 1} of ${ARRIVAL_MAX_SENDS}): the previous text was refused${last.error ? ` (${last.error})` : ""}.${msg.status === "FAILED" ? " This attempt failed too." : ""}`, smsMessageId: msg.id });
+    resent++;
+  }
+  return resent;
+}
+
+/**
+ * One CRITICAL notification an hour while outbound texts are failing. Without it, an empty SMS
+ * account looks exactly like guards who are not replying: the portal shows shifts awaiting arrival
+ * and nobody learns the question was never delivered.
+ */
+export async function alertOnFailingSms(now = new Date()): Promise<boolean> {
+  const since = new Date(now.getTime() - 15 * 60_000);
+  const failed = await db.smsMessage.findFirst({ where: { direction: "OUTBOUND", status: "FAILED", createdAt: { gte: since } }, orderBy: { createdAt: "desc" } });
+  if (!failed) return false;
+  // The newest failure may carry no reason; the provider's words are what tell someone what to fix.
+  const explained = (await db.smsMessage.findFirst({ where: { direction: "OUTBOUND", status: "FAILED", createdAt: { gte: since }, error: { not: null } }, orderBy: { createdAt: "desc" } })) ?? failed;
+  const recent = await db.notification.findFirst({ where: { type: "SMS_FAILING", createdAt: { gte: new Date(now.getTime() - 60 * 60_000) } } });
+  if (recent) return false;
+  const count = await db.smsMessage.count({ where: { direction: "OUTBOUND", status: "FAILED", createdAt: { gte: since } } });
+  await notify({
+    type: "SMS_FAILING", severity: "CRITICAL",
+    title: "Text messages are not being sent",
+    body: `${count} outbound ${count === 1 ? "text has" : "texts have"} failed in the last 15 minutes. Latest reason: ${explained.error ?? "none given"}. Guards are not receiving arrival, welfare or completion checks until this is fixed.`,
+    url: "/sms",
+  });
+  return true;
 }

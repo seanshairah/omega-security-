@@ -22,7 +22,7 @@
     <string name="status_offline">OFFLINE</string>
     <string name="status_rejected">REVOKED</string>
     <string name="version_label">App version:</string>
-    <string name="last_call_label">Last call:</string>
+    <string name="last_call_label">Last call</string>
     <string name="head_office">Head office</string>
     <string name="no_calls_yet">No calls yet</string>
     <string name="net_mobile">Mobile data</string>
@@ -167,7 +167,7 @@
     <!-- Dashboard redesign (Stage 6) -->
     <string name="diagnostics">Diagnostics</string>
     <string name="alerts_more">More…</string>
-    <string name="gps_card_label">GPS verification</string>
+    <string name="gps_card_label">Location</string>
     <string name="mon_off_line">Off · no shift being monitored</string>
     <string name="mon_fg_only_line">Will stop when the screen is off · allow location all the time</string>
     <string name="mon_outside_line">Outside site · updating every %1$d min until you are back</string>
@@ -285,4 +285,70 @@
         <item quantity="one">NO INTERNET · %1$d event saved on the phone</item>
         <item quantity="other">NO INTERNET · %1$d events saved on the phone</item>
     </plurals>
+
+    <!-- Calls the portal asks an operations phone to place -->
+    <string name="call_request_label">Operations asks you to call</string>
+    <string name="call_request_title">Call %1$s</string>
+    <string name="call_request_text">Operations asked this phone to call. Tap to see who.</string>
+    <string name="call_request_no_reason">No reason given.</string>
+    <string name="call_request_by">Requested by %1$s</string>
+    <string name="call_request_by_ops">Requested from the operations portal</string>
+    <string name="call_request_expires">Expires in %1$d s</string>
+    <string name="call_request_expired">This request has expired. Nothing was dialled.</string>
+    <string name="call_now">Call now</string>
+    <string name="call_open_dialler">Open the dialler</string>
+    <string name="call_decline">Not now</string>
+    <string name="call_permission_note">This phone is not allowed to place calls itself, so the dialler opens with the number ready. Press Call there. Allow "Phone calls" in Settings to dial with one tap.</string>
+    <!-- Home v1.8 -->
+    <string name="header_sub_guard">Guard phone · %1$s</string>
+    <string name="header_sub_ops">Operations gateway · %1$s</string>
+    <string name="header_ops_title">Operations phone</string>
+    <string name="chip_online">Online</string>
+    <string name="chip_no_internet">No internet</string>
+    <string name="chip_reconnecting">Reconnecting</string>
+    <string name="chip_not_heard">Not connected</string>
+    <string name="attn_not_heard">The server has not heard from this phone since %1$s. Events are saved on the phone. Open the app again, or restart the phone if this stays.</string>
+    <string name="chip_revoked">Revoked</string>
+    <string name="chip_action">Action needed</string>
+    <string name="attn_revoked">This phone has been revoked. Nothing is sent. Ask the administrator to register it again.</string>
+    <string name="attn_location">Location permission needed. Tap Grant permissions and choose “Allow all the time”.</string>
+    <string name="attn_phone">Phone permission needed. Tap Grant permissions.</string>
+    <string name="attn_call_log">Call log permission needed, or call numbers will not be seen.</string>
+    <string name="attn_waiting">Reconnecting to the server. %1$s</string>
+    <string name="attn_battery">Battery saving may stop checks while the screen is off.</string>
+    <plurals name="attn_no_internet">
+        <item quantity="one">No internet. %1$d event is saved on the phone and will be sent when it reconnects.</item>
+        <item quantity="other">No internet. %1$d events are saved on the phone and will be sent when it reconnects.</item>
+    </plurals>
+    <string name="shift_state_on">On shift</string>
+    <string name="shift_state_next">Next shift</string>
+    <string name="shift_state_none">No shift</string>
+    <string name="shift_hours">%1$s – %2$s</string>
+    <string name="shift_off_title">Off duty</string>
+    <string name="shift_next_sub">%1$s · location checks begin 10 minutes before</string>
+    <string name="shift_on_sub">Ends %1$s at %2$s</string>
+    <string name="day_today">Today</string>
+    <string name="day_tomorrow">Tomorrow</string>
+    <string name="presence_inside">Phone inside the site at %1$s</string>
+    <string name="presence_checking">Checking your location…</string>
+    <string name="presence_verifying">Outside reading · confirming</string>
+    <string name="presence_outside">Phone outside the site · operations told</string>
+    <string name="presence_unknown">Location not verified yet</string>
+    <string name="gps_meta">Last check %1$s · %2$s from the site · %3$s (limit %4$d m)</string>
+    <string name="gps_meta_no_fix">Last attempt %1$s · no usable fix (limit %2$d m)</string>
+    <string name="gps_meta_none">No location check yet</string>
+    <string name="sync_short_synced">Up to date</string>
+    <string name="sync_short_sending">Sending…</string>
+    <string name="sync_short_queued">Waiting to send</string>
+    <string name="sync_short_no_internet">Saved on the phone</string>
+    <string name="sync_short_retry">Retrying</string>
+    <string name="sync_short_failures">Up to date · some rejected</string>
+    <string name="sync_short_revoked">Device revoked</string>
+    <string name="sync_short_waiting">Reconnecting</string>
+    <string name="sync_footer_heartbeat"> · server seen %1$s</string>
+    <string name="call_line_active">Calls on this phone are reported to the control room.</string>
+    <string name="call_line_no_permission">Phone permission is needed before calls can be reported.</string>
+    <string name="call_line_no_numbers">Call log permission is needed to see the numbers.</string>
+    <string name="ops_call_note">When the portal asks this phone to call a guard, a screen opens for you to confirm. The call starts only when you tap Call.</string>
+    <string name="device_label">Device</string>
 </resources>

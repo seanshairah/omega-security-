@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, usesNeonHttp } from "@/lib/db";
 import { checkEnv } from "@/lib/env-check";
+import { schedulerStatus } from "@/lib/automation/scheduler";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +16,12 @@ export async function GET() {
   } catch (e) {
     database = { ok: false, error: (e as Error).message.split("\n")[0].slice(0, 200) };
   }
+  // When the engine last ran. Five minutes behind means arrival texts and shift-start checks are late.
+  const scheduler = database.ok ? await schedulerStatus() : null;
   return NextResponse.json({
     ok: database.ok,
     database,
+    scheduler,
     config: {
       databaseUrlSet: Boolean(url),
       databaseHost: process.env.NODE_ENV === "production" ? undefined : url.match(/@([^/:?]+)/)?.[1] ?? null,

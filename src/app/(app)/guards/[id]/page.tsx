@@ -2,8 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser, can } from "@/lib/auth/rbac";
 import { db } from "@/lib/db";
-import { guardPerformance, guardLiveStatus, GUARD_STATUS_LABEL } from "@/lib/services/guards";
-import { ON_SITE_STATUSES, shiftInclude } from "@/lib/services/shifts";
+import { shiftInclude } from "@/lib/services/shifts";
 import { ATTENDANCE_LABEL } from "@/lib/services/attendance";
 import { CATEGORY_LABEL } from "@/lib/services/incidents";
 import { Table, THead, TBody, Empty } from "@/components/ui/table";
@@ -19,9 +18,10 @@ import { CallList } from "@/components/calls/call-list";
 import { CommunicationHistory } from "@/components/calls/communication-history";
 import { LocationEventList } from "@/components/location/location-events";
 import { GuardWorkspace } from "@/components/guards/guard-workspace";
-import { guardSnapshot } from "@/lib/services/guard-snapshot";
-import { guardActivity } from "@/lib/guard-activity";
+import { guardWorkspaceData } from "@/lib/services/guard-workspace-data";
 import { audit } from "@/lib/audit";
+import { CallGuardButton } from "@/components/calls/call-guard";
+import { NotifyClientButton } from "@/components/clients/notify-client";
 
 export const metadata = { title: "Guard" };
 
@@ -34,14 +34,11 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
   const user = await requireUser();
   const { id } = await params;
   const { tab = "shifts" } = await searchParams;
-  const g = await db.guard.findUnique({ where: { id }, include: { homeLocation: true, supervisor: true } });
-  if (!g) notFound();
-  const [perf, deployed, snapshot, activity] = await Promise.all([guardPerformance(id), db.shift.findFirst({ where: { guardId: id, status: { in: ON_SITE_STATUSES } }, include: { location: true } }), guardSnapshot(id), guardActivity(id, { since: new Date(Date.now() - 7 * 86_400_000), limit: 50 })]);
-  if (!snapshot) notFound();
+  const data = await guardWorkspaceData(id);
+  if (!data) notFound();
+  const { guard: g, snapshot, activity, profile } = data;
   await audit({ userId: user.id, actor: user.name, action: "LOCATION_VIEWED", entity: "Guard", entityId: id, details: { via: "workspace" } });
   const name = `${g.firstName} ${g.lastName}`;
-  const live = guardLiveStatus(g, Boolean(deployed));
-  const tone = { DEPLOYED: "ok", AVAILABLE: "neutral", ON_LEAVE: "warn", SUSPENDED: "critical", INACTIVE: "muted" } as const;
   const tabs = [{ key: "shifts", label: "Shifts & attendance" }, { key: "incidents", label: "Incidents" }, { key: "messages", label: "SMS" }, { key: "calls", label: "Calls" }, { key: "communication", label: "Communication" }, ...(g.deviceKind === "ANDROID_GUARD" ? [{ key: "location", label: "Location events" }] : []), { key: "history", label: "Audit" }];
 
   // Only the active tab's rows are read.
@@ -55,8 +52,13 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
     tab === "history" ? db.auditLog.findMany({ where: { entity: "Guard", entityId: id }, orderBy: { createdAt: "desc" }, take: 40 }) : [],
   ]);
 
-  const actions = can.manageGuards(user) ? (
+  // Calling and client updates are open to every role that can see the guard (a supervisor's
+  // client update is a draft for approval); the rest of the row is for admins.
+  const actions = (
     <ButtonGroup>
+      {g.active && <CallGuardButton guardId={g.id} guardName={name} size="sm" />}
+      {g.active && <NotifyClientButton guardId={g.id} size="sm" />}
+      {can.manageGuards(user) && <>
       <LinkButton href={`/messages/new?guardId=${g.id}`} size="sm">Message</LinkButton>
       {g.watched
         ? <ConfirmButton size="sm" label="Stop watching" title={`Stop watching ${name}?`} body="Their events return to normal priority and they leave the Monitoring page." confirmLabel="Stop watching" action={async () => { "use server"; await setGuardWatched(g.id, false); }} />
@@ -66,18 +68,12 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
       {g.active
         ? <ConfirmButton size="sm" label="Deactivate" variant="danger" title={`Deactivate ${name}?`} body="The guard is archived, not deleted. Future scheduled shifts are cancelled; history is kept." confirmLabel="Deactivate" action={async () => { "use server"; await setGuardActive(g.id, false); }} />
         : <ConfirmButton size="sm" label="Reactivate" title={`Reactivate ${name}?`} body="The guard becomes available for scheduling again." confirmLabel="Reactivate" action={async () => { "use server"; await setGuardActive(g.id, true); }} />}
+      </>}
     </ButtonGroup>
-  ) : null;
-
-  const profile = {
-    photoUrl: g.photoUrl, email: g.email, nationalId: g.nationalId, supervisor: g.supervisor?.name ?? null, homeLocation: g.homeLocation ? { id: g.homeLocation.id, name: g.homeLocation.name } : null, address: g.address,
-    emergencyContact: g.emergencyContactName ? `${g.emergencyContactName} · ${g.emergencyContactPhone ?? ""}` : null,
-    employment: g.employmentStatus === "ACTIVE" ? "Active" : g.employmentStatus === "ON_LEAVE" ? "On leave" : g.employmentStatus === "SUSPENDED" ? "Suspended" : "Inactive", employedSince: fmtDate(g.dateEmployed),
-    notes: g.notes, watchNote: g.watched ? g.watchNote ?? "" : null, liveLabel: live === "DEPLOYED" && deployed ? `Deployed · ${deployed.location.name}` : GUARD_STATUS_LABEL[live], liveTone: tone[live], performance: perf,
-  };
+  );
 
   return (
-    <GuardWorkspace initial={JSON.parse(JSON.stringify(snapshot))} profile={profile} canRequest={can.manageGuards(user)} canEditSites={can.manageLocations(user)} actions={actions} tabs={tabs} tab={tab} initialActivity={activity}>
+    <GuardWorkspace initial={snapshot} profile={profile} canRequest={can.manageGuards(user)} canEditSites={can.manageLocations(user)} actions={actions} tabs={tabs} tab={tab} initialActivity={activity}>
       {tab === "shifts" && (
         <Table>
           <THead><tr><th>Date</th><th>Location</th><th>Hours</th><th>Arrival</th><th>Completion</th><th>Attendance</th><th>Status</th></tr></THead>

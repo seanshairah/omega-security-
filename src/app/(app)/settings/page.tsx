@@ -19,7 +19,9 @@ const GROUPS: { key: string; title: string; description: string }[] = [
   { key: "handover", title: "Handover", description: "When both guards are told about the handover." },
   { key: "recurrence", title: "Recurring shifts", description: "How far ahead recurring patterns are turned into shifts." },
   { key: "general", title: "Company", description: "Names used in the portal and in messages." },
-  { key: "checkin", title: "Call check-in", description: "The guard rings in at the start of a shift and the system asks their phone for a fresh GPS fix. Attendance is recorded only when the fix places them on site. A call on its own is never attendance." },
+  { key: "checkin", title: "Check-in with the guard app", description: "For guards with the guard app: at the start of a shift the system asks their phone for a fresh GPS fix, and records presence only when the fix places them on site." },
+  { key: "callattendance", title: "Call attendance (basic phones)", description: "For guards without the guard app: calling an operations gateway phone clocks them in and out. It is recorded as a call, not as location; a missed call is held for review unless you choose otherwise." },
+  { key: "networklocation", title: "Network location (mobile operator)", description: "Optional, and off. A separate check from GPS, with its own duty area per site. Every result is stored as network evidence, never as GPS, and attendance by call or SMS never waits for it." },
   { key: "geofence", title: "GPS and geofencing", description: "Guard devices check their position on this schedule during shifts. The phone applies the same rules offline; changes reach it with the next heartbeat." },
   { key: "gateway", title: "Call gateway", description: "Android gateway phones: how often they report in, when they count as offline, how long calls are kept, and which call alerts are raised." },
 ];

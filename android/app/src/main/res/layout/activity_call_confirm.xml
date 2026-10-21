@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "Operations asks you to call…": one decision, two buttons, nothing else on the screen. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="@color/surface2"
+    android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="16dp" android:paddingBottom="16dp">
+
+    <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+
+    <com.google.android.material.card.MaterialCardView android:layout_width="match_parent" android:layout_height="wrap_content">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="20dp">
+            <FrameLayout android:layout_width="56dp" android:layout_height="56dp" android:background="@drawable/circle_green_soft">
+                <ImageView android:layout_width="28dp" android:layout_height="28dp" android:layout_gravity="center" android:src="@drawable/ic_phone" app:tint="@color/accent" android:contentDescription="@null" />
+            </FrameLayout>
+            <TextView style="@style/Label" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="@string/call_request_label" />
+            <TextView android:id="@+id/callWho" style="@style/Headline" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" />
+            <TextView android:id="@+id/callNumber" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:textColor="@color/ink2" android:textSize="15sp" android:fontFeatureSettings="tnum" />
+            <View style="@style/Divider" android:layout_marginTop="16dp" />
+            <TextView android:id="@+id/callReason" style="@style/Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="14dp" android:textColor="@color/ink" android:textSize="15sp" />
+            <TextView android:id="@+id/callBy" style="@style/Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:textSize="13sp" />
+            <TextView android:id="@+id/callPermissionNote" style="@style/Body" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:background="@drawable/bg_banner_amber" android:padding="12dp" android:text="@string/call_permission_note" android:textColor="@color/ink" android:textSize="13sp" android:visibility="gone" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+
+    <TextView android:id="@+id/callExpires" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="@color/ink3" android:textSize="13sp" />
+    <com.google.android.material.button.MaterialButton android:id="@+id/callNow" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" app:icon="@drawable/ic_phone" app:iconGravity="textStart" app:iconTint="@color/surface" />
+    <com.google.android.material.button.MaterialButton android:id="@+id/callDecline" style="@style/Button.Text" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:minHeight="48dp" android:text="@string/call_decline" />
+</LinearLayout>

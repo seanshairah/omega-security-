@@ -65,3 +65,22 @@ Two controls were added to the map panel:
 
 Icons throughout the workspace are Material Symbols from `src/components/ui/icon.tsx`; the status
 words are unchanged, because an icon never carries a state on its own. See [ICONS.md](ICONS.md).
+
+## Guard Monitoring (v1.8)
+
+`/monitoring` uses the same workspace for one guard at a time. A list of guards sits beside it: those
+pinned with Watch, then everyone on duty, with open alerts and check-in exceptions first. Each entry
+shows the site, the hours, the shift state and the start-of-shift check-in. Below 1536 px the list is
+a horizontal strip above the workspace, so the map keeps its width on a laptop.
+
+The identity bar shows connection and heartbeat, shift, battery, the check-in status and open alerts.
+Under it, one row of actions: **Call guard** (`PORTAL_CALLING.md`), **Notify client**
+(`CLIENT_NOTIFICATIONS.md`), **Record incident**, **View shift**, **Escalate** and **Watch / Stop
+watching**. **Request location** stays on the map. Escalate needs a reason. It sends a critical alert
+to every portal user's devices and writes it on the shift timeline and in the audit log. It does not
+contact the client.
+
+The activity feed also carries start-of-shift attendance, calls requested from the portal,
+incidents and client messages, each with its own filter. The guard page and Monitoring load the
+workspace through `lib/services/guard-workspace-data.ts`. On both pages the actions have a row of
+their own, because inline they squeezed the guard's name.

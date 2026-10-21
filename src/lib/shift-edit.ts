@@ -65,11 +65,14 @@ export type ShiftTraceCounts = {
   locationEvents: number;
   alerts: number;
   notifications: number;
+  evidence: number;
+  networkChecks: number;
 };
 
 const TRACE_LABEL: Record<keyof ShiftTraceCounts, string> = {
   checkIns: "check-in", welfareChecks: "welfare check", incidents: "incident", smsMessages: "message",
   callLogs: "call", locationEvents: "location event", alerts: "alert", notifications: "notification",
+  evidence: "attendance record", networkChecks: "network location check",
 };
 
 export type DeletePolicy = { canDelete: boolean; reason: string | null };

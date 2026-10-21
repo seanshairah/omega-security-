@@ -97,3 +97,22 @@ fun gpsStatusWord(v: GpsView): String = when (v) {
 fun formatAccuracy(accuracyM: Float): String = "±" + String.format(java.util.Locale.US, "%.1f", accuracyM) + " m"
 
 fun formatDistance(distanceM: Float): String = if (distanceM < 0f) "—" else "${Math.round(distanceM)} m"
+
+enum class ConnectionView { REVOKED, ONLINE, NO_INTERNET, NOT_HEARD, RECONNECTING }
+
+/**
+ * Whether the server can be reached, judged by the last heartbeat rather than Android's network
+ * flag alone. A heartbeat that succeeded recently means the server answered, whatever Android says
+ * (over `adb reverse` there is no network at all). A heartbeat that last worked long ago is not
+ * "online" just because the last attempt did not fail: the service may not be running.
+ */
+fun connectionView(authRejected: Boolean, isOnline: Boolean, heartbeatOk: Boolean, lastHeartbeatAt: Long, heartbeatSeconds: Int, now: Long): ConnectionView {
+    if (authRejected) return ConnectionView.REVOKED
+    val recent = heartbeatOk && lastHeartbeatAt > 0 && now - lastHeartbeatAt <= 3L * heartbeatSeconds.coerceAtLeast(30) * 1000
+    return when {
+        recent -> ConnectionView.ONLINE
+        !isOnline -> ConnectionView.NO_INTERNET
+        heartbeatOk && lastHeartbeatAt > 0 -> ConnectionView.NOT_HEARD
+        else -> ConnectionView.RECONNECTING
+    }
+}

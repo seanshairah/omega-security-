@@ -116,3 +116,25 @@ node scripts/dev/app-release-e2e.mjs      # refusals and the portal's wording
 
 The e2e asserts the refusals rather than the happy path, because the refusals are what protect the
 fleet: an unauthenticated download, a debug-signed build, and APK bytes leaking on a refusal.
+
+## Debug builds from more than one machine
+
+A debug APK is signed with the building machine's own `~/.android/debug.keystore`. Installing a debug
+APK built on one machine over one built on another fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`
+(seen in the v1.8 device test: `artifacts/android/security-gateway-debug.apk` is built in the CI
+container, not on your Mac).
+
+- **Do not uninstall to get round it.** Uninstalling deletes the phone's activation and every event
+  still queued on it. Sync first (Diagnostics → Sync now, queue at 0) if you ever must.
+- Either build every debug APK on the same machine, or give every machine one shared development
+  keystore (never committed; `*.jks` and `*.keystore` are git-ignored):
+
+      keytool -genkeypair -keystore ~/omega-dev.jks -alias androiddebugkey -storepass android \
+              -keypass android -keyalg RSA -validity 10000 -dname "CN=Omega Dev"
+      # android/local.properties on every machine
+      omega.debugKeystore=/Users/<you>/omega-dev.jks
+
+  The build prints "Debug builds signed with the shared development keystore …" when it is in use.
+  Switching an already-installed phone to the shared key needs one uninstall, so do it before a test
+  phone holds real data.
+- Release builds are unaffected: they use `ANDROID_KEYSTORE_*` only.

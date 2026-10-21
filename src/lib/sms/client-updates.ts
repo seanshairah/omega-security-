@@ -5,20 +5,15 @@
  * the mid-shift welfare check came back fine, the shift ended. Messages go to the site's
  * client-update number, falling back to the site contact and then the client contact.
  * Failures never interrupt the guard's own flow: callers get a result, nothing throws.
+ * The sending, history and dedupe live in lib/client-notifications.
  */
 import { db } from "@/lib/db";
 import type { Location, Client } from "@prisma/client";
-import { getSettings } from "@/lib/settings";
-import { fmtTime, fmtDate } from "@/lib/time";
 import { normalisePhone } from "@/lib/phone";
-import { sendSms } from "./outbound";
-import { getTemplateBody, renderTemplate, type TemplateVars } from "./templates";
-import { recordEvent, type ShiftWithRelations } from "@/lib/services/shifts";
+import type { ShiftWithRelations } from "@/lib/services/shifts";
 
 export type ClientUpdateKind = "ARRIVAL" | "WELFARE_OK" | "SHIFT_ENDED";
 
-const TEMPLATE: Record<ClientUpdateKind, string> = { ARRIVAL: "CLIENT_ARRIVAL", WELFARE_OK: "CLIENT_WELFARE_OK", SHIFT_ENDED: "CLIENT_SHIFT_ENDED" };
-const FLAG: Record<ClientUpdateKind, keyof Location> = { ARRIVAL: "notifyClientArrival", WELFARE_OK: "notifyClientWelfare", SHIFT_ENDED: "notifyClientCompletion" };
 export const KIND_LABEL: Record<ClientUpdateKind, string> = { ARRIVAL: "guard on site", WELFARE_OK: "all well", SHIFT_ENDED: "shift ended" };
 
 /** The number a site's client updates go to, or null when none is configured. */
@@ -32,37 +27,21 @@ export function clientPhoneFor(location: Location & { client: Client }): string 
   }
 }
 
-export async function clientVars(shift: ShiftWithRelations, at: Date, extra: TemplateVars = {}): Promise<TemplateVars> {
-  const settings = await getSettings();
-  return {
-    company: settings["general.companyName"],
-    control_phone: settings["general.controlRoomPhone"],
-    client_name: shift.location.client.name,
-    site: shift.location.name,
-    guard_name: `${shift.guard.firstName} ${shift.guard.lastName}`,
-    start_time: fmtTime(shift.startAt),
-    end_time: fmtTime(shift.endAt),
-    time: fmtTime(at),
-    date: fmtDate(at),
-    ...extra,
-  };
-}
-
 /**
- * Send one status update for a shift if the site has opted in to that moment.
- * Returns what happened so the caller can mention it in its own summary.
+ * Send one status update for a shift if the site has opted in to that moment. It goes through the
+ * client-notification rules, so it is stored in the client's history, and a repeat (a second YES,
+ * or a GPS check-in after an SMS one) sends nothing. Returns what happened so the caller can
+ * mention it in its own summary.
  */
 export async function sendClientUpdate(shift: ShiftWithRelations, kind: ClientUpdateKind, at = new Date()): Promise<{ sent: boolean; reason?: string }> {
   try {
-    const loc = shift.location;
-    if (!loc.clientUpdates) return { sent: false, reason: "site has not opted in" };
-    if (!loc[FLAG[kind]]) return { sent: false, reason: `site does not report "${KIND_LABEL[kind]}"` };
-    const to = clientPhoneFor(loc);
-    if (!to) return { sent: false, reason: "no client phone on the site or client" };
-    const body = renderTemplate(await getTemplateBody(TEMPLATE[kind]), await clientVars(shift, at));
-    const msg = await sendSms({ to, body, type: "CLIENT_UPDATE", guardId: shift.guardId, shiftId: shift.id, locationId: shift.locationId, clientId: loc.clientId, actor: "system (client update)" });
-    await recordEvent(shift.id, shift.guardId, "CLIENT_NOTIFIED", { at, note: `Client updated by SMS (${KIND_LABEL[kind]}) on ${to}${msg.status === "FAILED" ? ` — delivery failed: ${msg.error ?? "unknown error"}` : ""}.`, smsMessageId: msg.id });
-    return { sent: msg.status !== "FAILED", reason: msg.error ?? undefined };
+    const { onGuardArrived, onShiftUpdate } = await import("@/lib/client-notifications/rules");
+    const r = kind === "ARRIVAL"
+      ? await onGuardArrived(shift.id, "GUARD_ARRIVED", `shift:${shift.id}:arrival`, at)
+      // Welfare checks recur in a shift, so each minute is its own message; a retried reply is not.
+      : await onShiftUpdate(shift.id, kind, at, kind === "WELFARE_OK" ? `${shift.id}:${Math.floor(at.getTime() / 60_000)}` : shift.id);
+    if (r.sent) return { sent: true };
+    return { sent: false, reason: r.skipped ?? (r.deduped ? "client already told" : r.failed ? "delivery failed" : undefined) };
   } catch (e) {
     return { sent: false, reason: (e as Error).message };
   }

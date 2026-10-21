@@ -34,7 +34,7 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class LocationRequestHandler(private val context: Context, private val scope: CoroutineScope, private val monitor: LocationMonitor) {
     private val prefs = Prefs(context)
-    private val queue = EventQueue(context)
+    private val queue = EventQueue.get(context)
     private val inFlight = ConcurrentHashMap.newKeySet<String>()
 
     fun handle(commands: List<DeviceCommand>) {
