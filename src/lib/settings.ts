@@ -4,7 +4,7 @@ export type SettingDef = {
   key: string;
   label: string;
   description: string;
-  group: "arrival" | "welfare" | "completion" | "handover" | "recurrence" | "general" | "gateway" | "geofence" | "checkin";
+  group: "arrival" | "welfare" | "completion" | "handover" | "recurrence" | "general" | "gateway" | "geofence" | "checkin" | "callattendance";
   default: string;
   type: "number" | "text" | "boolean";
 };
@@ -39,6 +39,15 @@ export const SETTING_DEFS: SettingDef[] = [
   { key: "checkin.numbers", label: "Authorised check-in numbers", description: "Comma-separated numbers a guard may call to check in. Blank accepts a call to any registered operations gateway phone.", group: "checkin", default: "", type: "text" },
   { key: "checkin.autoGps", label: "Automatic GPS check-in", description: "Check the guard's phone position at shift start without waiting for a call: from 10 minutes before, at the start, and at the end of the grace period.", group: "checkin", default: "true", type: "boolean" },
   { key: "checkin.autoBeforeMinutes", label: "Automatic check starts", description: "Minutes before the scheduled start that a position from the guard's phone already counts as arrival.", group: "checkin", default: "10", type: "number" },
+  { key: "callAttendance.enabled", label: "Call attendance", description: "Guards without the guard app may clock in and out by calling an operations gateway phone. The call is recorded as communication, never as location.", group: "callattendance", default: "true", type: "boolean" },
+  { key: "callAttendance.checkInBeforeMinutes", label: "Clock-in window opens", description: "Minutes before the shift start from which a call counts as clocking in.", group: "callattendance", default: "60", type: "number" },
+  { key: "callAttendance.checkInAfterMinutes", label: "Clock-in window closes", description: "Minutes after the shift start until which a call still counts as clocking in.", group: "callattendance", default: "120", type: "number" },
+  { key: "callAttendance.checkOutBeforeMinutes", label: "Clock-out window opens", description: "Minutes before the shift end from which a call counts as clocking out. Earlier calls during the shift are welfare calls.", group: "callattendance", default: "60", type: "number" },
+  { key: "callAttendance.checkOutAfterMinutes", label: "Clock-out window closes", description: "Minutes after the shift end until which a call still counts as clocking out.", group: "callattendance", default: "120", type: "number" },
+  { key: "callAttendance.answeredMinSeconds", label: "Shortest answered call", description: "An answered call shorter than this many seconds is held for a supervisor instead of being applied.", group: "callattendance", default: "5", type: "number" },
+  { key: "callAttendance.answeredMode", label: "Answered calls", description: "CONFIRMED: an answered call from the guard's number is applied. PENDING: a supervisor confirms every call first.", group: "callattendance", default: "CONFIRMED", type: "text" },
+  { key: "callAttendance.missedCallMode", label: "Missed calls", description: "What a missed call (the guard rings and hangs up) does. PENDING: held for a supervisor. PROVISIONAL: applied and flagged. SMS_CONFIRM: the guard is texted to reply YES. DISABLED: ignored.", group: "callattendance", default: "PENDING", type: "text" },
+  { key: "callAttendance.wrongGatewayMode", label: "Call to another gateway", description: "When the guard calls a gateway other than the one assigned to them or their site. FLAG: applied and flagged. PENDING: held for a supervisor. REJECT: not applied.", group: "callattendance", default: "FLAG", type: "text" },
   { key: "checkin.callRequired", label: "Check-in call required", description: "Also require the guard to ring in. When on, a guard verified on site by GPS without a call is shown as 'call outstanding', not absent.", group: "checkin", default: "false", type: "boolean" },
   { key: "checkin.maxClockSkewMinutes", label: "Accepted clock skew", description: "Minutes a guard phone's clock may differ from the server before its timestamps are replaced by the server's.", group: "checkin", default: "10", type: "number" },
   { key: "geofence.checkMinutes", label: "Location check interval", description: "Minutes between location checks during a shift when the guard is inside the site.", group: "geofence", default: "10", type: "number" },

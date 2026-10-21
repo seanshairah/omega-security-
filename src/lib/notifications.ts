@@ -41,6 +41,7 @@ export type NotifyInput = {
     | "CLIENT_NOTIFICATION_APPROVAL"
     | "CALL_REQUEST_FAILED"
     | "GUARD_ESCALATED"
+    | "CALL_ATTENDANCE_PENDING"
     | "GENERAL";
   severity?: NotificationSeverity;
   title: string;

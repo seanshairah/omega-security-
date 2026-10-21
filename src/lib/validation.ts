@@ -23,6 +23,26 @@ export const guardSchema = z.object({
   supervisorId: opt(z.string()),
   homeLocationId: opt(z.string()),
   notes: opt(z.string()),
+  // Phone and attendance
+  phoneType: z.enum(["BASIC", "ANDROID", "OTHER", "UNKNOWN"]).default("UNKNOWN"),
+  mobileOperator: z.enum(["ECONET", "NETONE", "TELECEL", "OTHER", "UNKNOWN"]).default("UNKNOWN"),
+  alternatePhones: z.string().optional().transform((v, ctx) => {
+    const out: string[] = [];
+    for (const raw of (v ?? "").split(/[,;\n]/).map((x) => x.trim()).filter(Boolean)) {
+      let p: string;
+      try { p = normalisePhone(raw); } catch { p = ""; }
+      if (!p || !isValidPhone(p)) { ctx.addIssue({ code: "custom", message: `"${raw}" is not a valid phone number` }); return z.NEVER; }
+      if (!out.includes(p)) out.push(p);
+    }
+    return out;
+  }),
+  preferredAttendance: z.enum(["CALL", "SMS", "APP"]).default("SMS"),
+  callAttendanceEnabled: flag,
+  smsAttendanceEnabled: flag,
+  assignedGatewayId: opt(z.string()),
+  phoneVerified: flag,
+  networkLocationEligible: flag,
+  networkLocationConsent: flag,
 });
 
 export const clientSchema = z.object({

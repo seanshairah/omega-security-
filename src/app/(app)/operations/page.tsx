@@ -40,7 +40,10 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
     const m = LOCATION_STATE_META[e.locationState];
     return <span><Status tone={f.label === "STALE" ? "muted" : m.tone}>{m.label}</Status><span className="block text-[12px] text-ink-3">{f.label.toLowerCase()} · {fmtTime(e.occurredAt)}</span></span>;
   };
+  // Shifts with a clock-in, welfare call or clock-out waiting for a person (a missed call, a short call, two shifts at once).
+  const pendingIds = new Set(all.length ? (await db.attendanceEvidence.findMany({ where: { shiftId: { in: all.map((s) => s.id) }, status: { in: ["PENDING", "PROVISIONAL"] } }, select: { shiftId: true } })).map((e) => e.shiftId) : []);
   const groups = {
+    pending: all.filter((s) => pendingIds.has(s.id)),
     all: all,
     attention: all.filter((s) => ["LATE", "NOT_CONFIRMED", "ASSISTANCE", "INCIDENT", "CRITICAL"].includes(s.status)),
     onduty: all.filter((s) => s.status === "ON_DUTY"),
@@ -71,6 +74,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
       <Segments className="mb-4" items={[
         { href: "/operations", label: "All", count: groups.all.length, active: f === "all" },
         { href: "/operations?f=attention", label: "Needs attention", count: groups.attention.length, active: f === "attention", tone: "critical" },
+        ...(groups.pending.length ? [{ href: "/operations?f=pending", label: "Attendance to confirm", count: groups.pending.length, active: f === "pending", tone: "warn" as const }] : []),
         { href: "/operations?f=onduty", label: "On duty", count: groups.onduty.length, active: f === "onduty", tone: "ok" },
         { href: "/operations?f=upcoming", label: "Starting soon", count: groups.upcoming.length, active: f === "upcoming", tone: "neutral" },
         ...(groups.watched.length ? [{ href: "/operations?f=watched", label: "Watched", count: groups.watched.length, active: f === "watched", tone: "warn" as const }] : []),

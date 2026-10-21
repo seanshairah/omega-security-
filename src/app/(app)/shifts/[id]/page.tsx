@@ -6,6 +6,7 @@ import { shiftInclude, STATUS_META, CLOSED_STATUSES } from "@/lib/services/shift
 import { PageHeader, Meta } from "@/components/ui/page";
 import { CallGuardButton } from "@/components/calls/call-guard";
 import { NotifyClientButton } from "@/components/clients/notify-client";
+import { EvidenceList } from "@/components/attendance/evidence-list";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Timeline } from "@/components/timeline";
 import { ShiftStatusLabel } from "@/components/shift-status";
@@ -55,6 +56,10 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   const fence = effectiveGeofence(s, s.location);
   // The call check-in for this shift, when the feature has opened one.
   const checkInRow = await db.attendanceCheckIn.findUnique({ where: { shiftId: s.id }, include: { gatewayDevice: true, decidedBy: { select: { name: true } } } });
+  const evidenceRows = await db.attendanceEvidence.findMany({ where: { shiftId: s.id }, include: { decidedBy: { select: { name: true } } }, orderBy: { occurredAt: "asc" } });
+  const evidenceGateways = await db.gatewayDevice.findMany({ where: { id: { in: [...new Set(evidenceRows.map((e) => e.gatewayDeviceId).filter((x): x is string => Boolean(x)))] } }, select: { id: true, deviceName: true } });
+  const evidence = evidenceRows.map((e) => ({ ...e, gateway: evidenceGateways.find((g) => g.id === e.gatewayDeviceId) ?? null }));
+  const pendingEvidence = evidence.filter((e) => e.status === "PENDING" || e.status === "PROVISIONAL").length;
   const checkIn: CheckInView | null = checkInRow ? {
     id: checkInRow.id, shiftId: s.id, guardName, guardPhone: s.guard.phone, siteName: s.location.name,
     status: checkInRow.status as CheckInStatus, scheduledStartAt: checkInRow.scheduledStartAt,
@@ -111,6 +116,12 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
               </CardBody>
             </Card>
           )}
+          <div id="attendance-evidence" className="scroll-mt-20">
+            <Card className={pendingEvidence ? "border-warn/50" : ""}>
+              <CardHeader title="Attendance evidence" description={pendingEvidence ? `${pendingEvidence} to confirm. Nothing pending is applied until someone confirms it.` : "Each clock-in, welfare check and clock-out, and where it came from. Calls and SMS are communication, not location."} />
+              <CardBody className="pt-1"><EvidenceList rows={evidence} canDecide={can.manageShifts(user)} /></CardBody>
+            </Card>
+          </div>
           <Card>
             <CardHeader title="Timeline" description="Every automated check, reply, call and location event on this shift, in order." action={<ShiftStatusLabel status={s.status} />} />
             <CardBody><Timeline events={s.checkIns} showDates={s.durationMinutes > 12 * 60} /></CardBody>

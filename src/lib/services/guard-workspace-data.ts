@@ -14,7 +14,7 @@ import type { GuardProfile } from "@/components/guards/guard-workspace";
 const LIVE_TONE = { DEPLOYED: "ok", AVAILABLE: "neutral", ON_LEAVE: "warn", SUSPENDED: "critical", INACTIVE: "muted" } as const;
 
 export async function guardWorkspaceData(guardId: string) {
-  const g = await db.guard.findUnique({ where: { id: guardId }, include: { homeLocation: true, supervisor: true } });
+  const g = await db.guard.findUnique({ where: { id: guardId }, include: { homeLocation: true, supervisor: true, assignedGateway: { select: { deviceName: true } } } });
   if (!g) return null;
   const [perf, deployed, snapshot, activity] = await Promise.all([
     guardPerformance(guardId),
@@ -32,6 +32,14 @@ export async function guardWorkspaceData(guardId: string) {
     employment: g.employmentStatus === "ACTIVE" ? "Active" : g.employmentStatus === "ON_LEAVE" ? "On leave" : g.employmentStatus === "SUSPENDED" ? "Suspended" : "Inactive", employedSince: fmtDate(g.dateEmployed),
     notes: g.notes, watchNote: g.watched ? g.watchNote ?? "" : null, liveLabel: live === "DEPLOYED" && deployed ? `Deployed · ${deployed.location.name}` : GUARD_STATUS_LABEL[live], liveTone: LIVE_TONE[live], performance: perf,
     attendance: checkIn ? { label: CHECK_IN_META[checkIn.status].label, tone: CHECK_IN_META[checkIn.status].tone } : null,
+    phoneProfile: {
+      type: { BASIC: "Basic phone", ANDROID: "Android", OTHER: "Other phone", UNKNOWN: "Phone type not set" }[g.phoneType],
+      operator: { ECONET: "Econet", NETONE: "NetOne", TELECEL: "Telecel", OTHER: "other network", UNKNOWN: "network not set" }[g.mobileOperator],
+      verified: Boolean(g.phoneVerifiedAt),
+      attendsBy: [g.deviceKind === "ANDROID_GUARD" ? "guard app" : null, g.callAttendanceEnabled ? "calls" : null, g.smsAttendanceEnabled ? "SMS" : null].filter(Boolean).join(", ") || "nothing enabled",
+      gateway: g.assignedGateway?.deviceName ?? null,
+      alternates: g.alternatePhones.length,
+    },
   };
   return { guard: g, deployed, snapshot: JSON.parse(JSON.stringify(snapshot)), activity, profile };
 }

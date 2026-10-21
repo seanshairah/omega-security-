@@ -38,6 +38,8 @@ export default async function GatewayPage({ params }: { params: Promise<{ id: st
   const locEvents = g?.mode === "GUARD" ? await db.locationEvent.findMany({ where: { gatewayDeviceId: id }, include: { shift: { select: { id: true, startAt: true, endAt: true } }, location: { select: { id: true, name: true, latitude: true, longitude: true, geofenceRadiusM: true } } }, orderBy: { occurredAt: "desc" }, take: 40 }) : [];
   const lastSite = locEvents.find((e) => e.location?.latitude != null)?.location ?? null;
   if (!g) notFound();
+  // Who is expected to call this phone: guards assigned to it, and guards at sites that use it by default.
+  const callers = g.mode === "OPERATIONS_GATEWAY" ? await db.guard.findMany({ where: { active: true, OR: [{ assignedGatewayId: g.id }, { assignedGatewayId: null, homeLocation: { defaultGatewayId: g.id } }] }, select: { id: true, firstName: true, lastName: true, phoneType: true, callAttendanceEnabled: true, assignedGatewayId: true }, orderBy: { lastName: "asc" }, take: 100 }) : [];
   const currentConfigVersion = g.mode === "GUARD" ? (await guardDeviceConfig(g)).configVersion : null;
   const status = effectiveStatus(g, offlineMinutes);
   const manage = can.manageLocations(user);
@@ -105,6 +107,16 @@ export default async function GatewayPage({ params }: { params: Promise<{ id: st
             </div>
             {g.notes && <p className="mt-4 border-t border-dashed border-line pt-3 text-[13px] text-ink-2">{g.notes}</p>}
           </CardBody></Card>
+          {g.mode === "OPERATIONS_GATEWAY" && (
+            <Card>
+              <CardHeader title="Guards who call this phone" description="Assigned on the guard, or through their usual site's default gateway. Their calls here clock them in and out; calls to another gateway are flagged." />
+              <CardBody className="pt-3">
+                {callers.length === 0 ? <p className="text-[13px] text-ink-3">No guard is assigned to this phone. Assign one on the guard&apos;s page, under Phone and attendance.</p> : (
+                  <ul className="space-y-1.5">{callers.map((c) => <li key={c.id} className="flex items-center justify-between gap-2 text-[13px]"><Link href={`/guards/${c.id}`} className="truncate font-medium text-ink hover:underline">{c.firstName} {c.lastName}</Link><span className="shrink-0 text-[12px] text-ink-3">{c.assignedGatewayId ? "assigned" : "site default"}{c.callAttendanceEnabled ? "" : " · calls off"}</span></li>)}</ul>
+                )}
+              </CardBody>
+            </Card>
+          )}
           <Card>
             <CardHeader title="Test connection" description="On the phone, open Settings → Test connection. A successful test updates “Last seen” above within a few seconds." />
             <CardBody><p className="text-[13px] text-ink-2">The phone sends a heartbeat every <span className="tnum">{Math.max(30, await getSettingNumber("gateway.heartbeatSeconds"))}</span> s and is marked offline after <span className="tnum">{offlineMinutes}</span> min of silence. Both are set under Settings → Call gateway.</p></CardBody>

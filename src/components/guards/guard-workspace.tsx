@@ -22,7 +22,7 @@ type Snapshot = Omit<GuardSnapshot, "device" | "shift" | "presentation" | "reque
   request: (Record<string, unknown> & { id: string; status: keyof typeof REQUEST_STATUS_META; latitude: number | null; longitude: number | null; accuracyM: number | null; capturedAt: string | null; failureReason: keyof typeof FAILURE_META | null; secondsLeft: number; requestedBy?: string | null; mock: boolean }) | null;
 };
 
-export type GuardProfile = { photoUrl: string | null; email: string | null; nationalId: string; supervisor: string | null; homeLocation: { id: string; name: string } | null; address: string | null; emergencyContact: string | null; employment: string; employedSince: string; notes: string | null; watchNote: string | null; liveLabel: string; liveTone: Tone; attendance?: { label: string; tone: Tone } | null; performance: { attendancePct: number; completed: number; late: number; missed: number; missedChecks: number; incidents: number; assistance: number } };
+export type GuardProfile = { photoUrl: string | null; email: string | null; nationalId: string; supervisor: string | null; homeLocation: { id: string; name: string } | null; address: string | null; emergencyContact: string | null; employment: string; employedSince: string; notes: string | null; watchNote: string | null; liveLabel: string; liveTone: Tone; attendance?: { label: string; tone: Tone } | null; phoneProfile?: { type: string; operator: string; verified: boolean; attendsBy: string; gateway: string | null; alternates: number } | null; performance: { attendancePct: number; completed: number; late: number; missed: number; missedChecks: number; incidents: number; assistance: number } };
 
 const fmtT = (d: string | Date | null | undefined) => (d ? new Date(d).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Harare" }) : "—");
 const fmtDT = (d: string | Date | null | undefined) => (d ? new Date(d).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Harare" }) : "—");
@@ -161,6 +161,14 @@ export function GuardWorkspace({ initial, profile, canRequest, canEditSites, act
                 <Fact label="Missed checks" strong>{profile.performance.missedChecks}</Fact>
                 <Fact label="Incidents" strong>{profile.performance.incidents}</Fact>
               </div>
+              {profile.phoneProfile && (
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-dashed border-line pt-3">
+                  <Fact label="Phone">{profile.phoneProfile.type} · {profile.phoneProfile.operator}{profile.phoneProfile.verified ? "" : " · not verified"}</Fact>
+                  <Fact label="Attends by">{profile.phoneProfile.attendsBy}</Fact>
+                  <Fact label="Calls to">{profile.phoneProfile.gateway ?? "Site default gateway"}</Fact>
+                  <Fact label="Other numbers">{profile.phoneProfile.alternates || "None"}</Fact>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-dashed border-line pt-3">
                 <Fact label="Email">{profile.email ? <a href={`mailto:${profile.email}`} className="underline">{profile.email}</a> : "—"}</Fact>
                 <Fact label="National ID">{profile.nationalId}</Fact>

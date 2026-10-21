@@ -59,9 +59,14 @@ export function validateEvent(raw: unknown): { ok: true; event: AnyIncomingEvent
 }
 
 /** Match a caller to exactly one guard. Never guesses: no match or an ambiguous match is an unknown caller. */
+/**
+ * The guard a number belongs to: their registered number or one of their authorised alternative
+ * numbers. A number that matches more than one guard matches nobody: caller ID is not identity, and
+ * guessing between two people is worse than asking.
+ */
 export async function matchGuardByPhone(normalized: string) {
   if (!normalized || normalized.length < 8) return null;
-  const guards = await db.guard.findMany({ where: { phone: normalized }, take: 2 });
+  const guards = await db.guard.findMany({ where: { OR: [{ phone: normalized }, { alternatePhones: { has: normalized } }] }, take: 2 });
   if (guards.length !== 1) return null;
   return guards[0];
 }
@@ -257,6 +262,17 @@ async function afterTransition(device: GatewayDevice, call: CallLog, previous: C
     }
   }
   if (isTerminal(call.status) || call.status === "ANSWERED") await db.gatewayDevice.update({ where: { id: device.id }, data: { lastCallAt: at } });
+  // A basic-phone guard calling the control room may be clocking in, checking in or clocking out.
+  // Decided once the call has ended (answered or not, and for how long). Never throws into the
+  // call pipeline: a failure here must not lose the call record.
+  if (isTerminal(call.status) && device.mode === "OPERATIONS_GATEWAY" && call.direction === "INCOMING" && call.guardId) {
+    try {
+      const { processAttendanceCall } = await import("@/lib/attendance/call-attendance");
+      await processAttendanceCall(call.id);
+    } catch (e) {
+      console.warn("[call-attendance] failed", (e as Error).message);
+    }
+  }
 }
 
 /** Link an unknown caller's call (and every other call from that number) to a guard. */
