@@ -75,11 +75,11 @@ export function LocationForm({ action, location, clients, supervisors, submitLab
       <FormSection title="Welfare checks" description="Leave both times and interval empty for one welfare text in the middle of each shift. A connected call is not a response: only a key press, a reply, or a person confirming settles a check.">
         <Field label="Check at" hint="Local times, 24-hour, e.g. 00:00, 03:00. Overnight shifts get both."><Input name="welfareTimes" defaultValue={l?.welfareTimes ?? ""} placeholder="00:00, 03:00" /></Field>
         <Field label="Or every (minutes)" hint="From the shift start. 15 at least."><Input type="number" name="welfareIntervalMinutes" min={15} max={720} defaultValue={l?.welfareIntervalMinutes ?? ""} placeholder="120" /></Field>
-        <Field label="Ask by">
+        <Field label="Ask by" hint="SMS: the guard replies 1. Operations phone: the operator confirms. Automated: the guard presses 1, 2 or 3.">
           <Select name="welfareChannel" defaultValue={l?.welfareChannel ?? "SMS"}>
-            <option value="SMS">SMS: the guard replies 1</option>
-            <option value="GATEWAY_CALL">Call from the operations phone: the operator confirms</option>
-            <option value="VOICE">Automated call: the guard presses 1, 2 or 3 (needs a voice provider)</option>
+            <option value="SMS">SMS reply</option>
+            <option value="GATEWAY_CALL">Call from the operations phone</option>
+            <option value="VOICE">Automated call (needs a voice provider)</option>
           </Select>
         </Field>
         <Field label="Tries before escalating" hint="Calls or texts, each one waiting for an answer."><Input type="number" name="welfareMaxAttempts" min={1} max={5} defaultValue={l?.welfareMaxAttempts ?? 2} /></Field>

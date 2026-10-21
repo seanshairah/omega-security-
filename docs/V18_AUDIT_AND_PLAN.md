@@ -71,3 +71,10 @@ call. Automated prompts need a programmable voice provider or a PBX (Phase 3).
 
 A call confirms that a call happened. It never proves who held the phone or where they were, and the
 system never shows it as location evidence.
+
+**Status (21 October 2026):** all five phases are built and tested against a local database; see
+`V18_READINESS_REPORT.md`. Differences from the plan:
+
+- Network-check caps are per shift and per month (plus a cooldown) rather than daily.
+- Automated IVR and network location have no real provider yet. Both run only on the simulators,
+  which are labelled everywhere and refused in production builds.

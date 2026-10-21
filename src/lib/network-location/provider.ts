@@ -77,8 +77,8 @@ export const NetOneLocationAdapter = () => new UnconfiguredOperatorAdapter("neto
 export const TelecelLocationAdapter = () => new UnconfiguredOperatorAdapter("telecel", "TELECEL");
 
 /** Scripted answers for tests and demonstrations, by phone number. Default: inside. */
-const scripted = new Map<string, CamaraVerification | "ERROR">();
-export function setSimulatedNetworkAnswer(phone: string, answer: CamaraVerification | "ERROR" | null) {
+const scripted = new Map<string, CamaraVerification | "ERROR" | "TIMEOUT">();
+export function setSimulatedNetworkAnswer(phone: string, answer: CamaraVerification | "ERROR" | "TIMEOUT" | null) {
   if (answer) scripted.set(phone, answer); else scripted.delete(phone);
 }
 
@@ -90,6 +90,7 @@ class SimulationLocationAdapter implements NetworkLocationProvider {
   authorisationRef() { return "simulation"; }
   async verify(req: VerifyRequest): Promise<VerifyAnswer> {
     const a = scripted.get(req.phone) ?? { verificationResult: "TRUE", lastLocationTime: new Date().toISOString() };
+    if (a === "TIMEOUT") throw new Error("simulated provider timeout");
     if (a === "ERROR") return { result: "NETWORK_ERROR", error: "simulated provider error", providerRef: `sim_${req.reference}` };
     return { ...mapCamaraVerification(a, req.maxAgeSeconds, new Date()), providerRef: `sim_${req.reference}`, costUnits: 0 };
   }

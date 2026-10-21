@@ -17,13 +17,14 @@ import { Rows, CardRow } from "@/components/ui/rows";
 import { Empty as EmptyState } from "@/components/ui/table";
 import { LOCATION_STATE_META, freshness } from "@/lib/geofence";
 import { effectiveGeofence } from "@/lib/site-config";
-import type { LocationEvent } from "@prisma/client";
+import type { EvidenceSource, LocationEvent } from "@prisma/client";
+import { arrivalSource, phoneGroup, ARRIVAL_SOURCE_LABEL, type ArrivalSource, type PhoneGroup } from "@/lib/attendance/arrival-source";
 
 export const metadata = { title: "Active operations" };
 
-export default async function OperationsPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
+export default async function OperationsPage({ searchParams }: { searchParams: Promise<{ f?: string; phone?: string; by?: string }> }) {
   await requireUser();
-  const { f = "all" } = await searchParams;
+  const { f = "all", phone = "all", by = "any" } = await searchParams;
   const all = await db.shift.findMany({ where: { OR: [{ status: { in: LIVE_STATUSES } }, { status: "SCHEDULED", startAt: { lte: new Date(Date.now() + 3 * 3600_000) } }] }, include: { ...shiftInclude, welfareChecks: { orderBy: { sentAt: "desc" }, take: 1 } }, orderBy: [{ startAt: "asc" }] });
   // Latest location event per shift, for guards with a device. Feature-phone guards show "—".
   const latestLoc = new Map<string, LocationEvent>();
@@ -49,9 +50,31 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
     onduty: all.filter((s) => s.status === "ON_DUTY"),
     upcoming: all.filter((s) => s.status === "SCHEDULED" || s.status === "AWAITING_ARRIVAL"),
     watched: all.filter((s) => s.guard.watched),
+    welfare: all.filter((s) => (s.attendance?.missedChecks ?? 0) > 0 || s.welfareChecks[0]?.response === "NO_RESPONSE"),
+    checkout: all.filter((s) => s.endAt.getTime() < Date.now() && !s.attendance?.completionConfirmedAt),
     location: all.filter((s) => { const e = latestLoc.get(s.id); return e && (e.locationState === "OUTSIDE" || e.eventType === "LOCATION_UNAVAILABLE" || e.eventType === "LOCATION_VERIFICATION_OVERDUE"); }),
   };
-  const rows = groups[f as keyof typeof groups] ?? all;
+  // How each arrival is known, from the evidence. A call or an SMS is never shown as GPS.
+  const confirmed = new Map<string, EvidenceSource[]>();
+  if (all.length) for (const e of await db.attendanceEvidence.findMany({ where: { shiftId: { in: all.map((s) => s.id) }, status: "CONFIRMED", kind: { in: ["CHECK_IN", "PRESENCE"] }, NOT: { flags: { has: "SIMULATED" } } }, select: { shiftId: true, source: true } })) confirmed.set(e.shiftId, [...(confirmed.get(e.shiftId) ?? []), e.source]);
+  const sourceOf = (s: (typeof all)[number]): ArrivalSource => arrivalSource({ arrivalConfirmedAt: s.attendance?.arrivalConfirmedAt ?? null, gpsVerified: s.attendance?.locationVerification === "VERIFIED", confirmedSources: confirmed.get(s.id) ?? [] });
+  const phoneOf = (s: (typeof all)[number]): PhoneGroup => phoneGroup(s.guard);
+  const byPhone = (s: (typeof all)[number]) => phone === "all" || phoneOf(s) === phone.toUpperCase();
+  const bySource = (s: (typeof all)[number]) => by === "any" || sourceOf(s) === by.toUpperCase();
+  const rows = (groups[f as keyof typeof groups] ?? all).filter((s) => byPhone(s) && bySource(s));
+  const href = (o: { f?: string; phone?: string; by?: string }) => {
+    const q = new URLSearchParams();
+    const v = { f, phone, by, ...o };
+    if (v.f !== "all") q.set("f", v.f);
+    if (v.phone !== "all") q.set("phone", v.phone);
+    if (v.by !== "any") q.set("by", v.by);
+    const qs = q.toString();
+    return qs ? `/operations?${qs}` : "/operations";
+  };
+  const arrivalBy = (s: (typeof all)[number]) => {
+    const src = sourceOf(s);
+    return src === "NONE" ? null : <span className="block text-[12px] text-ink-3">{ARRIVAL_SOURCE_LABEL[src]}</span>;
+  };
   const welfare = (s: (typeof all)[number]) => {
     const w = s.welfareChecks[0];
     if (!w) return <span className="text-ink-3">—</span>;
@@ -72,14 +95,28 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
         </div>
       )}
       <Segments className="mb-4" items={[
-        { href: "/operations", label: "All", count: groups.all.length, active: f === "all" },
-        { href: "/operations?f=attention", label: "Needs attention", count: groups.attention.length, active: f === "attention", tone: "critical" },
-        ...(groups.pending.length ? [{ href: "/operations?f=pending", label: "Attendance to confirm", count: groups.pending.length, active: f === "pending", tone: "warn" as const }] : []),
-        { href: "/operations?f=onduty", label: "On duty", count: groups.onduty.length, active: f === "onduty", tone: "ok" },
-        { href: "/operations?f=upcoming", label: "Starting soon", count: groups.upcoming.length, active: f === "upcoming", tone: "neutral" },
-        ...(groups.watched.length ? [{ href: "/operations?f=watched", label: "Watched", count: groups.watched.length, active: f === "watched", tone: "warn" as const }] : []),
-        ...(groups.location.length ? [{ href: "/operations?f=location", label: "Location exceptions", count: groups.location.length, active: f === "location", tone: "critical" as const }] : []),
+        { href: href({ f: "all" }), label: "All", count: groups.all.length, active: f === "all" },
+        { href: href({ f: "attention" }), label: "Needs attention", count: groups.attention.length, active: f === "attention", tone: "critical" },
+        ...(groups.pending.length ? [{ href: href({ f: "pending" }), label: "Attendance to confirm", count: groups.pending.length, active: f === "pending", tone: "warn" as const }] : []),
+        { href: href({ f: "onduty" }), label: "On duty", count: groups.onduty.length, active: f === "onduty", tone: "ok" },
+        { href: href({ f: "upcoming" }), label: "Starting soon", count: groups.upcoming.length, active: f === "upcoming", tone: "neutral" },
+        ...(groups.watched.length ? [{ href: href({ f: "watched" }), label: "Watched", count: groups.watched.length, active: f === "watched", tone: "warn" as const }] : []),
+        ...(groups.welfare.length ? [{ href: href({ f: "welfare" }), label: "Missed welfare checks", count: groups.welfare.length, active: f === "welfare", tone: "warn" as const }] : []),
+        ...(groups.checkout.length ? [{ href: href({ f: "checkout" }), label: "Not checked out", count: groups.checkout.length, active: f === "checkout", tone: "warn" as const }] : []),
+        ...(groups.location.length ? [{ href: href({ f: "location" }), label: "Location exceptions", count: groups.location.length, active: f === "location", tone: "critical" as const }] : []),
       ]} />
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Segments items={[
+          { href: href({ phone: "all" }), label: "All phones", active: phone === "all" },
+          { href: href({ phone: "basic" }), label: "Basic phones", count: all.filter((s) => phoneOf(s) === "BASIC").length, active: phone === "basic" },
+          { href: href({ phone: "android" }), label: "Guard app", count: all.filter((s) => phoneOf(s) === "ANDROID").length, active: phone === "android" },
+          { href: href({ phone: "unknown" }), label: "Phone not known", count: all.filter((s) => phoneOf(s) === "UNKNOWN").length, active: phone === "unknown" },
+        ]} />
+        <Segments items={[
+          { href: href({ by: "any" }), label: "Any arrival", active: by === "any" },
+          ...(["gps", "network", "call", "sms", "manual", "none"] as const).map((k) => ({ href: href({ by: k }), label: k === "none" ? "Not confirmed" : ARRIVAL_SOURCE_LABEL[k.toUpperCase() as ArrivalSource], count: all.filter((s) => byPhone(s) && sourceOf(s) === k.toUpperCase()).length, active: by === k })),
+        ]} />
+      </div>
       <Card>
         <Rows cards={
           rows.length === 0 ? <EmptyState title="No shifts here" body="Shifts appear as they start." /> : rows.map((s) => (
@@ -89,7 +126,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
               subtitle={`${s.location.name} · ${fmtTime(s.startAt)}–${fmtTime(s.endAt)}`}
               right={<ShiftStatusLabel status={s.status} />}
               meta={[
-                { label: "Arrival", value: s.attendance?.arrivalConfirmedAt ? fmtTime(s.attendance.arrivalConfirmedAt) : s.status === "SCHEDULED" ? "—" : "Not confirmed" },
+                { label: "Arrival", value: s.attendance?.arrivalConfirmedAt ? `${fmtTime(s.attendance.arrivalConfirmedAt)} · ${ARRIVAL_SOURCE_LABEL[sourceOf(s)].toLowerCase()}` : s.status === "SCHEDULED" ? "—" : "Not confirmed" },
                 { label: "Mid-shift", value: welfare(s) },
                 { label: "Location", value: loc(s) },
               ]} />
@@ -109,7 +146,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
                 </td>
                 <td><div className="text-ink">{s.location.name}</div><div className="text-[12px] text-ink-3">{s.location.client.name}</div></td>
                 <td className="tnum text-ink">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</td>
-                <td className="tnum">{s.attendance?.arrivalConfirmedAt ? <Status tone={(s.attendance.lateMinutes ?? 0) > 15 ? "warn" : "ok"}>{fmtTime(s.attendance.arrivalConfirmedAt)}{(s.attendance.lateMinutes ?? 0) > 15 ? ` · ${s.attendance.lateMinutes} min late` : ""}</Status> : s.status === "SCHEDULED" ? <span className="text-ink-3">—</span> : <Status tone={s.status === "AWAITING_ARRIVAL" ? "neutral" : "critical"}>Not confirmed</Status>}</td>
+                <td className="tnum">{s.attendance?.arrivalConfirmedAt ? <><Status tone={(s.attendance.lateMinutes ?? 0) > 15 ? "warn" : "ok"}>{fmtTime(s.attendance.arrivalConfirmedAt)}{(s.attendance.lateMinutes ?? 0) > 15 ? ` · ${s.attendance.lateMinutes} min late` : ""}</Status>{arrivalBy(s)}</> : s.status === "SCHEDULED" ? <span className="text-ink-3">—</span> : <Status tone={s.status === "AWAITING_ARRIVAL" ? "neutral" : "critical"}>Not confirmed</Status>}</td>
                 <td>{welfare(s)}</td>
                 <td>{loc(s)}</td>
                 <td><ShiftStatusLabel status={s.status} /></td>

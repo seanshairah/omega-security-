@@ -24,9 +24,11 @@ export const KIND_LABEL: Record<EvidenceKind, string> = { CHECK_IN: "Clock-in", 
 /** Does this source say anything about where the guard was? Only GPS and network checks do. */
 export const IS_LOCATION_EVIDENCE: Record<EvidenceSource, boolean> = { GPS: true, NETWORK: true, CALL: false, MISSED_CALL: false, SMS: false, IVR: false, MANUAL: false };
 
+const SIMULATED_WORD: Record<EvidenceSource, string> = { GPS: "GPS", NETWORK: "network check", CALL: "call", MISSED_CALL: "missed call", SMS: "SMS", IVR: "IVR response", MANUAL: "confirmation" };
+
 export function evidenceLabel(e: Pick<AttendanceEvidence, "source" | "status"> & { flags?: string[] }): { label: string; tone: EvidenceTone } {
   // A simulated record is never shown with a verified label.
-  if (e.flags?.includes("SIMULATED")) return { label: `Simulated ${SOURCE_LABEL[e.source].split(" ")[0]} · not real evidence`, tone: "muted" };
+  if (e.flags?.includes("SIMULATED")) return { label: `Simulated ${SIMULATED_WORD[e.source]} · not real evidence`, tone: "muted" };
   if (e.status === "PENDING") return { label: e.source === "MISSED_CALL" ? "Missed call · pending" : "Attendance pending", tone: "warn" };
   if (e.status === "REJECTED") return { label: `${SOURCE_LABEL[e.source]} · rejected`, tone: "muted" };
   if (e.status === "PROVISIONAL") return { label: `${e.source === "MISSED_CALL" ? "Missed call" : SOURCE_LABEL[e.source]} · provisional`, tone: "info" };

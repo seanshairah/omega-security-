@@ -144,8 +144,11 @@ async function main() {
   setSimulatedNetworkAnswer(nia.phone, "ERROR");
   r = await requestNetworkVerification({ guardId: nia.id, shiftId: niaShift.id, trigger: "MANUAL", actor }, addMinutes(now, 150), { ...policy, maxPerShift: 10 });
   check("a provider error is recorded as an error", r.check?.result === "NETWORK_ERROR" && r.check.requestSent);
+  setSimulatedNetworkAnswer(nia.phone, "TIMEOUT");
+  r = await requestNetworkVerification({ guardId: nia.id, shiftId: niaShift.id, trigger: "MANUAL", actor }, addMinutes(now, 185), { ...policy, maxPerShift: 10 });
+  check("a provider timeout is recorded as an error, and nothing else breaks", r.check?.result === "NETWORK_ERROR" && Boolean(r.check.reason?.includes("timeout")));
   setSimulatedNetworkAnswer(nia.phone, null);
-  r = await requestNetworkVerification({ guardId: nia.id, shiftId: niaShift.id, trigger: "MANUAL", actor }, addMinutes(now, 190), { ...policy, maxPerShift: 10, monthlyCap: 1 });
+  r = await requestNetworkVerification({ guardId: nia.id, shiftId: niaShift.id, trigger: "MANUAL", actor }, addMinutes(now, 230), { ...policy, maxPerShift: 10, monthlyCap: 1 });
   check("the monthly cap stops requests", r.method === "SKIP" && Boolean(r.reason?.includes("monthly")));
 
   console.log("Eligibility");

@@ -164,6 +164,10 @@ export async function verifyArrival(shiftId: string, guardId: string, state: Loc
   }
   const verification = state === "INSIDE" ? "VERIFIED" : "EXCEPTION";
   await db.attendance.update({ where: { shiftId }, data: { locationVerification: verification, locationVerifiedAt: at } });
+  if (verification === "VERIFIED") {
+    const { recordEvidence } = await import("@/lib/attendance/evidence");
+    await recordEvidence({ shiftId, guardId, kind: "CHECK_IN", source: "GPS", status: "CONFIRMED", occurredAt: at, dedupeKey: `gps:sms-arrival:${shiftId}`, note: `SMS confirmation and GPS inside ${siteName}${distanceM != null ? ` (${distanceM} m)` : ""}.` }).catch(() => undefined);
+  }
   await recordEvent(shiftId, guardId, verification === "VERIFIED" ? "LOCATION_VERIFIED" : "LOCATION_EXCEPTION", { at, source: "APP", note: verification === "VERIFIED" ? `Arrival verified: SMS confirmation and GPS inside ${siteName}${distanceM != null ? ` (${distanceM} m)` : ""}.` : `Location exception: SMS confirmation received but GPS places the guard outside ${siteName}${distanceM != null ? ` (${distanceM} m)` : ""}. Location verification required.` });
   if (verification === "EXCEPTION") {
     const g = await db.guard.findUnique({ where: { id: guardId } });

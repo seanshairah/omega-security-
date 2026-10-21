@@ -111,13 +111,15 @@ async function createOnce(data: Parameters<typeof db.networkLocationCheck.create
   return count ? row : null;
 }
 
+const PLACE: Partial<Record<NetworkLocationCheck["result"], string>> = { NETWORK_VERIFIED_INSIDE: "inside", NETWORK_VERIFIED_OUTSIDE: "outside", NETWORK_PARTIAL_MATCH: "partly inside" };
+
 async function afterResult(c: NetworkLocationCheck, shift: { id: string; locationId: string; location: { name: string } }, guard: { id: string; firstName: string; lastName: string }) {
   const meta = NETWORK_RESULT_META[c.result];
   const sim = c.simulated ? " (simulated, not real evidence)" : "";
   const area = c.areaRadiusM ? ` ${c.areaRadiusM.toLocaleString("en-GB")} m duty area` : " duty area";
   await recordEvent(shift.id, guard.id, "NETWORK_LOCATION", {
     at: c.completedAt ?? c.requestedAt,
-    note: `Network check (${c.provider}, ${NETWORK_TRIGGER_LABEL[c.trigger]}): ${meta.label.replace(/^Network: /, "").toLowerCase()}${meta.located ? ` of the${area}` : ""}${c.matchRate != null ? `, ${c.matchRate}% match` : ""}${c.observedAt ? `, position from ${fmtTime(c.observedAt)}` : ""}${sim}. Not GPS.`,
+    note: `Network check (${c.provider}, ${NETWORK_TRIGGER_LABEL[c.trigger]}): ${PLACE[c.result] ? `${PLACE[c.result]} the${area}` : meta.label.toLowerCase()}${c.matchRate != null ? `, ${c.matchRate}% match` : ""}${c.observedAt ? `, position from ${fmtTime(c.observedAt)}` : ""}${sim}. Not GPS.`,
   });
   if (c.result === "NETWORK_VERIFIED_INSIDE") {
     await recordEvidence({

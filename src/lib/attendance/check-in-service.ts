@@ -343,6 +343,14 @@ export async function applyFix(checkInId: string, fix: IncomingFix, receivedAt =
     });
   }
   if (!verified && exceptionNow) await raiseException(row.id, shift, line);
+  if (verified) {
+    // The unified evidence list: a GPS fix inside the geofence is the only "GPS verified" there is.
+    const { recordEvidence } = await import("@/lib/attendance/evidence");
+    await recordEvidence({
+      shiftId: shift.id, guardId: shift.guardId, kind: "CHECK_IN", source: "GPS", status: "CONFIRMED", occurredAt: capturedAt,
+      dedupeKey: `gps:checkin:${row.id}`, note: `${line}, ${how}. ${Math.round(cls.distanceM)} m from the site${fix.accuracyM != null ? `, ±${Math.round(fix.accuracyM)} m` : ""}.`,
+    }).catch(() => undefined);
+  }
   if (verified && !alreadyVerified) {
     const { onCheckInVerified } = await import("@/lib/client-notifications/rules");
     await onCheckInVerified(row.id).catch(() => undefined);
