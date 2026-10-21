@@ -31,6 +31,7 @@ import { CATEGORY_LABEL } from "@/lib/services/incidents";
 import { SiteMap } from "@/components/map/site-map";
 import { LocationEventList, SyncBadge } from "@/components/location/location-events";
 import { LOCATION_STATE_META, freshness } from "@/lib/geofence";
+import { WELFARE_CALL_LABEL, hasSchedule } from "@/lib/welfare/welfare-rules";
 
 export const metadata = { title: "Shift" };
 
@@ -60,6 +61,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   const evidenceGateways = await db.gatewayDevice.findMany({ where: { id: { in: [...new Set(evidenceRows.map((e) => e.gatewayDeviceId).filter((x): x is string => Boolean(x)))] } }, select: { id: true, deviceName: true } });
   const evidence = evidenceRows.map((e) => ({ ...e, gateway: evidenceGateways.find((g) => g.id === e.gatewayDeviceId) ?? null }));
   const pendingEvidence = evidence.filter((e) => e.status === "PENDING" || e.status === "PROVISIONAL").length;
+  const scheduledChecks = s.welfareChecks.filter((w) => w.scheduleKey);
   const checkIn: CheckInView | null = checkInRow ? {
     id: checkInRow.id, shiftId: s.id, guardName, guardPhone: s.guard.phone, siteName: s.location.name,
     status: checkInRow.status as CheckInStatus, scheduledStartAt: checkInRow.scheduledStartAt,
@@ -122,6 +124,24 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
               <CardBody className="pt-1"><EvidenceList rows={evidence} canDecide={can.manageShifts(user)} /></CardBody>
             </Card>
           </div>
+          {scheduledChecks.length > 0 && (
+            <Card>
+              <CardHeader title="Welfare checks" description="Scheduled for this site. An answered call is not a response: only a key press, a reply or a person confirming settles a check." />
+              <CardBody className="pt-1">
+                <ul className="divide-y divide-line">
+                  {scheduledChecks.map((w) => {
+                    const st = welfareState(w);
+                    return (
+                      <li key={w.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                        <span className="text-ink">Due {fmtTime(w.dueAt ?? w.sentAt)} <span className="text-ink-3">· {WELFARE_CHANNEL_LABEL[w.channel]}{w.attempts > 1 ? ` · ${w.attempts} tries` : ""}{w.smsFallbackAt ? " · then SMS" : ""}{w.provider === "simulated" ? " · simulated" : ""}</span></span>
+                        <Status tone={st.tone}>{st.label}</Status>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </CardBody>
+            </Card>
+          )}
           <Card>
             <CardHeader title="Timeline" description="Every automated check, reply, call and location event on this shift, in order." action={<ShiftStatusLabel status={s.status} />} />
             <CardBody><Timeline events={s.checkIns} showDates={s.durationMinutes > 12 * 60} /></CardBody>
@@ -185,7 +205,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
                 <Meta label="Attendance">{att ? <Status tone={att.tone}>{att.label}</Status> : "—"}</Meta>
                 <Meta label="Arrival">{s.attendance?.arrivalConfirmedAt ? `${fmtTime(s.attendance.arrivalConfirmedAt)}${s.attendance.lateMinutes ? ` (${s.attendance.lateMinutes} min late)` : ""}` : "Not confirmed"}</Meta>
                 <Meta label="Completion">{s.attendance?.completionConfirmedAt ? fmtTime(s.attendance.completionConfirmedAt) : s.completionTimedOutAt ? "Unconfirmed" : "—"}</Meta>
-                <Meta label="Welfare check">{s.welfareSmsSentAt ? `Sent ${fmtTime(s.welfareSmsSentAt)}` : `Due ${fmtTime(midpoint)}`}</Meta>
+                <Meta label="Welfare check">{hasSchedule({ times: s.location.welfareTimes, intervalMinutes: s.location.welfareIntervalMinutes }) ? (s.location.welfareTimes ? `At ${s.location.welfareTimes}` : `Every ${s.location.welfareIntervalMinutes} min`) : s.welfareSmsSentAt ? `Sent ${fmtTime(s.welfareSmsSentAt)}` : `Due ${fmtTime(midpoint)}`}</Meta>
                 <Meta label="Missed checks">{s.attendance?.missedChecks ?? 0}</Meta>
                 <Meta label="Awaiting reply">{s.pendingPrompt === "NONE" ? "Nothing" : s.pendingPrompt.toLowerCase().replace("_", " ")}</Meta>
                 <Meta label="Status">{STATUS_META[s.status].label}</Meta>
@@ -231,4 +251,15 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
       </div>
     </div>
   );
+}
+
+const WELFARE_CHANNEL_LABEL = { SMS: "SMS", VOICE: "automated call", GATEWAY_CALL: "operations phone" } as const;
+
+/** A settled response wins over what the call did; an open check shows the call's state. */
+function welfareState(w: { response: string; callStatus: keyof typeof WELFARE_CALL_LABEL | null; escalatedAt: Date | null }) {
+  if (w.response === "WELL") return { label: "Well", tone: "ok" as const };
+  if (w.response === "ASSISTANCE") return { label: "Needs assistance", tone: "warn" as const };
+  if (w.response === "INCIDENT") return { label: "Emergency", tone: "critical" as const };
+  if (w.response === "NO_RESPONSE") return { label: w.escalatedAt ? "No response · escalated" : "No response", tone: "critical" as const };
+  return w.callStatus ? WELFARE_CALL_LABEL[w.callStatus] : { label: "Waiting for a reply", tone: "info" as const };
 }

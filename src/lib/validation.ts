@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { normalisePhone, isValidPhone } from "@/lib/phone";
 import { coordinatePairError } from "@/lib/site-config";
+import { parseWelfareTimes } from "@/lib/welfare/welfare-rules";
 
 export const phoneSchema = z.string().trim().min(6, "Phone number is required").transform((v) => normalisePhone(v)).refine(isValidPhone, "Enter a valid phone number, e.g. 0772 123 456");
 /** Checkbox: present ("on") when ticked, absent when not. */
@@ -39,6 +40,7 @@ export const guardSchema = z.object({
   preferredAttendance: z.enum(["CALL", "SMS", "APP"]).default("SMS"),
   callAttendanceEnabled: flag,
   smsAttendanceEnabled: flag,
+  welfareExempt: flag,
   assignedGatewayId: opt(z.string()),
   phoneVerified: flag,
   networkLocationEligible: flag,
@@ -84,9 +86,17 @@ export const locationSchema = z.object({
   notifyClientEmergency: flag,
   clientUpdateEmail: opt(z.string().email("Enter a valid email address")),
   defaultGatewayId: opt(z.string()),
+  // Scheduled welfare checks. Neither times nor an interval: the single mid-shift welfare SMS.
+  welfareTimes: opt(z.string()),
+  welfareIntervalMinutes: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().int().min(15, "Check at most every 15 minutes").max(720).optional()).transform((v) => v ?? null),
+  welfareChannel: z.preprocess((v) => (v === "" || v == null ? "SMS" : v), z.enum(["SMS", "VOICE", "GATEWAY_CALL"])),
+  welfareMaxAttempts: z.preprocess((v) => (v === "" || v == null ? 2 : Number(v)), z.number().int().min(1).max(5)),
+  welfareRetryMinutes: z.preprocess((v) => (v === "" || v == null ? 10 : Number(v)), z.number().int().min(2).max(60)),
+  welfareSmsFallback: flag,
 }).superRefine((d, ctx) => {
   const e = coordinatePairError(d.latitude, d.longitude);
   if (e) ctx.addIssue({ code: "custom", message: e, path: ["latitude"] });
+  try { parseWelfareTimes(d.welfareTimes); } catch (err) { ctx.addIssue({ code: "custom", message: (err as Error).message, path: ["welfareTimes"] }); }
 });
 
 const optNum = (min: number, max: number) => z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().min(min).max(max).optional()).transform((v) => v ?? null);

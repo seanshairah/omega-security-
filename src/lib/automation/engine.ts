@@ -18,6 +18,7 @@ import { fmtTime } from "@/lib/time";
 import { gatewayMaintenance } from "@/lib/gateway/service";
 import { locationMaintenance } from "@/lib/gateway/location-events";
 import { expireStaleRequests } from "@/lib/gateway/location-requests";
+import { runWelfareSchedule, unscheduledSite } from "@/lib/welfare/scheduled";
 
 export type TickReport = {
   at: string;
@@ -132,7 +133,8 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
     }
 
     // 5. welfare check at the configured point of the shift
-    const onSite = await db.shift.findMany({ where: { status: { in: ON_SITE_STATUSES }, welfareSmsSentAt: null, endAt: { gt: now } }, include: shiftInclude });
+    // Sites with a welfare schedule are handled by step 6b instead.
+    const onSite = await db.shift.findMany({ where: { status: { in: ON_SITE_STATUSES }, welfareSmsSentAt: null, endAt: { gt: now }, location: unscheduledSite }, include: shiftInclude });
     for (const s of onSite) {
       const point = new Date(s.startAt.getTime() + (s.durationMinutes * 60000 * welfarePct) / 100);
       if (point > now) continue;
@@ -149,7 +151,7 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
     }
 
     // 6. missed welfare check
-    const missedWelfare = await db.shift.findMany({ where: { pendingPrompt: "WELFARE", welfareMissedAt: null, welfareSmsSentAt: { lte: addMinutes(now, -welfareWindow) } }, include: shiftInclude });
+    const missedWelfare = await db.shift.findMany({ where: { pendingPrompt: "WELFARE", welfareMissedAt: null, welfareSmsSentAt: { lte: addMinutes(now, -welfareWindow) }, location: unscheduledSite }, include: shiftInclude });
     for (const s of missedWelfare) {
       try {
         await db.shift.update({ where: { id: s.id }, data: { welfareMissedAt: now, pendingPrompt: "WELFARE" } }); // keep listening
@@ -161,6 +163,17 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
       } catch (e) {
         report.errors.push(`welfare-missed ${s.id}: ${(e as Error).message}`);
       }
+    }
+
+    // 6b. scheduled welfare checks (sites with welfare times or an interval): create, call or text,
+    // retry, fall back to SMS, escalate. Isolated so a voice or gateway problem never stops the steps above.
+    try {
+      const w = await runWelfareSchedule(now);
+      report.welfareSent += w.placed;
+      report.welfareMissed += w.escalated;
+      report.errors.push(...w.errors);
+    } catch (e) {
+      report.errors.push(`welfare schedule: ${(e as Error).message}`);
     }
 
     // 7. handover notices

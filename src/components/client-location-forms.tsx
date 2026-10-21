@@ -72,6 +72,20 @@ export function LocationForm({ action, location, clients, supervisors, submitLab
         <Checkbox name="notifyClientEmergency" label="Emergency (draft for approval)" hint="Internal escalation first; the client message waits for a supervisor's approval." defaultChecked={l?.notifyClientEmergency ?? false} />
         <Field label="Client update email" hint="Optional. Used when an update is sent by email instead of SMS." className="sm:col-span-2"><Input name="clientUpdateEmail" type="email" defaultValue={l?.clientUpdateEmail ?? ""} placeholder="security@client.co.zw" /></Field>
       </FormSection>
+      <FormSection title="Welfare checks" description="Leave both times and interval empty for one welfare text in the middle of each shift. A connected call is not a response: only a key press, a reply, or a person confirming settles a check.">
+        <Field label="Check at" hint="Local times, 24-hour, e.g. 00:00, 03:00. Overnight shifts get both."><Input name="welfareTimes" defaultValue={l?.welfareTimes ?? ""} placeholder="00:00, 03:00" /></Field>
+        <Field label="Or every (minutes)" hint="From the shift start. 15 at least."><Input type="number" name="welfareIntervalMinutes" min={15} max={720} defaultValue={l?.welfareIntervalMinutes ?? ""} placeholder="120" /></Field>
+        <Field label="Ask by">
+          <Select name="welfareChannel" defaultValue={l?.welfareChannel ?? "SMS"}>
+            <option value="SMS">SMS: the guard replies 1</option>
+            <option value="GATEWAY_CALL">Call from the operations phone: the operator confirms</option>
+            <option value="VOICE">Automated call: the guard presses 1, 2 or 3 (needs a voice provider)</option>
+          </Select>
+        </Field>
+        <Field label="Tries before escalating" hint="Calls or texts, each one waiting for an answer."><Input type="number" name="welfareMaxAttempts" min={1} max={5} defaultValue={l?.welfareMaxAttempts ?? 2} /></Field>
+        <Field label="Minutes between calls"><Input type="number" name="welfareRetryMinutes" min={2} max={60} defaultValue={l?.welfareRetryMinutes ?? 10} /></Field>
+        <Checkbox name="welfareSmsFallback" label="Text the guard before escalating an unanswered call" hint="Skipped for guards with SMS confirmation turned off." defaultChecked={l?.welfareSmsFallback ?? true} />
+      </FormSection>
       <FormSection title="Calling guards from the portal" description="The operations phone that rings guards at this site when someone presses Call guard. Any other eligible phone can still be chosen at the time.">
         <Field label="Default gateway phone" className="sm:col-span-2">
           <Select name="defaultGatewayId" defaultValue={l?.defaultGatewayId ?? ""}>

@@ -115,26 +115,35 @@ model Location {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
-  guards                Guard[]
-  shifts                Shift[]
-  incidents             Incident[]
-  recurrences           ShiftRecurrence[]
-  smsMessages           SmsMessage[]
-  gateways              GatewayDevice[]
-  alerts                GuardAlert[]
-  callLogs              CallLog[]
-  locationEvents        LocationEvent[]
+  guards                 Guard[]
+  shifts                 Shift[]
+  incidents              Incident[]
+  recurrences            ShiftRecurrence[]
+  smsMessages            SmsMessage[]
+  gateways               GatewayDevice[]
+  alerts                 GuardAlert[]
+  callLogs               CallLog[]
+  locationEvents         LocationEvent[]
   // Client notification rules beyond arrival / all well / shift ended. Off unless a site opts in.
-  notifyClientLate      Boolean              @default(false)
-  notifyClientAbsent    Boolean              @default(false)
+  notifyClientLate       Boolean              @default(false)
+  notifyClientAbsent     Boolean              @default(false)
   // These two never send on their own: they draft a message a supervisor approves first.
-  notifyClientOutside   Boolean              @default(false)
-  notifyClientEmergency Boolean              @default(false)
-  clientUpdateEmail     String?
+  notifyClientOutside    Boolean              @default(false)
+  notifyClientEmergency  Boolean              @default(false)
+  /// Welfare schedule. Neither set: one welfare SMS at welfare.offsetPercent of the shift, as before.
+  /// Local (Harare) times such as "00:00,03:00", or a check every N minutes from the shift start.
+  welfareTimes           String?
+  welfareIntervalMinutes Int?
+  welfareChannel         WelfareChannel       @default(SMS)
+  welfareMaxAttempts     Int                  @default(2)
+  welfareRetryMinutes    Int                  @default(10)
+  /// After the voice or gateway attempts, text the guard before escalating.
+  welfareSmsFallback     Boolean              @default(true)
+  clientUpdateEmail      String?
   // The operations phone that calls guards at this site from the portal.
-  defaultGatewayId      String?
-  defaultGateway        GatewayDevice?       @relation("SiteDefaultGateway", fields: [defaultGatewayId], references: [id], onDelete: SetNull)
-  clientNotifications   ClientNotification[]
+  defaultGatewayId       String?
+  defaultGateway         GatewayDevice?       @relation("SiteDefaultGateway", fields: [defaultGatewayId], references: [id], onDelete: SetNull)
+  clientNotifications    ClientNotification[]
 
   @@index([clientId])
   @@index([active])
@@ -202,6 +211,8 @@ model Guard {
   assignedGateway          GatewayDevice?      @relation("GuardAssignedGateway", fields: [assignedGatewayId], references: [id], onDelete: SetNull)
   networkLocationEligible  Boolean             @default(false)
   networkLocationConsentAt DateTime?
+  /// No scheduled welfare checks for this guard (the site's schedule does not apply).
+  welfareExempt            Boolean             @default(false)
   createdAt                DateTime            @default(now())
   updatedAt                DateTime            @updatedAt
 
@@ -527,6 +538,34 @@ model ShiftCheckIn {
   @@index([guardId, at])
 }
 
+enum WelfareChannel {
+  SMS
+  VOICE // a programmable voice provider rings the guard and reads their key press
+  GATEWAY_CALL // the operations gateway phone rings the guard; the operator speaks to them
+}
+
+enum WelfareCallStatus {
+  CALL_SCHEDULED
+  CALL_INITIATED
+  CALL_RINGING
+  CALL_ANSWERED
+  RESPONSE_CONFIRMED
+  NO_ANSWER
+  BUSY
+  FAILED
+  ESCALATED
+}
+
+/// Voice-provider webhooks already accepted. A replayed event finds its id here and changes nothing.
+model VoiceWebhookEvent {
+  id         String   @id @default(cuid())
+  provider   String
+  eventId    String
+  receivedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
+}
+
 enum WelfareResponse {
   PENDING
   WELL
@@ -536,12 +575,28 @@ enum WelfareResponse {
 }
 
 model WelfareCheck {
-  id          String          @id @default(cuid())
-  shiftId     String
-  shift       Shift           @relation(fields: [shiftId], references: [id])
-  sentAt      DateTime        @default(now())
-  respondedAt DateTime?
-  response    WelfareResponse @default(PENDING)
+  id             String             @id @default(cuid())
+  shiftId        String
+  shift          Shift              @relation(fields: [shiftId], references: [id])
+  sentAt         DateTime           @default(now())
+  respondedAt    DateTime?
+  response       WelfareResponse    @default(PENDING)
+  /// Scheduled checks only: "<shiftId>:<n>", so one engine pass cannot create a due point twice.
+  scheduleKey    String?            @unique
+  dueAt          DateTime?
+  channel        WelfareChannel     @default(SMS)
+  /// Voice and gateway checks: what the call did. Answered is not a response; only a key press,
+  /// an SMS reply or a person confirming is.
+  callStatus     WelfareCallStatus?
+  attempts       Int                @default(1)
+  lastAttemptAt  DateTime?
+  provider       String?
+  providerCallId String?            @unique
+  callRequestId  String?
+  digits         String?
+  smsFallbackAt  DateTime?
+  escalatedAt    DateTime?
+  note           String?
 
   @@index([shiftId])
 }
@@ -580,6 +635,7 @@ enum IncidentSource {
   ADMIN
   EMERGENCY
   APP
+  VOICE // a key press on a welfare call (IVR)
 }
 
 /// Guard-initiated alerts and status messages from the Android app (Phase 2, Stage 5)
