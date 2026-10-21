@@ -96,6 +96,13 @@ export async function processAttendanceCall(callLogId: string, now = new Date())
   });
   if (!created) return "already handled";
   if (!call.shiftId) await db.callLog.update({ where: { id: call.id }, data: { shiftId: shift.id } });
+  // A separate, optional network check. The call itself says nothing about where the guard is.
+  try {
+    const { networkCheckForCall } = await import("@/lib/network-location/service");
+    await networkCheckForCall(guard.id, shift.id, call.id, now);
+  } catch (e) {
+    console.error("network check for call failed", (e as Error).message);
+  }
 
   const word = INTENT_WORD[decision.intent];
   const flagText = flags.length ? ` (${flags.map((f) => FLAG_LABEL[f] ?? f).join(", ")})` : "";

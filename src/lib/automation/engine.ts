@@ -176,6 +176,15 @@ export async function runAutomationTick(now = new Date()): Promise<TickReport> {
       report.errors.push(`welfare schedule: ${(e as Error).message}`);
     }
 
+    // 6c. mobile-network location checks (off unless configured); isolated like the steps below
+    try {
+      const { runNetworkLocationSchedule } = await import("@/lib/network-location/service");
+      const n = await runNetworkLocationSchedule(now);
+      report.errors.push(...n.errors);
+    } catch (e) {
+      report.errors.push(`network location: ${(e as Error).message}`);
+    }
+
     // 7. handover notices
     const incoming = await db.shift.findMany({ where: { status: "SCHEDULED", handoverSmsSentAt: null, startAt: { gt: now, lte: addMinutes(now, handoverMinutes) } }, include: shiftInclude });
     for (const s of incoming) {

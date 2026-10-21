@@ -296,6 +296,12 @@ export async function applyVoiceReport(providerName: string, simulated: boolean,
     // The guard can text a description, as after an SMS EMERGENCY.
     await sendTemplated(await db.shift.findUniqueOrThrow({ where: { id: s.id }, include: shiftInclude }), "EMERGENCY_ACK", "EMERGENCY").catch(() => undefined);
   }
+  try {
+    const { networkCheckAfterWelfare } = await import("@/lib/network-location/service");
+    await networkCheckAfterWelfare(s.guardId, s.id, check.id, now);
+  } catch (e) {
+    console.error("network check after welfare call failed", (e as Error).message);
+  }
   if (late) {
     await notify({ type: "WELFARE_MISSED", severity: "INFO", title: `${who} answered the welfare check late`, body: `${s.location.name}. The check due ${fmtTime(check.dueAt ?? check.sentAt)} was escalated at ${fmtTime(check.escalatedAt)}; the guard pressed ${r.digits} at ${fmtTime(r.at)}${tag}.`, guardId: s.guardId, shiftId: s.id }).catch(() => undefined);
   }

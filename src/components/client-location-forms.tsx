@@ -86,6 +86,10 @@ export function LocationForm({ action, location, clients, supervisors, submitLab
         <Field label="Minutes between calls"><Input type="number" name="welfareRetryMinutes" min={2} max={60} defaultValue={l?.welfareRetryMinutes ?? 10} /></Field>
         <Checkbox name="welfareSmsFallback" label="Text the guard before escalating an unanswered call" hint="Skipped for guards with SMS confirmation turned off." defaultChecked={l?.welfareSmsFallback ?? true} />
       </FormSection>
+      <FormSection title="Network duty area" description="Optional. For checks by the guard's mobile network, where an operator offers them. Separate from the GPS geofence above, which it never widens. Network positions are approximate; ask the operator which area sizes they support.">
+        <Checkbox name="networkVerifyEnabled" label="Allow network location checks at this site" hint="Each guard also needs consent recorded and network checks allowed on their profile." defaultChecked={l?.networkVerifyEnabled ?? false} />
+        <Field label="Network area radius (m)" hint="Centred on the site's coordinates. For example 1000."><Input type="number" name="networkRadiusM" min={50} max={50000} defaultValue={l?.networkRadiusM ?? ""} placeholder="1000" /></Field>
+      </FormSection>
       <FormSection title="Calling guards from the portal" description="The operations phone that rings guards at this site when someone presses Call guard. Any other eligible phone can still be chosen at the time.">
         <Field label="Default gateway phone" className="sm:col-span-2">
           <Select name="defaultGatewayId" defaultValue={l?.defaultGatewayId ?? ""}>

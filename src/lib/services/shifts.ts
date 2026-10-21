@@ -206,7 +206,7 @@ export async function deleteShift(shiftId: string, actor: { userId: string; name
 
 /** Everything that would make a shift part of the operational record. */
 export async function shiftTraceCounts(shiftId: string): Promise<ShiftTraceCounts> {
-  const [checkIns, welfareChecks, incidents, smsMessages, callLogs, locationEvents, alerts, notifications] = await Promise.all([
+  const [checkIns, welfareChecks, incidents, smsMessages, callLogs, locationEvents, alerts, notifications, evidence, networkChecks] = await Promise.all([
     db.shiftCheckIn.count({ where: { shiftId } }),
     db.welfareCheck.count({ where: { shiftId } }),
     db.incident.count({ where: { shiftId } }),
@@ -215,8 +215,10 @@ export async function shiftTraceCounts(shiftId: string): Promise<ShiftTraceCount
     db.locationEvent.count({ where: { shiftId } }),
     db.guardAlert.count({ where: { shiftId } }),
     db.notification.count({ where: { shiftId } }),
+    db.attendanceEvidence.count({ where: { shiftId } }),
+    db.networkLocationCheck.count({ where: { shiftId } }),
   ]);
-  return { checkIns, welfareChecks, incidents, smsMessages, callLogs, locationEvents, alerts, notifications };
+  return { checkIns, welfareChecks, incidents, smsMessages, callLogs, locationEvents, alerts, notifications, evidence, networkChecks };
 }
 
 export async function cancelShift(shiftId: string, actor: { userId: string; name: string }, reason?: string) {

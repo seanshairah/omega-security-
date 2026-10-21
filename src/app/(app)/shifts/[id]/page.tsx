@@ -32,6 +32,8 @@ import { SiteMap } from "@/components/map/site-map";
 import { LocationEventList, SyncBadge } from "@/components/location/location-events";
 import { LOCATION_STATE_META, freshness } from "@/lib/geofence";
 import { WELFARE_CALL_LABEL, hasSchedule } from "@/lib/welfare/welfare-rules";
+import { NETWORK_RESULT_META, NETWORK_TRIGGER_LABEL } from "@/lib/network-location/router-rules";
+import { requestNetworkCheck } from "@/actions/network-location";
 
 export const metadata = { title: "Shift" };
 
@@ -62,6 +64,8 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   const evidence = evidenceRows.map((e) => ({ ...e, gateway: evidenceGateways.find((g) => g.id === e.gatewayDeviceId) ?? null }));
   const pendingEvidence = evidence.filter((e) => e.status === "PENDING" || e.status === "PROVISIONAL").length;
   const scheduledChecks = s.welfareChecks.filter((w) => w.scheduleKey);
+  const networkChecks = await db.networkLocationCheck.findMany({ where: { shiftId: s.id }, orderBy: { requestedAt: "desc" }, take: 20 });
+  const networkPossible = s.guard.networkLocationEligible && s.location.networkVerifyEnabled;
   const checkIn: CheckInView | null = checkInRow ? {
     id: checkInRow.id, shiftId: s.id, guardName, guardPhone: s.guard.phone, siteName: s.location.name,
     status: checkInRow.status as CheckInStatus, scheduledStartAt: checkInRow.scheduledStartAt,
@@ -139,6 +143,27 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
                     );
                   })}
                 </ul>
+              </CardBody>
+            </Card>
+          )}
+          {(networkChecks.length > 0 || networkPossible) && (
+            <Card>
+              <CardHeader
+                title="Network location checks"
+                description="From the guard's mobile network, not GPS. Approximate, and stored apart from the GPS history. Attendance does not wait for them."
+                action={networkPossible && live && can.manageShifts(user) ? <ConfirmButton label="Check by network" title="Ask the mobile network?" body="One request to the guard's network, if consent, the shift window, the cooldown and the monthly limit allow it. The operator may charge for it." confirmLabel="Ask the network" action={async () => { "use server"; await requestNetworkCheck(s.id); }} /> : undefined}
+              />
+              <CardBody className="pt-1">
+                {networkChecks.length === 0 ? <p className="py-2 text-sm text-ink-3">No network checks on this shift.</p> : (
+                  <ul className="divide-y divide-line">
+                    {networkChecks.map((c) => (
+                      <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                        <span className="text-ink">{fmtTime(c.requestedAt)} <span className="text-ink-3">· {NETWORK_TRIGGER_LABEL[c.trigger]} · {c.requestSent ? c.provider : "not sent"}{c.areaRadiusM ? ` · ${c.areaRadiusM.toLocaleString("en-GB")} m area` : ""}{c.reason ? ` · ${c.reason}` : ""}</span></span>
+                        <Status tone={c.simulated ? "muted" : NETWORK_RESULT_META[c.result].tone}>{c.simulated ? `Simulated · ${NETWORK_RESULT_META[c.result].label}` : NETWORK_RESULT_META[c.result].label}</Status>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </CardBody>
             </Card>
           )}

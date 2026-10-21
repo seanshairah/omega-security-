@@ -139,6 +139,10 @@ model Location {
   welfareRetryMinutes    Int                  @default(10)
   /// After the voice or gateway attempts, text the guard before escalating.
   welfareSmsFallback     Boolean              @default(true)
+  /// Network duty-area verification: separate from the GPS geofence and never used to widen it.
+  /// The centre is the site's (or shift override's) coordinates; the radius is this one.
+  networkVerifyEnabled   Boolean              @default(false)
+  networkRadiusM         Int?
   clientUpdateEmail      String?
   // The operations phone that calls guards at this site from the portal.
   defaultGatewayId       String?
@@ -216,20 +220,21 @@ model Guard {
   createdAt                DateTime            @default(now())
   updatedAt                DateTime            @updatedAt
 
-  shifts              Shift[]
-  checkIns            ShiftCheckIn[]
-  incidents           Incident[]
-  smsMessages         SmsMessage[]
-  recurrences         ShiftRecurrence[]
-  notifications       Notification[]
-  callLogs            CallLog[]
-  locationRequests    DeviceLocationRequest[]
-  devices             GatewayDevice[]
-  locationEvents      LocationEvent[]
-  alerts              GuardAlert[]
-  callRequests        CallRequest[]
-  clientNotifications ClientNotification[]
-  attendanceEvidence  AttendanceEvidence[]
+  shifts                Shift[]
+  checkIns              ShiftCheckIn[]
+  incidents             Incident[]
+  smsMessages           SmsMessage[]
+  recurrences           ShiftRecurrence[]
+  notifications         Notification[]
+  callLogs              CallLog[]
+  locationRequests      DeviceLocationRequest[]
+  devices               GatewayDevice[]
+  locationEvents        LocationEvent[]
+  alerts                GuardAlert[]
+  callRequests          CallRequest[]
+  clientNotifications   ClientNotification[]
+  attendanceEvidence    AttendanceEvidence[]
+  networkLocationChecks NetworkLocationCheck[]
 
   @@index([lastName, firstName])
   @@index([active])
@@ -326,18 +331,19 @@ model Shift {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  attendance          Attendance?
-  attendanceCheckIn   AttendanceCheckIn?
-  checkIns            ShiftCheckIn[]
-  welfareChecks       WelfareCheck[]
-  incidents           Incident[]
-  smsMessages         SmsMessage[]
-  notifications       Notification[]
-  callLogs            CallLog[]
-  locationEvents      LocationEvent[]
-  alerts              GuardAlert[]
-  callRequests        CallRequest[]
-  clientNotifications ClientNotification[]
+  attendance            Attendance?
+  attendanceCheckIn     AttendanceCheckIn?
+  checkIns              ShiftCheckIn[]
+  welfareChecks         WelfareCheck[]
+  incidents             Incident[]
+  smsMessages           SmsMessage[]
+  notifications         Notification[]
+  callLogs              CallLog[]
+  locationEvents        LocationEvent[]
+  alerts                GuardAlert[]
+  callRequests          CallRequest[]
+  clientNotifications   ClientNotification[]
+  networkLocationChecks NetworkLocationCheck[]
 
   @@index([startAt])
   @@index([endAt])
@@ -510,6 +516,7 @@ enum CheckInType {
   LOCATION_RETURNED
   LOCATION_UNAVAILABLE
   LOCATION_OVERDUE
+  NETWORK_LOCATION // a mobile-network location check: never GPS
 }
 
 enum CheckInSource {
@@ -557,6 +564,69 @@ enum WelfareCallStatus {
 }
 
 /// Voice-provider webhooks already accepted. A replayed event finds its id here and changes nothing.
+enum NetworkLocationResult {
+  NETWORK_VERIFIED_INSIDE
+  NETWORK_VERIFIED_OUTSIDE
+  NETWORK_PARTIAL_MATCH
+  NETWORK_LOCATION_STALE
+  NETWORK_LOCATION_UNAVAILABLE
+  NETWORK_PROVIDER_UNAVAILABLE
+  NETWORK_NOT_AUTHORISED
+  NETWORK_UNSUPPORTED
+  NETWORK_ERROR
+}
+
+enum NetworkCheckTrigger {
+  SHIFT_START
+  MID_SHIFT
+  SHIFT_END
+  INCOMING_CALL
+  AFTER_WELFARE_CALL
+  MANUAL
+  RETRY_UNCERTAIN
+  ANDROID_FALLBACK
+}
+
+/// One network location check, or the reason none was made. Kept apart from GPS location events:
+/// a network result never overwrites or stands in for GPS history. Only the requested area and the
+/// provider's answer are stored; no coordinates are derived from a yes/no verification.
+model NetworkLocationCheck {
+  id               String                @id @default(cuid())
+  /// One check per trigger occurrence ("SHIFT_START:<shiftId>", "call:<callLogId>"); null for manual checks.
+  dedupeKey        String?               @unique
+  guardId          String
+  guard            Guard                 @relation(fields: [guardId], references: [id])
+  shiftId          String?
+  shift            Shift?                @relation(fields: [shiftId], references: [id])
+  locationId       String?
+  trigger          NetworkCheckTrigger
+  requestedById    String?
+  operator         MobileOperator        @default(UNKNOWN)
+  /// The adapter that answered, or "router" when no request was sent.
+  provider         String
+  /// False when the router decided not to ask a provider (not authorised, unsupported, unavailable).
+  requestSent      Boolean               @default(false)
+  result           NetworkLocationResult
+  reason           String?
+  areaLatitude     Float?
+  areaLongitude    Float?
+  areaRadiusM      Int?
+  maxAgeSeconds    Int?
+  /// When the network last located the subscriber, as the provider says.
+  observedAt       DateTime?
+  matchRate        Int?
+  uncertaintyM     Int?
+  authorisationRef String?
+  providerRef      String?
+  costUnits        Float?
+  simulated        Boolean               @default(false)
+  requestedAt      DateTime              @default(now())
+  completedAt      DateTime?
+
+  @@index([guardId, requestedAt])
+  @@index([shiftId, requestedAt])
+}
+
 model VoiceWebhookEvent {
   id         String   @id @default(cuid())
   provider   String

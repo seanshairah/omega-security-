@@ -93,7 +93,12 @@ export const locationSchema = z.object({
   welfareMaxAttempts: z.preprocess((v) => (v === "" || v == null ? 2 : Number(v)), z.number().int().min(1).max(5)),
   welfareRetryMinutes: z.preprocess((v) => (v === "" || v == null ? 10 : Number(v)), z.number().int().min(2).max(60)),
   welfareSmsFallback: flag,
+  // Network duty area: its own radius, never the GPS geofence's.
+  networkVerifyEnabled: flag,
+  networkRadiusM: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().int().min(50, "The network area must be at least 50 m").max(50000).optional()).transform((v) => v ?? null),
 }).superRefine((d, ctx) => {
+  if (d.networkVerifyEnabled && d.networkRadiusM == null) ctx.addIssue({ code: "custom", message: "Give the network duty area a radius, or turn network checks off for this site.", path: ["networkRadiusM"] });
+  if (d.networkVerifyEnabled && (d.latitude == null || d.longitude == null)) ctx.addIssue({ code: "custom", message: "Network checks need the site's coordinates.", path: ["networkVerifyEnabled"] });
   const e = coordinatePairError(d.latitude, d.longitude);
   if (e) ctx.addIssue({ code: "custom", message: e, path: ["latitude"] });
   try { parseWelfareTimes(d.welfareTimes); } catch (err) { ctx.addIssue({ code: "custom", message: (err as Error).message, path: ["welfareTimes"] }); }

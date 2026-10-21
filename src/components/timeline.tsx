@@ -46,6 +46,7 @@ const META: Record<CheckInType, { label: string; tone: "ok" | "warn" | "critical
   LOCATION_RETURNED: { label: "LOCATION RETURNED", tone: "ok", icon: "where_to_vote" },
   LOCATION_UNAVAILABLE: { label: "Location unavailable", tone: "warn", icon: "signal_cellular_off" },
   LOCATION_OVERDUE: { label: "Location verification overdue", tone: "warn", icon: "signal_cellular_off" },
+  NETWORK_LOCATION: { label: "Network location check", tone: "info", icon: "cell_tower" },
 };
 const ring = { ok: "border-ok text-ok", warn: "border-warn text-warn", critical: "border-critical text-critical", neutral: "border-line-strong text-ink-3", info: "border-info text-info" };
 
