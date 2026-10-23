@@ -29,6 +29,7 @@
     "android:build": "node scripts/android.mjs build",
     "android:debug": "node scripts/android.mjs debug",
     "android:release": "node scripts/android.mjs release",
+    "android:keystore": "node scripts/android-keystore.mjs",
     "db:check": "tsx scripts/dev/prisma-check.ts",
     "db:check:db": "tsx scripts/dev/prisma-check.ts --db",
     "icons:build": "node scripts/dev/build-icons.mjs",

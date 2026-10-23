@@ -36,29 +36,32 @@ is never right in production.
 
 ## Creating the keystore
 
-Once, on a machine you control. **Keep it somewhere it cannot be lost** — losing it means every
-guard's phone needs the app uninstalled and reinstalled, because Android will refuse an update
-signed with a different key.
+Once, **on a machine you control**: not a build server, not a shared or disposable container. The key
+is the app's permanent identity, and the script that makes it also writes its password to disk.
 
 ```
-keytool -genkeypair -v \
-  -keystore omega-release.jks \
-  -alias omega \
-  -keyalg RSA -keysize 4096 -validity 10000 \
-  -dname "CN=Omega Protection Services, O=Omega Protection Services, L=Harare, C=ZW"
+npm run android:keystore
 ```
 
-Then, in `android/local.properties` (never committed) or as environment variables:
+`scripts/android-keystore.mjs` needs a JDK (`keytool`, which Android Studio ships). It:
 
-```
-ANDROID_KEYSTORE_PATH=/secure/path/omega-release.jks
-ANDROID_KEYSTORE_PASSWORD=…
-ANDROID_KEY_ALIAS=omega
-ANDROID_KEY_PASSWORD=…
-```
+- generates a random password and never prints it or puts it on a command line;
+- creates an RSA 4096 key valid for about 27 years, at `~/omega-release-keystore/omega-release.jks`
+  (outside the repository);
+- writes `android/keystore.properties` (git-ignored, owner-only) with `ANDROID_KEYSTORE_PATH`,
+  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`, which is what
+  `android/app/build.gradle.kts` reads (the same names also work as environment variables);
+- prints the certificate's SHA-256 fingerprint;
+- refuses to run if a keystore or settings file already exists, so it cannot overwrite a key.
 
-`android/app/build.gradle.kts` picks these up automatically. Without them the release build falls
-back to the debug key and logs a warning.
+**Back up both files immediately**, in two places that survive this machine dying (a password
+manager's file storage plus an encrypted USB stick or a second computer), and write the fingerprint
+down. Losing the key means every guard's phone needs the app uninstalled and reinstalled, because
+Android refuses an update signed by a different key. There is no recovery. Never commit either file.
+
+`.gitignore` already excludes `android/keystore.properties`, `android/*.jks` and `*.keystore`.
+Without a keystore the release build falls back to the debug key and logs a warning, which is why the
+portal then refuses to serve it.
 
 Verify what you built before shipping it:
 
@@ -72,6 +75,20 @@ $ANDROID_SDK_ROOT/build-tools/*/apksigner verify --print-certs \
 1. Sign in to the portal on the phone, open **Devices**, tap **Download APK**.
 2. Android asks to allow installs from the browser — this is per-source, so it is asked once.
 3. Install, open the app, enter the activation code from **Devices → Register device**.
+
+### Moving a phone from the debug build to the release build
+
+The first release-signed build is a fresh install on every phone, not an update:
+
+- the release app id is `zw.co.omega.gateway` and the debug one is `zw.co.omega.gateway.debug`, so
+  they are different apps; and
+- an app signed with a different key cannot update one signed with another.
+
+For each phone: uninstall the debug app, install the release, and register it again with a new
+activation code from **Devices → Register device** (the old registration, its queued events and its
+stored credentials go with the uninstall). Do the control-room phone ("Oprosec") first, since portal
+calling and call attendance depend on it. After that, every later release updates in place, as long as
+it is signed with the same key.
 
 ### The test build must be uninstalled first
 
