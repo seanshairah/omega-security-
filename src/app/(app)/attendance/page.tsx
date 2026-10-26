@@ -66,7 +66,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
                 <td className="tnum">{s.attendance?.completionConfirmedAt ? fmtTime(s.attendance.completionConfirmedAt) : s.completionTimedOutAt ? <span className="text-ink-3">unconfirmed</span> : <span className="text-ink-3">—</span>}</td>
                 <td className="tnum">{s.attendance?.missedChecks || <span className="text-ink-3">0</span>}</td>
                 <td>{s.attendance ? <Status tone={ATTENDANCE_LABEL[s.attendance.status].tone}>{ATTENDANCE_LABEL[s.attendance.status].label}</Status> : "—"}</td>
-                <td><ShiftStatusLabel status={s.status} /></td>
+                <td><ShiftStatusLabel status={s.status} startAt={s.startAt} /></td>
               </tr>
             ))}
           </TBody>

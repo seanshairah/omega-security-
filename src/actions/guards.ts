@@ -12,6 +12,9 @@ function parse(fd: FormData) {
   const r = guardSchema.safeParse(formToObject(fd));
   if (!r.success) throw new Error(firstIssue(r.error));
   const { phoneVerified, networkLocationConsent, ...d } = r.data;
+  // The way the guard is told to attend must actually work: switch it on if the form left it off.
+  if (d.preferredAttendance === "CALL" || d.preferredAttendance === "CALL_OR_SMS") d.callAttendanceEnabled = true;
+  if (d.preferredAttendance === "SMS" || d.preferredAttendance === "CALL_OR_SMS") d.smsAttendanceEnabled = true;
   return { data: { ...d, alternatePhones: d.alternatePhones.filter((p) => p !== d.phone), dateOfBirth: d.dateOfBirth ? new Date(d.dateOfBirth) : null, dateEmployed: d.dateEmployed ? new Date(d.dateEmployed) : null }, phoneVerified, networkLocationConsent };
 }
 

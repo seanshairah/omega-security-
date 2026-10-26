@@ -46,6 +46,8 @@ export const FLAG_LABEL: Record<string, string> = {
   LATE_CHECK_IN: "after the clock-in window",
   SMS_CONFIRM_SENT: "SMS sent asking to confirm",
   SIMULATED: "simulated, not real evidence",
+  OPERATOR_CALLED: "operator called the guard",
+  GPS_REQUESTED: "verifying by GPS on the guard's phone",
 };
 
 export type NewEvidence = {

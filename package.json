@@ -37,6 +37,7 @@
     "test:client-notifications": "tsx scripts/dev/client-notification-e2e.ts",
     "test:basic-phone": "tsx scripts/dev/basic-phone-attendance-e2e.ts",
     "test:welfare": "tsx scripts/dev/welfare-e2e.ts",
+    "test:call-verification": "tsx scripts/dev/call-verification-e2e.ts",
     "test:network-location": "tsx scripts/dev/network-location-e2e.ts",
     "test:shift-edit": "tsx scripts/dev/shift-edit-e2e.ts",
     "test:map": "node scripts/dev/map-e2e.mjs",

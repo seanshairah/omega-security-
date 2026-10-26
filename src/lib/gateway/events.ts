@@ -262,10 +262,11 @@ async function afterTransition(device: GatewayDevice, call: CallLog, previous: C
     }
   }
   if (isTerminal(call.status) || call.status === "ANSWERED") await db.gatewayDevice.update({ where: { id: device.id }, data: { lastCallAt: at } });
-  // A basic-phone guard calling the control room may be clocking in, checking in or clocking out.
+  // A guard calling the control room, or answering its call, may be clocking in, checking in or out.
   // Decided once the call has ended (answered or not, and for how long). Never throws into the
   // call pipeline: a failure here must not lose the call record.
-  if (isTerminal(call.status) && device.mode === "OPERATIONS_GATEWAY" && call.direction === "INCOMING" && call.guardId) {
+  // An answered call the operator made to the guard counts too (callAttendance.outgoingMode).
+  if (isTerminal(call.status) && device.mode === "OPERATIONS_GATEWAY" && call.guardId) {
     try {
       const { processAttendanceCall } = await import("@/lib/attendance/call-attendance");
       await processAttendanceCall(call.id);

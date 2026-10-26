@@ -124,7 +124,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
               avatar={<Avatar src={s.guard.photoUrl} name={s.guard.firstName} size={36} />}
               title={<>{s.guard.firstName} {s.guard.lastName}{s.guard.watched && <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-warn">watched</span>}</>}
               subtitle={`${s.location.name} · ${fmtTime(s.startAt)}–${fmtTime(s.endAt)}`}
-              right={<ShiftStatusLabel status={s.status} />}
+              right={<ShiftStatusLabel status={s.status} startAt={s.startAt} />}
               meta={[
                 { label: "Arrival", value: s.attendance?.arrivalConfirmedAt ? `${fmtTime(s.attendance.arrivalConfirmedAt)} · ${ARRIVAL_SOURCE_LABEL[sourceOf(s)].toLowerCase()}` : s.status === "SCHEDULED" ? "—" : "Not confirmed" },
                 { label: "Mid-shift", value: welfare(s) },
@@ -149,7 +149,7 @@ export default async function OperationsPage({ searchParams }: { searchParams: P
                 <td className="tnum">{s.attendance?.arrivalConfirmedAt ? <><Status tone={(s.attendance.lateMinutes ?? 0) > 15 ? "warn" : "ok"}>{fmtTime(s.attendance.arrivalConfirmedAt)}{(s.attendance.lateMinutes ?? 0) > 15 ? ` · ${s.attendance.lateMinutes} min late` : ""}</Status>{arrivalBy(s)}</> : s.status === "SCHEDULED" ? <span className="text-ink-3">—</span> : <Status tone={s.status === "AWAITING_ARRIVAL" ? "neutral" : "critical"}>Not confirmed</Status>}</td>
                 <td>{welfare(s)}</td>
                 <td>{loc(s)}</td>
-                <td><ShiftStatusLabel status={s.status} /></td>
+                <td><ShiftStatusLabel status={s.status} startAt={s.startAt} /></td>
                 <td className="text-ink-3">{ago(s.updatedAt)}</td>
                 <td className="text-right"><span className="inline-flex items-center gap-1"><CallGuardButton guardId={s.guardId} guardName={`${s.guard.firstName} ${s.guard.lastName}`} shiftId={s.id} size="sm" variant="ghost" label="Call" /><Link href={`/monitoring?guard=${s.guardId}`} className="inline-flex h-8 items-center px-2 text-[13px] font-medium text-ink-2 hover:text-ink">Monitor</Link><Link href={`/shifts/${s.id}`} className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-2 hover:text-ink">Timeline <Icon name="chevron_right" size={12} filled /></Link></span></td>
               </tr>

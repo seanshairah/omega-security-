@@ -160,7 +160,8 @@ async function main() {
   const g3 = await mk("Andro", "+263778860010", { deviceKind: "ANDROID_GUARD", phoneType: "ANDROID" });
   const s5 = await shiftFor(g3.id, 1);
   await call(ops1.id, "+263778860010", now);
-  check("19. a guard with the guard app is not clocked in by a call to the control room", (await evidenceFor(s5.id)).length === 0 && (await shiftOf(s5.id)).status === "SCHEDULED");
+  // Marked as a guard-app guard but with no registered phone to ask for a fix: decided like a basic phone.
+  check("19. a guard-app guard with no phone that can be asked is decided like a basic phone", (await evidenceFor(s5.id))[0]?.status === "CONFIRMED" && !(await evidenceFor(s5.id))[0]?.flags.includes("GPS_REQUESTED"));
 
   console.log("missed and short calls");
   const g4 = await mk("Missed", "+263778860011");

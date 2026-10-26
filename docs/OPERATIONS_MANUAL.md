@@ -24,7 +24,8 @@ is, call them, or send a supervisor.
 1. **Guards → Edit → Phone and attendance.**
    - Phone type: *Basic / feature phone*.
    - Mobile network: as the guard tells you.
-   - Attends by: *Calling the gateway phone*.
+   - Attends by: *Calling the gateway phone*, *SMS replies*, or *Calls or SMS*. The chosen ways are
+     switched on for the guard when you save.
 2. **Gateway phone to call.** Pick the operations phone this guard should ring, or leave it on the
    site default. Calls to another gateway are flagged; Settings decides whether they are also held
    or refused.
@@ -34,6 +35,16 @@ is, call them, or send a supervisor.
    calls, then tick **Number verified**.
 5. Tell the guard: *call the operations number when you arrive, call during the shift if asked, and
    call when you leave. The call can be short; you may hang up once it is answered.*
+
+## Clocking a guard in by phone
+
+- **Basic phone.** The guard rings the operations phone, or you ring the guard from it and they
+  answer: either clocks them in by call. An unanswered call from you does nothing.
+- **Guard app.** The same calls, either way round, ask the guard's phone for its GPS position. Inside
+  the site: clocked in, GPS verified. If the phone gives no usable position, the call is kept on the
+  shift for you to confirm or reject.
+- No call tells you where a basic-phone guard is. Neither the portal nor the operations phone can see
+  the guard's cell tower; only their mobile operator could, and no operator offers that service yet.
 
 ## During a shift
 

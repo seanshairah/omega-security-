@@ -93,7 +93,7 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
         <Card>
           <Rows cards={
             shifts.length === 0 ? <Empty title="No shifts match" /> : shifts.map((s) => (
-              <CardRow key={s.id} href={`/shifts/${s.id}`} title={`${s.guard.firstName} ${s.guard.lastName}`} subtitle={`${s.location.name}`} right={<ShiftStatusLabel status={s.status} />}
+              <CardRow key={s.id} href={`/shifts/${s.id}`} title={`${s.guard.firstName} ${s.guard.lastName}`} subtitle={`${s.location.name}`} right={<ShiftStatusLabel status={s.status} startAt={s.startAt} />}
                 meta={[{ label: "Date", value: fmtDate(s.startAt) }, { label: "Hours", value: `${fmtTime(s.startAt)}–${fmtTime(s.endAt)} · ${fmtDuration(s.durationMinutes)}` }, { label: "Arrival", value: s.attendance?.arrivalConfirmedAt ? fmtTime(s.attendance.arrivalConfirmedAt) : "—" }, { label: "Supervisor", value: s.supervisor?.name ?? "—" }]} />
             ))
           } table={
@@ -110,7 +110,7 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
                   <td className="tnum">{fmtDuration(s.durationMinutes)}</td>
                   <td className="text-ink-2">{s.supervisor?.name ?? "—"}</td>
                   <td className="tnum">{s.attendance?.arrivalConfirmedAt ? fmtTime(s.attendance.arrivalConfirmedAt) : <span className="text-ink-3">—</span>}</td>
-                  <td><ShiftStatusLabel status={s.status} /></td>
+                  <td><ShiftStatusLabel status={s.status} startAt={s.startAt} /></td>
                   {canEdit && <td className="text-right">{editPolicy({ status: s.status, arrivalConfirmedAt: s.attendance?.arrivalConfirmedAt ?? null, arrivalSmsSentAt: s.arrivalSmsSentAt }).canEdit
                     ? <Link href={`/shifts/${s.id}/edit`} className="text-[13px] font-medium text-accent-strong hover:underline">Edit</Link>
                     : <span className="text-[13px] text-ink-3">—</span>}</td>}

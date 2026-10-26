@@ -411,6 +411,7 @@ enum AttendanceChannel {
   CALL
   SMS
   APP
+  CALL_OR_SMS // calls to the gateway phone, or SMS replies, whichever the guard uses
 }
 
 /// What a piece of attendance evidence is about.

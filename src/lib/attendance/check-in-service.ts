@@ -120,8 +120,17 @@ export async function handleCall(call: CallLog, device: GatewayDevice, now = new
   const cfg = await checkInConfig();
   if (!cfg.enabled) return "check-in disabled";
   if (!call.guardId) return "no guard on the call";
-  // Only the guard's own registered phone can report a check-in: caller ID alone is not identity.
-  if (device.mode !== "GUARD" || device.guardId !== call.guardId) return "not the guard's registered device";
+  // Either side of the conversation may report it. The guard's own phone reports its call to the
+  // control room; the operations phone reports the guard ringing in, or the operator ringing the
+  // guard. Caller ID is not where the guard is, so the call proves nothing by itself: what it does
+  // is ask the guard's registered phone for a fix, and the fix is the evidence either way.
+  const fromGuardDevice = device.mode === "GUARD" && device.guardId === call.guardId;
+  const viaOperations = device.mode === "OPERATIONS_GATEWAY";
+  if (!fromGuardDevice && !viaOperations) return "not the guard's registered device";
+  if (viaOperations && !(await db.gatewayDevice.findFirst({ where: { guardId: call.guardId, mode: "GUARD" }, select: { id: true } }))) return "guard has no guard app; call attendance handles the call";
+  // The number the guard dialled: on their phone, the number in the call; on the operations phone, its own.
+  const dialled = viaOperations ? device.phoneNumber : call.normalizedPhoneNumber;
+  const authorized = viaOperations && call.direction === "OUTGOING" ? [] : cfg.authorizedNumbers; // the operator rang them
 
   const window = { beforeMinutes: cfg.windowBeforeMinutes, afterMinutes: cfg.windowAfterMinutes };
   const earliest = new Date(call.startedAt.getTime() - cfg.windowAfterMinutes * 60_000);
@@ -134,9 +143,9 @@ export async function handleCall(call: CallLog, device: GatewayDevice, now = new
 
   const open = shifts.filter((s) => {
     const r = callQualifies(
-      { startedAt: call.startedAt, direction: call.direction, normalizedPhoneNumber: call.normalizedPhoneNumber, fromGuardDevice: true },
+      { startedAt: call.startedAt, direction: call.direction, normalizedPhoneNumber: dialled, fromGuardDevice: true },
       { id: s.id, startAt: s.startAt, endAt: s.endAt, cancelled: false, alreadyVerified: VERIFIED_STATUSES.includes((s.attendanceCheckIn?.status ?? "AWAITING") as CheckInStatus) },
-      window, cfg.authorizedNumbers,
+      window, authorized,
     );
     return r.ok;
   });
@@ -147,8 +156,8 @@ export async function handleCall(call: CallLog, device: GatewayDevice, now = new
       const r = s.attendanceCheckIn;
       if (!r || !(VERIFIED_STATUSES.includes(r.status as CheckInStatus) || r.status === "MANUALLY_APPROVED") || r.callAt) return false;
       return callQualifies(
-        { startedAt: call.startedAt, direction: call.direction, normalizedPhoneNumber: call.normalizedPhoneNumber, fromGuardDevice: true },
-        { id: s.id, startAt: s.startAt, endAt: s.endAt, cancelled: false, alreadyVerified: false }, window, cfg.authorizedNumbers,
+        { startedAt: call.startedAt, direction: call.direction, normalizedPhoneNumber: dialled, fromGuardDevice: true },
+        { id: s.id, startAt: s.startAt, endAt: s.endAt, cancelled: false, alreadyVerified: false }, window, authorized,
       ).ok;
     });
     if (verified.length === 1) {
@@ -175,10 +184,16 @@ export async function handleCall(call: CallLog, device: GatewayDevice, now = new
   if (!row) return "no check-in row";
   if (VERIFIED_STATUSES.includes(row.status as CheckInStatus) || row.status === "MANUALLY_APPROVED") return "already verified";
   if (row.callLogId === call.id && row.status === "GPS_PENDING") return "already handled";
+  // Both phones report the same conversation: the second report must not ask for a second fix.
+  if ((row.status === "CALL_RECEIVED" || row.status === "GPS_PENDING") && row.callAt && Math.abs(row.callAt.getTime() - call.startedAt.getTime()) < 3 * 60_000) {
+    await db.callLog.update({ where: { id: call.id }, data: { shiftId: shift.id, note: call.note ?? "Shift check-in call" } });
+    return "already requesting a fix for this call";
+  }
 
+  const operatorRang = viaOperations && call.direction === "OUTGOING";
   await db.attendanceCheckIn.update({ where: { id: row.id }, data: { status: "CALL_RECEIVED", callLogId: call.id, callAt: call.startedAt, exceptionReason: null } });
   await db.callLog.update({ where: { id: call.id }, data: { shiftId: shift.id, note: call.note ?? "Shift check-in call" } });
-  await recordEvent(shift.id, shift.guardId, "CALL_INCOMING", { at: call.startedAt, source: "APP", note: `Check-in call recorded at ${fmtTime(call.startedAt)}. Requesting a GPS fix to verify arrival.` });
+  await recordEvent(shift.id, shift.guardId, operatorRang ? "CALL_OUTGOING" : "CALL_INCOMING", { at: call.startedAt, source: "APP", note: `${operatorRang ? `The operator rang the guard from ${device.deviceName}` : `Check-in call${viaOperations ? ` to ${device.deviceName}` : ""}`} at ${fmtTime(call.startedAt)}. Requesting a GPS fix from the guard's phone to verify arrival.` });
 
   return await requestFix(row.id, shift, now);
 }
@@ -350,6 +365,9 @@ export async function applyFix(checkInId: string, fix: IncomingFix, receivedAt =
       shiftId: shift.id, guardId: shift.guardId, kind: "CHECK_IN", source: "GPS", status: "CONFIRMED", occurredAt: capturedAt,
       dedupeKey: `gps:checkin:${row.id}`, note: `${line}, ${how}. ${Math.round(cls.distanceM)} m from the site${fix.accuracyM != null ? `, ±${Math.round(fix.accuracyM)} m` : ""}.`,
     }).catch(() => undefined);
+    // A call held for this fix (the guard rang in, or the operator rang them) is settled by it.
+    const { settlePendingCalls } = await import("@/lib/attendance/evidence");
+    await settlePendingCalls(shift.id, "CHECK_IN", `Settled by the GPS fix at ${fmtTime(capturedAt)}.`).catch(() => 0);
   }
   if (verified && !alreadyVerified) {
     const { onCheckInVerified } = await import("@/lib/client-notifications/rules");
