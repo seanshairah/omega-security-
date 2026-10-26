@@ -62,7 +62,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
                     <li key={s.id} className="flex items-center gap-3 py-3">
                       <Avatar src={s.guard.photoUrl} name={s.guard.firstName} size={32} />
                       <div className="flex-1"><Link href={`/shifts/${s.id}`} className="font-medium text-ink hover:underline">{s.guard.firstName} {s.guard.lastName}</Link><p className="text-[12px] text-ink-3 tnum">{fmtTime(s.startAt)}–{fmtTime(s.endAt)} · arrived {fmtTime(s.attendance?.arrivalConfirmedAt)}</p></div>
-                      <ShiftStatusLabel status={s.status} />
+                      <ShiftStatusLabel status={s.status} startAt={s.startAt} />
                     </li>
                   ))}
                 </ul>
@@ -75,7 +75,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
               <THead><tr><th>Date</th><th>Guard</th><th>Hours</th><th>Status</th></tr></THead>
               <TBody>
                 {upcoming.length === 0 && <Empty colSpan={4} title="Nothing scheduled" action={<LinkButton href={`/shifts/new?locationId=${l.id}`} size="sm" variant="primary">Schedule shift</LinkButton>} />}
-                {upcoming.map((s) => <tr key={s.id}><td className="tnum"><Link href={`/shifts/${s.id}`} className="font-medium hover:underline">{fmtDate(s.startAt)}</Link></td><td>{s.guard.firstName} {s.guard.lastName}</td><td className="tnum">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</td><td><ShiftStatusLabel status={s.status} /></td></tr>)}
+                {upcoming.map((s) => <tr key={s.id}><td className="tnum"><Link href={`/shifts/${s.id}`} className="font-medium hover:underline">{fmtDate(s.startAt)}</Link></td><td>{s.guard.firstName} {s.guard.lastName}</td><td className="tnum">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</td><td><ShiftStatusLabel status={s.status} startAt={s.startAt} /></td></tr>)}
               </TBody>
             </Table>
           </Card>
@@ -91,7 +91,7 @@ export default async function LocationPage({ params }: { params: Promise<{ id: s
               <THead><tr><th>Date</th><th>Guard</th><th>Hours</th><th>Arrival</th><th>Status</th></tr></THead>
               <TBody>
                 {recent.length === 0 && <Empty colSpan={5} title="No recent shifts" />}
-                {recent.map((s) => <tr key={s.id}><td className="tnum"><Link href={`/shifts/${s.id}`} className="font-medium hover:underline">{fmtDate(s.startAt)}</Link></td><td>{s.guard.firstName} {s.guard.lastName}</td><td className="tnum">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</td><td className="tnum">{s.attendance?.arrivalConfirmedAt ? fmtTime(s.attendance.arrivalConfirmedAt) : "—"}</td><td><ShiftStatusLabel status={s.status} /></td></tr>)}
+                {recent.map((s) => <tr key={s.id}><td className="tnum"><Link href={`/shifts/${s.id}`} className="font-medium hover:underline">{fmtDate(s.startAt)}</Link></td><td>{s.guard.firstName} {s.guard.lastName}</td><td className="tnum">{fmtTime(s.startAt)}–{fmtTime(s.endAt)}</td><td className="tnum">{s.attendance?.arrivalConfirmedAt ? fmtTime(s.attendance.arrivalConfirmedAt) : "—"}</td><td><ShiftStatusLabel status={s.status} startAt={s.startAt} /></td></tr>)}
               </TBody>
             </Table>
           </Card>

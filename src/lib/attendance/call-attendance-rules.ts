@@ -21,6 +21,8 @@
  *                                                  replies YES) or DISABLED
  *   to a gateway other than the expected one    → wrongGatewayMode: FLAG (default), PENDING or REJECT
  *   on a shift already closed (the call synced late) → PENDING, flagged SHIFT_CLOSED: never reopens a shift
+ *   the operator rang the guard and they answered   → outgoingMode: CONFIRMED (default), PENDING or
+ *                                                  DISABLED; flagged OPERATOR_CALLED. Unanswered: nothing
  *
  * A confirmed call means "a call came from the guard's registered number". It is labelled as a
  * call, never as location, and never proves who held the phone.
@@ -40,11 +42,13 @@ export type CallAttendancePolicy = {
   answeredMode: "CONFIRMED" | "PENDING";
   missedCallMode: MissedCallMode;
   wrongGatewayMode: WrongGatewayMode;
+  /** The operator rang the guard from the operations phone and the guard answered. */
+  outgoingMode: "CONFIRMED" | "PENDING" | "DISABLED";
 };
 
 export const DEFAULT_CALL_POLICY: CallAttendancePolicy = {
   enabled: true, checkInBeforeMinutes: 60, checkInAfterMinutes: 120, checkOutBeforeMinutes: 60, checkOutAfterMinutes: 120,
-  answeredMinSeconds: 5, answeredMode: "CONFIRMED", missedCallMode: "PENDING", wrongGatewayMode: "FLAG",
+  answeredMinSeconds: 5, answeredMode: "CONFIRMED", missedCallMode: "PENDING", wrongGatewayMode: "FLAG", outgoingMode: "CONFIRMED",
 };
 
 export type CallFacts = {
@@ -97,12 +101,19 @@ export function callIntent(t: Date, s: ShiftFacts, p: CallAttendancePolicy): { i
  */
 export function decideCall(call: CallFacts, shift: ShiftFacts, p: CallAttendancePolicy, expectedGateway: boolean | null): Decision {
   if (!p.enabled) return { action: "IGNORE", reason: "call attendance is off", flags: [] };
-  if (call.direction !== "INCOMING") return { action: "IGNORE", reason: "the gateway called the guard, not the other way round", flags: [] };
+  const operatorCalled = call.direction === "OUTGOING";
+  if (operatorCalled) {
+    // The operator rang the guard. Answered, it is the same evidence as the guard ringing in: their
+    // phone, their voice. Unanswered, it says nothing, and the operator chose the gateway.
+    if (p.outgoingMode === "DISABLED") return { action: "IGNORE", reason: "operator calls do not count by policy", flags: [] };
+    if (!call.answered) return { action: "IGNORE", reason: call.missed ? "the guard did not answer the operator's call" : "the call has not ended yet", flags: [] };
+    expectedGateway = null;
+  }
   if (!call.answered && !call.missed) return { action: "IGNORE", reason: "the call has not ended yet", flags: [] };
   const i = callIntent(call.startedAt, shift, p);
   if ("none" in i) return { action: "IGNORE", reason: i.none, flags: [] };
 
-  const flags = [...i.flags];
+  const flags = [...i.flags, ...(operatorCalled ? ["OPERATOR_CALLED"] : [])];
   let status: "CONFIRMED" | "PROVISIONAL" | "PENDING" | "REJECTED";
   let reason: string;
   let sendSmsConfirm = false;
@@ -117,10 +128,10 @@ export function decideCall(call: CallFacts, shift: ShiftFacts, p: CallAttendance
   } else if ((call.durationSeconds ?? 0) < p.answeredMinSeconds) {
     flags.push("SHORT_CALL");
     status = "PENDING"; reason = `answered for under ${p.answeredMinSeconds} s`;
-  } else if (p.answeredMode === "PENDING") {
+  } else if (operatorCalled ? p.outgoingMode === "PENDING" : p.answeredMode === "PENDING") {
     status = "PENDING"; reason = "every call waits for a supervisor by policy";
   } else {
-    status = "CONFIRMED"; reason = "answered call from the guard's registered number";
+    status = "CONFIRMED"; reason = operatorCalled ? "the guard answered the operator's call on their registered number" : "answered call from the guard's registered number";
   }
 
   if (expectedGateway === false) {
@@ -171,5 +182,6 @@ export function parseCallPolicy(v: Record<string, string>): CallAttendancePolicy
     answeredMode: pick("callAttendance.answeredMode", ["CONFIRMED", "PENDING"] as const, d.answeredMode),
     missedCallMode: pick("callAttendance.missedCallMode", ["DISABLED", "PENDING", "PROVISIONAL", "SMS_CONFIRM"] as const, d.missedCallMode),
     wrongGatewayMode: pick("callAttendance.wrongGatewayMode", ["FLAG", "PENDING", "REJECT"] as const, d.wrongGatewayMode),
+    outgoingMode: pick("callAttendance.outgoingMode", ["CONFIRMED", "PENDING", "DISABLED"] as const, d.outgoingMode),
   };
 }

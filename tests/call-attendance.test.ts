@@ -75,8 +75,19 @@ test("a call synced after the shift was closed never reopens it", () => {
   assert.ok(d.action === "RECORD" && d.status === "PENDING" && d.flags.includes("SHIFT_CLOSED"));
 });
 
-test("outgoing calls and calls still ringing are not attendance", () => {
-  assert.equal(decideCall({ ...answered("2026-10-21T15:58:00Z"), direction: "OUTGOING" }, night(), P, null).action, "IGNORE");
+test("the operator ringing the guard counts when answered, by policy, and never as the wrong gateway", () => {
+  const out = { ...answered("2026-10-21T15:58:00Z"), direction: "OUTGOING" as const };
+  const d = decideCall(out, night(), P, false);
+  assert.ok(d.action === "RECORD" && d.intent === "CHECK_IN" && d.status === "CONFIRMED" && d.flags.includes("OPERATOR_CALLED") && !d.flags.includes("WRONG_GATEWAY"));
+  assert.equal(decideCall({ ...missed("2026-10-21T15:58:00Z"), direction: "OUTGOING" }, night(), P, null).action, "IGNORE", "unanswered says nothing");
+  const pend = decideCall(out, night(), { ...P, outgoingMode: "PENDING" }, null);
+  assert.ok(pend.action === "RECORD" && pend.status === "PENDING");
+  assert.equal(decideCall(out, night(), { ...P, outgoingMode: "DISABLED" }, null).action, "IGNORE");
+  assert.equal(parseCallPolicy({ "callAttendance.outgoingMode": "pending" }).outgoingMode, "PENDING");
+  assert.equal(parseCallPolicy({ "callAttendance.outgoingMode": "nonsense" }).outgoingMode, "CONFIRMED");
+});
+
+test("calls still ringing are not attendance", () => {
   assert.equal(decideCall({ startedAt: at("2026-10-21T15:58:00Z"), direction: "INCOMING", answered: false, missed: false, durationSeconds: null }, night(), P, null).action, "IGNORE");
   assert.equal(decideCall(answered("2026-10-21T15:58:00Z"), night(), { ...P, enabled: false }, null).action, "IGNORE");
 });

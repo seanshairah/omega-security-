@@ -87,7 +87,7 @@ export default async function GuardPage({ params, searchParams }: { params: Prom
                 <td className="tnum">{s.attendance?.arrivalConfirmedAt ? `${fmtTime(s.attendance.arrivalConfirmedAt)}${s.attendance.lateMinutes > 15 ? ` · +${s.attendance.lateMinutes} min` : ""}` : "—"}</td>
                 <td className="tnum">{s.attendance?.completionConfirmedAt ? fmtTime(s.attendance.completionConfirmedAt) : "—"}</td>
                 <td>{s.attendance ? <Status tone={ATTENDANCE_LABEL[s.attendance.status].tone}>{ATTENDANCE_LABEL[s.attendance.status].label}</Status> : "—"}</td>
-                <td><ShiftStatusLabel status={s.status} /></td>
+                <td><ShiftStatusLabel status={s.status} startAt={s.startAt} /></td>
               </tr>
             ))}
           </TBody>

@@ -6,12 +6,14 @@
  * runs between requests, and the GitHub Actions schedule meant to fill that gap fired four times on
  * 20 October 2026 instead of once every five minutes. A 16:00 shift got its arrival text at 16:50.
  *
- * So the engine now has three ways in, all through one lease so they can never overlap:
+ * So the engine now has four ways in, all through one lease so they can never overlap:
  *
  *   - the cron route (`POST /api/automation/tick`), from whatever external scheduler is configured;
  *   - every device heartbeat, after its response is sent, when the engine has not run for a minute.
  *     Guard and operations phones heartbeat every two minutes, all day, so while any phone is
  *     online the engine keeps time without depending on anyone's cron;
+ *   - every portal page view, after its response, on the same one-minute rule, so a control room
+ *     with the portal open keeps the engine running even with no phone online and no cron;
  *   - an admin's "run now".
  *
  * The lease is a row, not a lock held in memory: on serverless the next request may land on a
@@ -25,12 +27,14 @@ const JOB = "automation";
 /** A run that has not released its lease by then is assumed to have died with its instance. */
 const LEASE_MS = 120_000;
 
-export type TickSource = "cron" | "heartbeat" | "manual" | "in-process";
+export type TickSource = "cron" | "heartbeat" | "portal" | "manual" | "in-process";
 
 /** How long a source waits after the last run before it may start another. */
 export const MIN_INTERVAL_MS: Record<TickSource, number> = {
   // Phones are many and frequent; one run a minute is what the engine needs.
   heartbeat: 55_000,
+  // Anyone using the portal keeps the engine running too, with no phone online and no cron.
+  portal: 55_000,
   // An external scheduler aimed at every minute should not run again on top of a heartbeat run.
   cron: 20_000,
   "in-process": 20_000,
@@ -87,17 +91,20 @@ export async function runScheduledTick(source: TickSource, now = new Date()): Pr
   return { ran: true, report };
 }
 
+/** Called after a portal page has been rendered: the same check, so a busy portal never runs it twice. */
+export const maybeTickFromPortal = () => maybeTickFromHeartbeat(new Date(), "portal");
+
 /**
  * Called after a device heartbeat has been answered. Cheap when there is nothing to do: one read,
  * and no write unless the engine is due.
  */
-export async function maybeTickFromHeartbeat(now = new Date()): Promise<void> {
-  if (process.env.AUTOMATION_HEARTBEAT_TICK === "false") return;
+export async function maybeTickFromHeartbeat(now = new Date(), source: "heartbeat" | "portal" = "heartbeat"): Promise<void> {
+  if (source === "heartbeat" && process.env.AUTOMATION_HEARTBEAT_TICK === "false") return;
   try {
     const row = await db.schedulerLease.findUnique({ where: { name: JOB } });
     if (row?.lastRunAt && now.getTime() - row.lastRunAt.getTime() < MIN_INTERVAL_MS.heartbeat) return;
     if (row && row.leaseUntil >= now) return;
-    await runScheduledTick("heartbeat", now);
+    await runScheduledTick(source, now);
   } catch {
     // The heartbeat has already been answered; a scheduling hiccup is retried on the next one.
   }

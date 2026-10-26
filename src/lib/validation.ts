@@ -37,7 +37,7 @@ export const guardSchema = z.object({
     }
     return out;
   }),
-  preferredAttendance: z.enum(["CALL", "SMS", "APP"]).default("SMS"),
+  preferredAttendance: z.enum(["CALL", "SMS", "CALL_OR_SMS", "APP"]).default("SMS"),
   callAttendanceEnabled: flag,
   smsAttendanceEnabled: flag,
   welfareExempt: flag,

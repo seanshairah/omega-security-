@@ -5,11 +5,16 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmergencyBanner } from "@/components/layout/emergency-banner";
 import { activeProviderName } from "@/lib/sms";
 import { simulatorEnabled } from "@/lib/env-check";
+import { after } from "next/server";
+import { maybeTickFromPortal } from "@/lib/automation/scheduler";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  // The engine moves shifts on (arrival checks, shift-start GPS, escalations). Without a cron it ran
+  // only while a phone was heartbeating; now every portal page view after its response runs it too.
+  after(() => maybeTickFromPortal());
   const [attention, incidents, unread, critical, watched, alerts] = await Promise.all([
     db.shift.count({ where: { status: { in: ["LATE", "NOT_CONFIRMED", "ASSISTANCE", "INCIDENT", "CRITICAL"] } } }),
     db.incident.count({ where: { status: { in: ["OPEN", "ACKNOWLEDGED"] } } }),

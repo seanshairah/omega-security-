@@ -168,7 +168,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
             </Card>
           )}
           <Card>
-            <CardHeader title="Timeline" description="Every automated check, reply, call and location event on this shift, in order." action={<ShiftStatusLabel status={s.status} />} />
+            <CardHeader title="Timeline" description="Every automated check, reply, call and location event on this shift, in order." action={<ShiftStatusLabel status={s.status} startAt={s.startAt} />} />
             <CardBody><Timeline events={s.checkIns} showDates={s.durationMinutes > 12 * 60} /></CardBody>
             {live && can.simulate(user) && (
               <div className="border-t border-dashed border-line px-5 py-4">

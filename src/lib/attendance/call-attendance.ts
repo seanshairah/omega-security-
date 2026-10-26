@@ -41,13 +41,18 @@ export async function processAttendanceCall(callLogId: string, now = new Date())
   const call = await db.callLog.findUnique({ where: { id: callLogId }, include: { gateway: true, guard: true } });
   if (!call) return "call not found";
   if (call.gateway.mode !== "OPERATIONS_GATEWAY") return "not an operations gateway call";
-  if (call.direction !== "INCOMING") return "outgoing call";
   if (call.status !== "ENDED" && call.status !== "MISSED") return "call still in progress";
   const guard = call.guard;
-  if (!guard) return "caller not identified";
+  if (!guard) return call.direction === "INCOMING" ? "caller not identified" : "the number called is not a guard's";
   if (!guard.callAttendanceEnabled) return "call attendance off for this guard";
-  // A guard with the guard app clocks in by GPS on their own phone; their calls stay calls.
-  if (guard.deviceKind === "ANDROID_GUARD") return "guard uses the guard app";
+  // A guard with the guard app is clocked in by the GPS fix their phone is asked for when this call
+  // happens (check-in service). The call is still recorded, held until that fix settles it, so a
+  // phone that is off or has no fix leaves a call for a supervisor rather than nothing at all.
+  // Only when that phone can actually be asked: with none, or one revoked or not activated, no fix is
+  // coming, and the call is decided as it would be for a basic phone.
+  const verifiedByGps = guard.deviceKind === "ANDROID_GUARD" && Boolean(await db.gatewayDevice.findFirst({
+    where: { guardId: guard.id, mode: "GUARD", activationStatus: "ACTIVE", status: { notIn: ["REVOKED", "DISABLED"] } }, select: { id: true },
+  }));
 
   const policy = await callAttendancePolicy();
   if (!policy.enabled) return "call attendance is off";
@@ -89,6 +94,13 @@ export async function processAttendanceCall(callLogId: string, now = new Date())
   if (decision.action === "IGNORE") return decision.reason;
 
   const flags = [...decision.flags, ...(lateSync ? ["LATE_SYNC"] : [])];
+  const waitForGps = verifiedByGps && decision.intent === "CHECK_IN" && (decision.status === "CONFIRMED" || decision.status === "PROVISIONAL");
+  if (waitForGps) {
+    flags.push("GPS_REQUESTED");
+    decision.status = "PENDING";
+    decision.reason = "the guard's phone has been asked for a GPS fix; the fix decides the clock-in";
+    decision.sendSmsConfirm = false;
+  }
   const how = call.status === "MISSED" ? "missed call" : `answered, ${fmtCallDuration(call.durationSeconds)}`;
   const { evidence, created } = await recordEvidence({
     shiftId: shift.id, guardId: guard.id, kind: KIND[decision.intent], source: decision.source, status: decision.status,
@@ -120,6 +132,8 @@ export async function processAttendanceCall(callLogId: string, now = new Date())
     if (sent) await db.attendanceEvidence.update({ where: { id: evidence.id }, data: { flags: [...flags, "SMS_CONFIRM_SENT"] } });
   }
   await recordEvent(shift.id, guard.id, "ADMIN_NOTE", { at: t, source: "SYSTEM", note: `Call at ${fmtTime(t)} (${how}) held as a pending ${word}: ${decision.reason}${flagText}.` });
+  // The GPS check-in raises its own exception if no usable fix comes; no second alert for the same thing.
+  if (waitForGps) return `${word} waiting for GPS`;
   await notifyPending(guard, shift.id, `${guard.firstName} ${guard.lastName} called ${call.gateway.deviceName} at ${fmtTime(t)} (${how}). Pending ${word}: ${decision.reason}.`);
   return `${word} pending: ${decision.reason}`;
 }
